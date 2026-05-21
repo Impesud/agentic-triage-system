@@ -1,20 +1,21 @@
 import json
-import sys
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from schemas.ticket import Ticket
 from storage import store
 
 
-@pytest.fixture(autouse=True)
-def isolated_tickets_file(tmp_path, monkeypatch):
-    tickets_file = tmp_path / "tickets.jsonl"
-    monkeypatch.setattr(store, "TICKETS_PATH", tickets_file)
-    yield tickets_file
+def test_triaged_requires_analisi_problema():
+    with pytest.raises(ValueError, match="analisi_problema"):
+        Ticket(
+            id=1,
+            status="TRIAGED",
+            messaggio_originale="help",
+            categoria="IT",
+            priorita="HIGH",
+            riassunto_breve="Email bloccata",
+        )
 
 
 def test_next_ticket_id_starts_at_one():
@@ -36,6 +37,10 @@ def test_current_state_is_last_snapshot():
         id=1,
         status="TRIAGED",
         messaggio_originale="help",
+        analisi_problema=(
+            "1. Problema: email bloccata. 2. Contesto: accesso IT. "
+            "3. Categoria: IT. 4. Priorità: HIGH."
+        ),
         categoria="IT",
         priorita="HIGH",
         riassunto_breve="Email bloccata",
@@ -45,3 +50,16 @@ def test_current_state_is_last_snapshot():
 
     current = store.get_current_ticket(1)
     assert current["status"] == "TRIAGED"
+    assert current["analisi_problema"]
+
+
+def test_routed_snapshot_persists_team(triaged_ticket):
+    from tools.router import assign_to_team
+
+    ticket = triaged_ticket(categoria="IT")
+    store.save_ticket(ticket)
+    routed = assign_to_team(ticket)
+    store.save_ticket(routed)
+
+    current = store.get_current_ticket(1)
+    assert current["team"] == "team_tecnico"

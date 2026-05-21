@@ -7,6 +7,9 @@ _PRIORITY_RANK: dict[Priority, int] = {
     "CRITICAL": 3,
 }
 
+_HIGH_KEYWORDS = ("urgente", "bloccato", "bloccata")
+_MEDIUM_KEYWORDS = ("subito", "non funziona")
+
 
 def _max_priority(current: Priority, minimum: Priority) -> Priority:
     if _PRIORITY_RANK[current] >= _PRIORITY_RANK[minimum]:
@@ -17,7 +20,7 @@ def _max_priority(current: Priority, minimum: Priority) -> Priority:
 def enrich_priority(ticket: Ticket) -> Ticket:
     """
     Enrichment deterministico sulla priorità (senza seconda chiamata LLM).
-    - "urgente", "bloccato" → almeno HIGH
+    - "urgente", "bloccato", "bloccata" → almeno HIGH
     - "subito", "non funziona" → almeno MEDIUM
     """
     if ticket.priorita is None:
@@ -26,10 +29,10 @@ def enrich_priority(ticket: Ticket) -> Ticket:
     text = ticket.messaggio_originale.lower()
     priorita = ticket.priorita
 
-    if "urgente" in text or "bloccato" in text:
+    if any(keyword in text for keyword in _HIGH_KEYWORDS):
         priorita = _max_priority(priorita, "HIGH")
 
-    if "subito" in text or "non funziona" in text:
+    if any(keyword in text for keyword in _MEDIUM_KEYWORDS):
         priorita = _max_priority(priorita, "MEDIUM")
 
     return ticket.model_copy(update={"priorita": priorita})

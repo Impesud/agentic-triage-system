@@ -6,14 +6,31 @@ Category = Literal["IT", "BILLING", "SALES", "SECURITY"]
 Priority = Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"]
 TicketStatus = Literal["OPEN", "TRIAGED"]
 
+_TRIAGED_REQUIRED = ("categoria", "priorita", "analisi_problema", "riassunto_breve")
+
+
+def _non_empty_str(value: str, field_label: str) -> str:
+    if not value or not value.strip():
+        raise ValueError(f"{field_label} non può essere vuoto")
+    return value.strip()
+
 
 class TriageResult(BaseModel):
     """Output strutturato dell'LLM (Parte 1)."""
 
+    analisi_problema: str = Field(
+        ...,
+        description="Ragionamento CoT strutturato prima della classificazione",
+    )
     categoria: Category
     priorita: Priority
     riassunto_breve: str
     messaggio_originale: str
+
+    @field_validator("analisi_problema")
+    @classmethod
+    def validate_analisi(cls, value: str) -> str:
+        return _non_empty_str(value, "L'analisi del problema")
 
     @field_validator("riassunto_breve")
     @classmethod
@@ -27,10 +44,8 @@ class TriageResult(BaseModel):
 
     @field_validator("messaggio_originale")
     @classmethod
-    def validate_messaggio_not_empty(cls, value: str) -> str:
-        if not value or not value.strip():
-            raise ValueError("Il messaggio originale non può essere vuoto")
-        return value
+    def validate_messaggio(cls, value: str) -> str:
+        return _non_empty_str(value, "Il messaggio originale")
 
 
 class Ticket(BaseModel):
@@ -39,6 +54,7 @@ class Ticket(BaseModel):
     id: int
     status: TicketStatus
     messaggio_originale: str
+    analisi_problema: str | None = None
     categoria: Category | None = None
     priorita: Priority | None = None
     riassunto_breve: str | None = None
@@ -46,23 +62,21 @@ class Ticket(BaseModel):
 
     @field_validator("messaggio_originale")
     @classmethod
-    def validate_messaggio_not_empty(cls, value: str) -> str:
-        if not value or not value.strip():
-            raise ValueError("Il messaggio originale non può essere vuoto")
-        return value
+    def validate_messaggio(cls, value: str) -> str:
+        return _non_empty_str(value, "Il messaggio originale")
 
     @model_validator(mode="after")
     def validate_triaged_fields(self) -> "Ticket":
-        if self.status == "TRIAGED":
-            missing = []
-            if self.categoria is None:
-                missing.append("categoria")
-            if self.priorita is None:
-                missing.append("priorita")
-            if not self.riassunto_breve:
-                missing.append("riassunto_breve")
-            if missing:
-                raise ValueError(
-                    f"Ticket TRIAGED incompleto: campi mancanti {', '.join(missing)}"
-                )
+        if self.status != "TRIAGED":
+            return self
+
+        missing = [
+            name
+            for name in _TRIAGED_REQUIRED
+            if getattr(self, name) in (None, "")
+        ]
+        if missing:
+            raise ValueError(
+                f"Ticket TRIAGED incompleto: campi mancanti {', '.join(missing)}"
+            )
         return self

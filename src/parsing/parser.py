@@ -1,68 +1,47 @@
 import json
 import re
-from typing import Any, Dict
+from typing import Any
+
+from pydantic import ValidationError
 
 from schemas.ticket import TriageResult
 
 
 def _extract_json_block(text: str) -> str:
     """
-    Estrae il primo blocco JSON valido da una stringa.
-    Gestisce:
-    - testo extra prima/dopo
-    - blocchi markdown ```json
+    Estrae il primo oggetto JSON bilanciato da una stringa.
+    Gestisce testo extra e blocchi markdown ```json.
     """
-
-    # Rimuove eventuali blocchi markdown ```json ... ```
     text = re.sub(r"```json|```", "", text, flags=re.IGNORECASE).strip()
-
-    # Cerca il primo blocco JSON (da { a })
-    match = re.search(r"\{.*\}", text, re.DOTALL)
-
-    if not match:
+    start = text.find("{")
+    if start == -1:
         raise ValueError("Nessun JSON trovato nella risposta del modello")
 
-    return match.group(0)
+    depth = 0
+    for index, char in enumerate(text[start:], start=start):
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start : index + 1]
+
+    raise ValueError("JSON non bilanciato nella risposta del modello")
 
 
-def _safe_json_load(json_str: str) -> Dict[str, Any]:
-    """
-    Converte una stringa JSON in dict con gestione errori.
-    """
-
+def _safe_json_load(json_str: str) -> dict[str, Any]:
     try:
         return json.loads(json_str)
     except json.JSONDecodeError as e:
-        raise ValueError(f"JSON non valido: {e}")
+        raise ValueError(f"JSON non valido: {e}") from e
 
 
 def parse_llm_output(raw_output: str) -> TriageResult:
-    """
-    Pipeline completa di parsing:
-
-    1. Estrazione JSON
-    2. Parsing stringa → dict
-    3. Validazione con Pydantic
-
-    Restituisce:
-    - oggetto TriageResult valido
-
-    Solleva errore se:
-    - JSON non trovato
-    - JSON invalido
-    - schema non rispettato
-    """
-
-    # 1. Estrai JSON
+    """Estrae JSON dalla risposta LLM e valida con TriageResult."""
     json_str = _extract_json_block(raw_output)
-
-    # 2. Converti in dict
     data = _safe_json_load(json_str)
 
-    # 3. Validazione schema
     try:
-        result = TriageResult(**data)
-    except Exception as e:
-        raise ValueError(f"Errore validazione TriageResult: {e}")
-
-    return result
+        return TriageResult(**data)
+    except ValidationError as e:
+        raise ValueError(f"Errore validazione TriageResult: {e}") from e

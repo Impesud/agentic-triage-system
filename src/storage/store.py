@@ -1,10 +1,7 @@
 import json
-from pathlib import Path
 
+from paths import TICKETS_PATH
 from schemas.ticket import Ticket
-
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-TICKETS_PATH = _REPO_ROOT / "data" / "tickets.jsonl"
 
 
 def _ensure_data_dir() -> None:

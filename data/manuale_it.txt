@@ -1,0 +1,19 @@
+Manuale Interno IT – Impesud
+
+Problemi Password:
+Usare il portale 'reset.impesud.it'.
+Mai chiedere la password in chat.
+
+Accesso VPN:
+Verificare che l'utente abbia
+l'app 'GlobalProtect' attiva.
+
+Stampanti:
+Se la stampante non va,
+riavviare lo spooler di stampa.
+
+Portale pagamenti / acquisti online:
+Se l'utente vuole completare un acquisto ma il sito o la pagina di pagamento
+non carica, va in errore o resta bianca, classificare come problema IT.
+Verificare browser, connessione e VPN se l'utente è da remoto.
+Se la richiesta è solo commerciale, senza malfunzionamento tecnico, → SALES.

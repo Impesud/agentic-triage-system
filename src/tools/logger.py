@@ -1,75 +1,40 @@
 import json
-import os
-from datetime import datetime
-from typing import Any, Dict
+import re
+from datetime import UTC, datetime
+from typing import Any
+
+from paths import LOG_FILE_PATH
+
+_API_KEY_PATTERN = re.compile(r"sk-[A-Za-z0-9_-]+")
 
 
-LOG_FILE_PATH = os.path.join("logs", "activity.jsonl")
-
-
-def _ensure_log_dir():
-    """
-    Assicura che la cartella logs/ esista.
-    """
-    os.makedirs(os.path.dirname(LOG_FILE_PATH), exist_ok=True)
+def _ensure_log_dir() -> None:
+    LOG_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 
 def _redact_sensitive_data(text: str) -> str:
-    """
-    Oscura informazioni sensibili nel testo.
-    Esempi:
-    - API keys (pattern base)
-    - token lunghi
-    """
-
-    if not isinstance(text, str):
-        return text
-
-    # Redazione semplice per API key OpenAI (sk-...)
-    text = text.replace("sk-", "sk-***")
-
-    # Redazione generica per stringhe lunghe (token-like)
-    # Es: abcdefghijklmnopqrstuvwxyz123456 → abc***456
-    if len(text) > 20:
-        text = text[:3] + "***" + text[-3:]
-
-    return text
+    """Oscura solo pattern sensibili (es. API key), non il testo dei ticket."""
+    return _API_KEY_PATTERN.sub("sk-***", text)
 
 
-def _sanitize_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Applica redaction a tutti i campi stringa del payload.
-    """
-
-    sanitized = {}
-
-    for key, value in payload.items():
-        if isinstance(value, str):
-            sanitized[key] = _redact_sensitive_data(value)
-        else:
-            sanitized[key] = value
-
-    return sanitized
+def _sanitize_value(value: Any) -> Any:
+    if isinstance(value, str):
+        return _redact_sensitive_data(value)
+    if isinstance(value, dict):
+        return {key: _sanitize_value(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_sanitize_value(item) for item in value]
+    return value
 
 
-def log_event(event_type: str, payload: Dict[str, Any]) -> None:
-    """
-    Scrive un evento nel file JSONL.
-
-    Struttura:
-    {
-        "timestamp": "...",
-        "event_type": "...",
-        "payload": {...}
-    }
-    """
-
+def log_event(event_type: str, payload: dict[str, Any]) -> None:
+    """Scrive un evento strutturato in logs/activity.jsonl."""
     _ensure_log_dir()
 
     log_entry = {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "event_type": event_type,
-        "payload": _sanitize_payload(payload),
+        "payload": _sanitize_value(payload),
     }
 
     with open(LOG_FILE_PATH, "a", encoding="utf-8") as f:
