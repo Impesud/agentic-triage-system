@@ -4,11 +4,13 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from logic import (
+    _build_context_text,
     _detects_angry_sentiment,
     _extract_max_budget_eur,
     _requires_vip_escalation,
     triage_message,
 )
+from prompts.triage_v1 import build_chat_messages
 
 
 def _completion(content=None, tool_calls=None):
@@ -74,6 +76,25 @@ def test_triage_message_empty_response_raises(mock_get_client):
     )
     with pytest.raises(ValueError, match="Risposta vuota"):
         triage_message("x", manuale="")
+
+
+def test_build_chat_messages_includes_history():
+    history = [
+        {"role": "user", "content": "Il server non si avvia."},
+        {"role": "assistant", "content": "Qual è l'ID del server?"},
+    ]
+    messages = build_chat_messages("È il server-X.", manuale="", history=history)
+    assert messages[0]["role"] == "system"
+    assert messages[1:3] == history
+    assert messages[-1]["role"] == "user"
+    assert "server-X" in messages[-1]["content"]
+
+
+def test_build_context_text_joins_thread():
+    history = [{"role": "user", "content": "Sono Marco."}]
+    ctx = _build_context_text("Server down.", history)
+    assert "Marco" in ctx
+    assert "Server down" in ctx
 
 
 def test_extract_max_budget_eur():

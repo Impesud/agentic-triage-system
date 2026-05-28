@@ -29,17 +29,19 @@ L’abbonamento a Cursor **non è necessario** per questo argomento. Conta molto
 
 ## Stato attuale del progetto
 
-Il codice ha una gestione errori di **livello 1–2**: fail-fast con `ValueError`, boundary in `main.py`, parser con `raise ... from e` su JSON e Pydantic, nucleo loop in `logic.py` (`_run_agent_loop`), suite di **24 test** sui fallimenti principali e sui fallback di escalation. Manca ancora una **gerarchia di eccezioni di dominio**.
+Il codice ha una gestione errori di **livello 1–2**: fail-fast con `ValueError`, boundary in `main.py`, parser con `raise ... from e` su JSON e Pydantic, nucleo loop in `logic.py` (`_run_agent_loop`), memoria short/long-term, suite di **40 test** sui fallimenti principali e sui fallback. Manca ancora una **gerarchia di eccezioni di dominio**.
 
 ### Nucleo agentico (`logic.py`) — riferimento rapido
 
-Il triage LLM vive in un unico loop (vedi [README — Nucleo del loop](README.md#nucleo-del-loop-logicpy)):
+Il triage LLM vive in un unico loop (vedi [README — Architettura](README.md#architettura)):
 
-1. `build_chat_messages` — input + few-shot + manuale IT  
+1. `build_chat_messages` — cronologia (`history`) + few-shot + manuale IT  
 2. `_call_llm_with_tools` — prima risposta con `TOOLS_DEFINITION`  
 3. `_execute_tool_calls` — tool locali (se `tool_calls`)  
-4. `_apply_policy_fallback` — guardie policy con observation in conversation  
-5. `_request_final_json` + `parse_llm_output` — JSON validato (o content diretto se nessun tool)
+4. `_apply_all_fallbacks` — policy (VIP, ARRABBIATO) + long-term (storico cliente)  
+5. `_request_final_json` + `parse_llm_output` — JSON validato  
+
+Se la prima risposta non è JSON e non ci sono tool, `logic` solleva `ClarificationNeeded` (non è un errore fatale: `main` stampa `[CHIARIMENTO]` e il ticket resta `OPEN`).
 
 Gli errori di parsing/API nascono nei passi 2 e 5; il boundary in `main.py` li converte in `log_event` + `return None`.
 
@@ -70,9 +72,11 @@ flowchart TD
         Client --> Llm1["_call_llm_with_tools"]
         Llm1 --> HasTools{tool_calls?}
         HasTools -->|sì| ExecTools["_execute_tool_calls"]
-        HasTools -->|no| Fallback["_apply_policy_fallback"]
+        HasTools -->|no| Fallback["_apply_all_fallbacks"]
         ExecTools --> Fallback
-        Fallback --> NeedJson{serve JSON\nfinale?}
+        Fallback --> Clarify{testo non-JSON?}
+        Clarify -->|sì| ClarExc[ClarificationNeeded]
+        Clarify -->|no| NeedJson{serve JSON\nfinale?}
         NeedJson -->|sì| FinalJson["_request_final_json"]
         NeedJson -->|no| DirectContent["content prima risposta"]
         FinalJson -->|risposta vuota / JSON invalido| ErrBoundary
@@ -97,17 +101,7 @@ flowchart TD
 
 **Caso didattico importante:** se la chiamata LLM fallisce dopo il save `OPEN`, il ticket resta in JSONL senza classificazione. È uno **stato parziale** da discutere (rollback, flag `FAILED`, retry manuale).
 
-**Scenario E (ambiguo SALES vs IT, RAG):** il ticket «acquistare il corso + pagina pagamento non carica» può essere classificato **SALES** dall’LLM se ignora il manuale. In quel caso il ticket resta comunque `OPEN` o viene salvato `TRIAGED` con categoria errata — utile in classe per confrontare output con e senza voce «Portale pagamenti» in `data/manuale_it.txt`. Criterio di successo: `categoria` IT e `analisi_problema` che cita il MANUALE ed esclude SALES (vedi [README.md](README.md)).
-
-**Scenari G / H / I (policy commerciale e escalation):**
-
-| Scenario | Ticket demo | Rischio didattico | Comportamento atteso |
-|----------|-------------|-------------------|----------------------|
-| **G** — VIP | Ing. Rossi, 15.500€ (`VIP_ESCALATION_TICKET`) | LLM non chiama `notify_manager` | `_apply_policy_fallback` → observation in conversation → `_request_final_json`; log `manager_escalation` |
-| **H** — standard | Verdi & Partners, 7.500€ (`STANDARD_BUDGET_TICKET`) | Falso positivo escalation | Nessun `notify_manager` (sotto soglia 10k) |
-| **I** — ARRABBIATO | Portale down, 20k€, avvocato (`ANGRY_SENTIMENT_TICKET`) | LLM ignora policy §3.1 | Fallback: `search_policy` + `notify_manager`, poi JSON finale |
-
-I few-shot usano testi diversi (es. Dr. Esposito 15.000€, Bianchi 8.000€) per stabilizzare il formato senza copiare i demo.
+**Demo attuali (Lezione 9 — M1–M3):** vedi [README.md](README.md). **M1** può lasciare il ticket `OPEN` se l’LLM chiede chiarimento (`ClarificationNeeded`). **M2** verifica long-term + fallback escalation su storico Marco. I fallback policy (VIP, ARRABBIATO) e long-term restano in `_apply_all_fallbacks`.
 
 Il fallback **non è un errore**: è una guardia operativa in `_run_agent_loop` dopo la prima risposta LLM; le observation entrano nel contesto della seconda chiamata. Se un tool solleva eccezione, il boundary in `main.py` cattura `ValueError`/`OSError`.
 
@@ -125,7 +119,7 @@ flowchart TD
     N2 --> End
 ```
 
-Dettaglio scenari e comandi: [README.md — Escalation e fallback](README.md#escalation-e-fallback-deterministico).
+Dettaglio scenari e comandi: [README.md — Demo Lezione 9](README.md#demo-lezione-9-m1m3).
 
 ### Cosa esiste oggi
 
@@ -134,7 +128,7 @@ Dettaglio scenari e comandi: [README.md — Escalation e fallback](README.md#esc
 | `raise ValueError(...)` | `client.py`, `logic.py`, `parser.py`, `enrichment.py`, `router.py`, `schemas/ticket.py` | Messaggi in italiano |
 | `raise ... from e` | `parser.py` — `JSONDecodeError`, `ValidationError` | Catena traceback preservata |
 | Boundary tipizzato | `main.py` — `except (FileNotFoundError, ValueError, OSError)` | Cattura errori da tutta la pipeline |
-| Suite test essenziale | `tests/` — **24 test**, alcuni `pytest.raises` | Vedi tabella sotto |
+| Suite test essenziale | `tests/` — **40 test**, alcuni `pytest.raises` | Vedi tabella sotto |
 | Percorsi centralizzati | `paths.py` | Manuale, policy, ticket, log, `.env` |
 | Separazione agente / orchestrazione | `logic.py` (`_run_agent_loop`) vs `main.py` | Errori LLM nascono nel nucleo loop, gestiti in `main` |
 | Nessuna eccezione di dominio | — | Obiettivo dei moduli 2–4 |
@@ -177,7 +171,7 @@ Estrazione JSON con **parentesi bilanciate** (non regex greedy): riduce falsi po
 - JSONL: nessuna gestione esplicita di righe corrotte in `next_ticket_id()`.
 - Boundary non distingue messaggi per tipo (config vs parsing vs regole).
 - Stato parziale `OPEN` dopo fallimento LLM non documentato in UI/log dedicato.
-- Suite essenziale (24 test): parser, store, enrichment, router, logic (mock loop + fallback in conversation), tools, main; nessun E2E con API reale.
+- Suite essenziale (40 test): parser, store, enrichment, router, logic, memory, history_tools, tools, main; nessun E2E con API reale.
 
 ### Flusso oggi vs obiettivo
 
@@ -258,7 +252,7 @@ Vantaggi:
 
 | Scelta | Quando ha senso |
 |--------|------------------|
-| `return None` + messaggio | CLI didattica, `run_demo_scenarios()`: un errore non deve far crashare tutti gli scenari |
+| `return None` + messaggio | CLI didattica, `run_demo()`: un errore non deve far crashare tutti gli scenari M1–M3 |
 | Eccezione che risale | Librerie riusabili, API HTTP (status 4xx/5xx), test che verificano il tipo esatto |
 
 In questo corso, **`None` + messaggio differenziato** in `main.py` è sufficiente.
@@ -298,7 +292,7 @@ Durata indicativa: 30 min – 2 ore per modulo.
 - Perché l’ultimo snapshot può avere `team` valorizzato ma status ancora `TRIAGED`?
 - `return None` è sempre la scelta giusta per un’API REST?
 
-**File da leggere:** `src/main.py`, `src/logic.py` (`_run_agent_loop`, `_apply_policy_fallback`), `src/client.py`, `src/prompts/triage_v1.py`, `src/parsing/parser.py`, `src/tools/office_tools.py`, `src/tools/registry.py`, `src/storage/store.py`, `src/tools/enrichment.py`, `src/tools/router.py`.
+**File da leggere:** `src/main.py`, `src/logic.py` (`_run_agent_loop`, `_apply_all_fallbacks`, `ClarificationNeeded`), `src/memory/`, `src/tools/history_tools.py`, `src/client.py`, `src/prompts/triage_v1.py`, `src/parsing/parser.py`, `src/tools/office_tools.py`, `src/tools/registry.py`, `src/storage/store.py`, `src/tools/enrichment.py`, `src/tools/router.py`.
 
 **Output atteso:** schema flusso errori + tabella stati parziali su JSONL.
 
@@ -465,7 +459,7 @@ Checklist Modulo 0 — aggiornare dopo ogni migrazione.
 |------|--------------|---------|--------|
 | `client.py` | `ValueError` | API key mancante | `ConfigError` |
 | `logic.py` | `ValueError` | Risposta vuota dal modello | `LLMError` o `ParseError` |
-| `logic.py` | (nessuno) | `_apply_policy_fallback` — tool in conversation, non raise | Documentato in README; opz. `BusinessRuleError` se tool fallisce |
+| `logic.py` | `ClarificationNeeded` | `_apply_all_fallbacks` — tool in conversation, non raise | Documentato in README; opz. `BusinessRuleError` se tool fallisce |
 | `parser.py` | `ValueError` + `from e` | JSON / schema | `ParseError` + `from e` |
 | `schemas/ticket.py` | `ValueError` (Pydantic) | Campi vuoti, TRIAGED incompleto | Resta in Pydantic; parser → `ParseError` |
 | `main.py` | `FileNotFoundError` | Manuale assente | `ConfigError` o handler dedicato |
@@ -478,17 +472,20 @@ Checklist Modulo 0 — aggiornare dopo ogni migrazione.
 
 ## Test e copertura fallimenti
 
-Suite essenziale: **24 test** (`pytest tests/ -q`, `pythonpath = src` in `pyproject.toml`). Nessuna chiamata API reale.
+Suite essenziale: **40 test** (`pytest tests/ -q`, `pythonpath = src` in `pyproject.toml`). Nessuna chiamata API reale.
 
-| File test | Test | Cosa copre |
-|-----------|------|------------|
-| `test_parser.py` | 2 | JSON valido; assenza JSON → `ValueError` |
-| `test_store.py` | 2 | `next_ticket_id`; ultimo snapshot con `team` |
-| `test_enrichment.py` | 2 | `urgente` → HIGH; ticket senza priorità |
-| `test_router.py` | 4 | Routing IT, BILLING, SALES, SECURITY (parametrizzato) |
-| `test_logic.py` | 10 | Loop mock; budget/sentiment; fallback VIP/angry con 2 chiamate API; tool in conversation |
-| `test_tools.py` | 3 | `search_policy` file + sentiment; `notify_manager` + registry |
-| `test_main.py` | 1 | 9 scenari demo (A–I; G escalation, H budget sotto 10k, I sentiment ARRABBIATO) |
+| File test | Cosa copre |
+|-----------|------------|
+| `test_parser.py` | JSON valido; assenza JSON |
+| `test_store.py` | `next_ticket_id`; ultimo snapshot |
+| `test_enrichment.py` | Keyword priorità |
+| `test_router.py` | Routing 4 categorie |
+| `test_logic.py` | Loop mock; fallback policy |
+| `test_tools.py` | Tool + registry (incluso `search_long_term_history`) |
+| `test_session_manager.py` | Short-term memory |
+| `test_extractors.py` | `cliente_nome`, sentiment |
+| `test_history_tools.py` | Long-term memory |
+| `test_main.py` | Scenari demo M1–M3 |
 
 Fixture in `tests/conftest.py`: `triaged_ticket`, isolamento `TICKETS_PATH` su file temporaneo.
 
@@ -511,7 +508,7 @@ Fixture in `tests/conftest.py`: `triaged_ticket`, isolamento `TICKETS_PATH` su f
 
 ## Messaggio riassuntivo
 
-> Il progetto ha già boundary tipizzato, nucleo loop in `logic.py`, parser con `from e`, persistenza a snapshot (OPEN → TRIAGED → routed con `team`) e 24 test sui fallimenti nei moduli core. Non serve rifare tutto né chiedere a Cursor un refactor unico.
+> Il progetto ha già boundary tipizzato, nucleo loop in `logic.py`, memoria short/long-term, `ClarificationNeeded` per turni ambigui, parser con `from e`, persistenza a snapshot (OPEN → TRIAGED → routed con `team`) e 40 test sui moduli core. Non serve rifare tutto né chiedere a Cursor un refactor unico.
 >
 > Percorso: (1) mappa errori e stati parziali su JSONL, (2) esercizio minimale su `raise from`, (3) `errors.py` e migra un modulo per volta con test, (4) boundary con messaggi per tipo in `main.py`.
 >
@@ -521,12 +518,14 @@ Fixture in `tests/conftest.py`: `triaged_ticket`, isolamento `TICKETS_PATH` su f
 
 ## Collegamenti
 
-- [README.md](README.md) — architettura, nucleo loop, pipeline, 9 scenari demo, setup
+- [README.md](README.md) — architettura, memoria, demo M1–M3, setup
 - `src/main.py` — orchestrazione e boundary
 - `src/logic.py` — nucleo loop agentico (`_run_agent_loop`, tool locali, fallback, JSON finale)
 - `src/client.py` — connessione OpenAI
 - `src/paths.py` — percorsi assoluti (log, dati, manuale, policy, `.env`)
 - `src/parsing/parser.py` — parsing e incapsulamento
-- `src/tools/office_tools.py` — tool `search_policy`, `notify_manager`
+- `src/tools/office_tools.py` — `search_policy`, `notify_manager`
+- `src/tools/history_tools.py` — `search_long_term_history`
+- `src/memory/` — `SessionManager`, extractors
 - `tests/conftest.py` — fixture condivise
-- `tests/test_*.py` — suite essenziale (24 test); estendere dopo ogni migrazione errori
+- `tests/test_*.py` — suite essenziale (40 test); estendere dopo ogni migrazione errori
