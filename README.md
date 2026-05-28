@@ -87,7 +87,7 @@ flowchart TD
     Open --> Triage[triage_message + history]
     Cont --> Triage
     Triage --> Clarify{ClarificationNeeded?}
-    Clarify -->|sì| Stop[[CHIARIMENTO] ticket OPEN]
+    Clarify -->|sì| Stop["CHIARIMENTO — ticket OPEN"]
     Clarify -->|no| Enrich[enrich_priority]
     Enrich --> Route[assign_to_team]
     Route --> Log[ticket_processed]
