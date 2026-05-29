@@ -8,7 +8,7 @@ Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSO
 |--------|--------|
 | [`main.py`](src/main.py) | Orchestrazione, `SessionManager`, demo didattiche M1–M3 |
 | [`logic.py`](src/logic.py) | Loop agentico: LLM → tool → fallback → JSON |
-| [`client.py`](src/client.py) | Client OpenAI (`OPENAI_API_KEY` in `.env`) |
+| [`client.py`](src/client.py) | Client OpenAI (`OPENAI_API_KEY` solo nel file `.env`, non dalla shell) |
 
 | Package / file | Ruolo |
 |----------------|--------|
@@ -75,7 +75,15 @@ Stesso `ticket_id`, più turni. `SessionManager` (in-memory) conserva il thread;
 
 Ogni `ticket_processed` in `logs/activity.jsonl` include `cliente_nome` e `sentiment`. Il tool `search_long_term_history` legge lo storico; se ≥4 ticket **IT + ARRABBIATO** in 24h → fallback `notify_manager` (priority 4).
 
-In demo **M2** lo storico è isolato in `logs/demo_m2_activity.jsonl` (seed con `reset=True`, ripetibile).
+**Demo M2 — due log distinti:**
+
+| Operazione | File |
+|------------|------|
+| Seed storico (`seed_marco_angry_history`) | `logs/demo_m2_activity.jsonl` |
+| Lettura storico + soglia escalation (`search_long_term_history`, `should_escalate_repeat_customer`) | `demo_m2_activity.jsonl` durante il patch in `run_ltm_demo()` |
+| Eventi live della run (`log_event`, es. `ticket_received`, `ticket_processed`) | `logs/activity.jsonl` (sempre) |
+
+Il seed con `reset=True` rende ripetibile la lezione; la **ricerca** long-term in M2 non legge il log principale, ma gli eventi della sessione corrente vengono comunque auditati in `activity.jsonl`.
 
 ## Pipeline ticket
 
@@ -140,7 +148,7 @@ PYTHONPATH=src python3 src/main.py --scenario m1
 PYTHONPATH=src python3 src/main.py --scenario m2
 ```
 
-Richiede `OPENAI_API_KEY` in `.env`.
+**API key:** imposta `OPENAI_API_KEY=sk-...` nel file `.env` alla root del repo. Non viene letta da `export` in shell (`client.py` usa solo `dotenv_values` sul file).
 
 ### Testi demo (distinti dai few-shot)
 
@@ -166,11 +174,13 @@ if t:
 ```
 agentic-triage-system/
 ├── .env
+├── README.md
+├── GESTIONE_ERRORI.md
 ├── data/
 │   ├── manuale_it.txt
 │   ├── policy.txt
-│   └── tickets.jsonl
-├── logs/                          # gitignored
+│   └── tickets.jsonl          # runtime, gitignored
+├── logs/                      # gitignored
 │   ├── activity.jsonl
 │   └── demo_m2_activity.jsonl
 ├── src/
@@ -180,8 +190,10 @@ agentic-triage-system/
 │   ├── paths.py
 │   ├── memory/
 │   ├── prompts/triage_v1.py
+│   ├── parsing/parser.py
+│   ├── schemas/ticket.py
 │   ├── storage/store.py
-│   └── tools/
+│   └── tools/                 # registry, history, office, enrichment, router, logger
 └── tests/
 ```
 
@@ -191,7 +203,7 @@ agentic-triage-system/
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[test]"
-# .env: OPENAI_API_KEY=sk-...
+# Crea .env nella root: OPENAI_API_KEY=sk-...  (obbligatorio per demo live, non basta export)
 pytest tests/ -q
 ```
 

@@ -106,6 +106,12 @@ def search_long_term_history(
     return " ".join(lines)
 
 
-def should_escalate_repeat_customer(cliente_nome: str, hours: int = 24) -> bool:
-    records = _load_ticket_processed_records(LOG_FILE_PATH, cliente_nome, hours)
+def should_escalate_repeat_customer(
+    cliente_nome: str,
+    hours: int = 24,
+    log_path: Path | None = None,
+) -> bool:
+    """True se >=4 ticket IT+ARRABBIATO nel log indicato (default: LOG_FILE_PATH del modulo)."""
+    path = log_path or LOG_FILE_PATH
+    records = _load_ticket_processed_records(path, cliente_nome, hours)
     return count_angry_technical_tickets(records) >= _REPEAT_ESCALATION_THRESHOLD

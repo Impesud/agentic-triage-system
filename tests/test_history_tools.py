@@ -48,6 +48,15 @@ def test_should_escalate_repeat_customer(tmp_path, monkeypatch):
     assert should_escalate_repeat_customer("Altro", hours=24) is False
 
 
+def test_should_escalate_explicit_log_path(tmp_path):
+    log_file = tmp_path / "demo.jsonl"
+    for i in range(4):
+        _write_processed(log_file, "Marco", "IT", "ARRABBIATO")
+
+    assert should_escalate_repeat_customer("Marco", hours=24, log_path=log_file) is True
+    assert should_escalate_repeat_customer("Marco", hours=24, log_path=tmp_path / "empty.jsonl") is False
+
+
 def test_count_angry_technical():
     records = [
         {"categoria": "IT", "sentiment": "ARRABBIATO"},
