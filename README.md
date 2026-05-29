@@ -161,6 +161,15 @@ PYTHONPATH=src python3 src/main.py --scenario l10
 
 Richiede `OPENAI_API_KEY` in `.env` per embeddings reali.
 
+### Lezione 10B — ChromaDB (sotto-lezione)
+
+Per **installare, configurare e usare** un database vettoriale persistente (ChromaDB embedded), seguire la guida didattica dedicata:
+
+**[docs/LEZIONE_10B_CHROMADB.md](docs/LEZIONE_10B_CHROMADB.md)**
+
+Contiene: prerequisiti, `pip install chromadb`, configurazione `data/chroma/`, script di laboratorio `scripts/esercizio_chroma_policy.py`, checklist docente e troubleshooting.  
+L’integrazione nel codice di `policy_semantic.py` è il passo successivo; la sotto-lezione funziona già con lo script autonomo.
+
 ## Demo Lezione 9 (M1–M3)
 
 Metadati in `DEMO_SCENARIOS` (`Lesson9Scenario`: obiettivo, messaggi, cosa osservare). Ordine in `run_demo()`: **M3 → M1 → M2**.
@@ -213,11 +222,15 @@ if t:
 ```
 agentic-triage-system/
 ├── .env
+├── .env.example
 ├── README.md
 ├── GESTIONE_ERRORI.md
+├── docs/
+│   └── LEZIONE_10B_CHROMADB.md   # sotto-lezione ChromaDB
 ├── data/
 │   ├── manuale_it.txt
 │   ├── policy.txt
+│   ├── chroma/                  # indice ChromaDB (runtime, gitignored dopo integrazione)
 │   └── tickets.jsonl          # runtime, gitignored
 ├── logs/                      # gitignored
 │   ├── activity.jsonl

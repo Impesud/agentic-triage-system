@@ -107,6 +107,8 @@ Il fallback **non è un errore**: è una guardia operativa in `_run_agent_loop` 
 
 **RAG `search_policy` (Lezione 10):** in `office_tools.py`, errori API key / rete / embeddings (`ValueError`, `OSError`, `RuntimeError`) non propagano al boundary del ticket: `search_policy` ripiega su `_search_policy_keyword`. Score sotto soglia 0.38 → stesso fallback. La demo L10 cattura esplicitamente gli errori embeddings e mostra il fallback didattico.
 
+**ChromaDB (Lezione 10B — sotto-lezione):** installazione, persistenza in `data/chroma/` e laboratorio guidato sono in [docs/LEZIONE_10B_CHROMADB.md](docs/LEZIONE_10B_CHROMADB.md). Dopo l’integrazione nel codice, errori di I/O su disco o collection corrotta seguiranno lo stesso principio del RAG: fallback keyword, senza far fallire il ticket.
+
 ```mermaid
 flowchart TD
     Input[user_input] --> Already{notify_manager\ngià invocato?}
