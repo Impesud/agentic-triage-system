@@ -29,7 +29,7 @@ L’abbonamento a Cursor **non è necessario** per questo argomento. Conta molto
 
 ## Stato attuale del progetto
 
-Il codice ha una gestione errori di **livello 1–2**: fail-fast con `ValueError`, boundary in `main.py`, parser con `raise ... from e` su JSON e Pydantic, nucleo loop in `logic.py` (`_run_agent_loop`), memoria short/long-term, suite di **40 test** sui fallimenti principali e sui fallback. Manca ancora una **gerarchia di eccezioni di dominio**.
+Il codice ha una gestione errori di **livello 1–2**: fail-fast con `ValueError`, boundary in `main.py`, parser con `raise ... from e` su JSON e Pydantic, nucleo loop in `logic.py` (`_run_agent_loop`), memoria short/long-term, RAG semantica su policy (Lezione 10), suite di **48 test** sui fallimenti principali e sui fallback. Manca ancora una **gerarchia di eccezioni di dominio**.
 
 ### Nucleo agentico (`logic.py`) — riferimento rapido
 
@@ -101,9 +101,11 @@ flowchart TD
 
 **Caso didattico importante:** se la chiamata LLM fallisce dopo il save `OPEN`, il ticket resta in JSONL senza classificazione. È uno **stato parziale** da discutere (rollback, flag `FAILED`, retry manuale).
 
-**Demo attuali (Lezione 9 — M1–M3):** vedi [README.md](README.md). **M1** può lasciare il ticket `OPEN` se l’LLM chiede chiarimento (`ClarificationNeeded`). **M2** verifica long-term + fallback escalation su storico Marco. I fallback policy (VIP, ARRABBIATO) e long-term restano in `_apply_all_fallbacks`.
+**Demo attuali:** Lezione 9 (M1–M3) e Lezione 10 (L10 RAG) — vedi [README.md](README.md). **M1** può lasciare il ticket `OPEN` se l’LLM chiede chiarimento (`ClarificationNeeded`). **M2** verifica long-term + fallback escalation su storico Marco. **L10** invoca `semantic_policy_search` con query sinonimica (successo = score ≥ 0.38, non match lessicale). I fallback policy (VIP, ARRABBIATO) e long-term restano in `_apply_all_fallbacks`.
 
 Il fallback **non è un errore**: è una guardia operativa in `_run_agent_loop` dopo la prima risposta LLM; le observation entrano nel contesto della seconda chiamata. Se un tool solleva eccezione, il boundary in `main.py` cattura `ValueError`/`OSError`.
+
+**RAG `search_policy` (Lezione 10):** in `office_tools.py`, errori API key / rete / embeddings (`ValueError`, `OSError`, `RuntimeError`) non propagano al boundary del ticket: `search_policy` ripiega su `_search_policy_keyword`. Score sotto soglia 0.38 → stesso fallback. La demo L10 cattura esplicitamente gli errori embeddings e mostra il fallback didattico.
 
 ```mermaid
 flowchart TD
@@ -119,7 +121,7 @@ flowchart TD
     N2 --> End
 ```
 
-Dettaglio scenari e comandi: [README.md — Demo Lezione 9](README.md#demo-lezione-9-m1m3).
+Dettaglio scenari e comandi: [README — Demo Lezione 9](README.md#demo-lezione-9-m1m3), [README — RAG Lezione 10](README.md#rag-semantica-lezione-10).
 
 ### Cosa esiste oggi
 
@@ -472,7 +474,7 @@ Checklist Modulo 0 — aggiornare dopo ogni migrazione.
 
 ## Test e copertura fallimenti
 
-Suite essenziale: **40 test** (`pytest tests/ -q`, `pythonpath = src` in `pyproject.toml`). Nessuna chiamata API reale.
+Suite essenziale: **48 test** (`pytest tests/ -q`, `pythonpath = src` in `pyproject.toml`). Nessuna chiamata API reale (mock su LLM e embeddings).
 
 | File test | Cosa copre |
 |-----------|------------|
@@ -481,7 +483,8 @@ Suite essenziale: **40 test** (`pytest tests/ -q`, `pythonpath = src` in `pyproj
 | `test_enrichment.py` | Keyword priorità |
 | `test_router.py` | Routing 4 categorie |
 | `test_logic.py` | Loop mock; fallback policy |
-| `test_tools.py` | Tool + registry (incluso `search_long_term_history`) |
+| `test_tools.py` | Tool + registry (mock embeddings per `search_policy`) |
+| `test_policy_semantic.py` | Chunking, cosine, RAG sinonimi, fallback keyword |
 | `test_session_manager.py` | Short-term memory |
 | `test_extractors.py` | `cliente_nome`, sentiment |
 | `test_history_tools.py` | Long-term memory |
@@ -508,7 +511,7 @@ Fixture in `tests/conftest.py`: `triaged_ticket`, isolamento `TICKETS_PATH` su f
 
 ## Messaggio riassuntivo
 
-> Il progetto ha già boundary tipizzato, nucleo loop in `logic.py`, memoria short/long-term, `ClarificationNeeded` per turni ambigui, parser con `from e`, persistenza a snapshot (OPEN → TRIAGED → routed con `team`) e 40 test sui moduli core. Non serve rifare tutto né chiedere a Cursor un refactor unico.
+> Il progetto ha già boundary tipizzato, nucleo loop in `logic.py`, memoria short/long-term, RAG semantica su policy, `ClarificationNeeded` per turni ambigui, parser con `from e`, persistenza a snapshot (OPEN → TRIAGED → routed con `team`) e 48 test sui moduli core. Non serve rifare tutto né chiedere a Cursor un refactor unico.
 >
 > Percorso: (1) mappa errori e stati parziali su JSONL, (2) esercizio minimale su `raise from`, (3) `errors.py` e migra un modulo per volta con test, (4) boundary con messaggi per tipo in `main.py`.
 >
@@ -518,14 +521,15 @@ Fixture in `tests/conftest.py`: `triaged_ticket`, isolamento `TICKETS_PATH` su f
 
 ## Collegamenti
 
-- [README.md](README.md) — architettura, memoria, demo M1–M3, setup
+- [README.md](README.md) — architettura, memoria, RAG L10, demo M1–M3 e L10, setup
 - `src/main.py` — orchestrazione e boundary
 - `src/logic.py` — nucleo loop agentico (`_run_agent_loop`, tool locali, fallback, JSON finale)
 - `src/client.py` — connessione OpenAI
 - `src/paths.py` — percorsi assoluti (log, dati, manuale, policy, `.env`)
 - `src/parsing/parser.py` — parsing e incapsulamento
-- `src/tools/office_tools.py` — `search_policy`, `notify_manager`
+- `src/rag/policy_semantic.py` — chunking, embeddings, cosine similarity (Lezione 10)
+- `src/tools/office_tools.py` — `search_policy` (RAG + fallback keyword), `notify_manager`
 - `src/tools/history_tools.py` — `search_long_term_history`
 - `src/memory/` — `SessionManager`, extractors
 - `tests/conftest.py` — fixture condivise
-- `tests/test_*.py` — suite essenziale (40 test); estendere dopo ogni migrazione errori
+- `tests/test_*.py` — suite essenziale (48 test); estendere dopo ogni migrazione errori

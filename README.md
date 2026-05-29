@@ -1,12 +1,12 @@
 # Agentic Customer Care Triage System
 
-Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSON), tool locali, **memoria short/long-term** (Lezione 9) e persistenza append-only.
+Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSON), tool locali, **memoria short/long-term** (Lezione 9), **RAG semantica su policy** (Lezione 10) e persistenza append-only.
 
 ## Architettura
 
 | Modulo | Ruolo |
 |--------|--------|
-| [`main.py`](src/main.py) | Orchestrazione, `SessionManager`, demo didattiche M1–M3 |
+| [`main.py`](src/main.py) | Orchestrazione, `SessionManager`, demo didattiche M1–M3 e L10 |
 | [`logic.py`](src/logic.py) | Loop agentico: LLM → tool → fallback → JSON |
 | [`client.py`](src/client.py) | Client OpenAI (`OPENAI_API_KEY` solo nel file `.env`, non dalla shell) |
 
@@ -15,7 +15,8 @@ Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSO
 | [`memory/session_manager.py`](src/memory/session_manager.py) | Short-term: cronologia `user`/`assistant` per `ticket_id` |
 | [`memory/extractors.py`](src/memory/extractors.py) | Estrazione `cliente_nome` e `sentiment` per audit log |
 | [`tools/history_tools.py`](src/tools/history_tools.py) | Long-term: `search_long_term_history` |
-| [`tools/office_tools.py`](src/tools/office_tools.py) | `search_policy`, `notify_manager` |
+| [`rag/policy_semantic.py`](src/rag/policy_semantic.py) | Chunking policy, embeddings, cosine similarity (Lezione 10) |
+| [`tools/office_tools.py`](src/tools/office_tools.py) | `search_policy` (RAG + fallback keyword), `notify_manager` |
 | [`tools/registry.py`](src/tools/registry.py) | `TOOL_MAP` e schema OpenAI |
 | [`prompts/triage_v1.py`](src/prompts/triage_v1.py) | System prompt, 2 few-shot, `build_chat_messages(history=…)` |
 | [`paths.py`](src/paths.py) | Percorsi repo (`LOG_FILE_PATH`, `DEMO_M2_LOG_PATH`, …) |
@@ -42,6 +43,10 @@ flowchart TB
         SP[search_policy]
         NM[notify_manager]
     end
+    subgraph rag_pkg [rag]
+        RAG[policy_semantic]
+    end
+    SP --> RAG
     PT --> TM
     CT --> TM
     Loop --> LTM
@@ -59,6 +64,7 @@ flowchart TB
 | `continue_ticket(ticket_id, messaggio)` | Turno successivo (short-term memory) |
 | `seed_marco_angry_history(n, log_path, reset=…)` | Seed demo M2 (storico Marco) |
 | `run_demo()` / `run_*_demo()` | Scenari didattici M3 → M1 → M2 |
+| `run_l10_rag_demo()` | Demo Lezione 10: RAG semantica su `data/policy.txt` |
 
 ## Memoria (Lezione 9)
 
@@ -106,7 +112,7 @@ flowchart TD
 | Tool | Quando |
 |------|--------|
 | `search_long_term_history` | Cliente identificabile nel thread (`context_text`) |
-| `search_policy` | Policy commerciale, sentiment ARRABBIATO |
+| `search_policy` | Policy via RAG semantica (embeddings + cosine); fallback keyword se API assente o score sotto 0.38 |
 | `notify_manager` | VIP >10k€, ARRABBIATO, o storico cliente critico |
 
 [`_apply_all_fallbacks`](src/logic.py) in `logic.py` unisce fallback **policy** (VIP, ARRABBIATO) e **long-term** (storico Marco). I tool mancanti vengono eseguiti e le observation sono aggiunte alla conversazione prima del JSON finale.
@@ -122,6 +128,38 @@ flowchart TD
   "messaggio_originale": "ultimo input utente del turno corrente"
 }
 ```
+
+## RAG semantica (Lezione 10)
+
+Il tool `search_policy` non confronta più parole esatte su `data/policy.txt`. Pipeline in [`rag/policy_semantic.py`](src/rag/policy_semantic.py):
+
+1. **Paragraph chunking** — split su `\n\n` (paragrafi autocontenuti)
+2. **Embeddings** — OpenAI `text-embedding-3-small` (chunk policy + query utente)
+3. **Cosine similarity** — selezione del chunk con score massimo
+4. **Soglia** — 0.38; sotto soglia → fallback keyword (Lezione 6)
+
+L’observation restituita all’LLM include score e testo del chunk: `[RAG semantica | score=0.xxx]`.
+
+```mermaid
+flowchart LR
+    Q[query utente] --> EmbQ[embedding query]
+    Policy[data/policy.txt] --> Chunk[chunk_policy]
+    Chunk --> EmbC[embedding chunk cached]
+    EmbQ --> Cos[cosine similarity]
+    EmbC --> Cos
+    Cos -->|score >= 0.38| Obs[Observation al LLM]
+    Cos -->|score < 0.38| KW[fallback keyword]
+```
+
+### Demo L10
+
+Query **senza parole in comune** con la policy (es. «annullare contratto e riavere i soldi» → paragrafo «recesso per ripensamento / 14 giorni»). Il successo si valuta dal **score**, non da match lessicali nel testo.
+
+```bash
+PYTHONPATH=src python3 src/main.py --scenario l10
+```
+
+Richiede `OPENAI_API_KEY` in `.env` per embeddings reali.
 
 ## Demo Lezione 9 (M1–M3)
 
@@ -146,6 +184,7 @@ PYTHONPATH=src python3 src/main.py
 PYTHONPATH=src python3 src/main.py --scenario m3
 PYTHONPATH=src python3 src/main.py --scenario m1
 PYTHONPATH=src python3 src/main.py --scenario m2
+PYTHONPATH=src python3 src/main.py --scenario l10   # RAG semantica (Lezione 10)
 ```
 
 **API key:** imposta `OPENAI_API_KEY=sk-...` nel file `.env` alla root del repo. Non viene letta da `export` in shell (`client.py` usa solo `dotenv_values` sul file).
@@ -189,6 +228,7 @@ agentic-triage-system/
 │   ├── client.py
 │   ├── paths.py
 │   ├── memory/
+│   ├── rag/                   # policy_semantic.py (Lezione 10)
 │   ├── prompts/triage_v1.py
 │   ├── parsing/parser.py
 │   ├── schemas/ticket.py
@@ -207,7 +247,7 @@ pip install -e ".[test]"
 pytest tests/ -q
 ```
 
-**40 test**, senza chiamate LLM reali (mock su `logic.get_client`).
+**48 test**, senza chiamate LLM reali (mock su `logic.get_client` e `rag.policy_semantic.get_client`).
 
 | File | Verifica |
 |------|----------|
@@ -215,7 +255,8 @@ pytest tests/ -q
 | `test_extractors.py` | `cliente_nome`, `sentiment` |
 | `test_history_tools.py` | Storico e soglia escalation |
 | `test_logic.py` | Loop, history, fallback |
-| `test_tools.py` | Registry e tool |
+| `test_tools.py` | Registry e tool (mock embeddings) |
+| `test_policy_semantic.py` | Chunking, cosine, RAG sinonimi, fallback |
 | `test_main.py` | Scenari M1–M3, seed `reset` |
 
 Errori e stati parziali: [`GESTIONE_ERRORI.md`](GESTIONE_ERRORI.md).

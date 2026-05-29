@@ -1,5 +1,5 @@
 """
-Prompt v1 per il sistema di Customer Care Triage (Lezione 9: memoria).
+Prompt v1 per il sistema di Customer Care Triage (Lezione 9: memoria, Lezione 10: RAG policy).
 """
 
 import json
@@ -24,12 +24,13 @@ MEMORIA A LUNGO TERMINE:
 FLUSSO DI LAVORO:
 1. Leggi messaggio + cronologia + MANUALE IT (procedure tecniche).
 2. Cliente identificabile → search_long_term_history.
-3. Dubbi su policy commerciale / sentiment ARRABBIATO / budget >10k → search_policy poi notify_manager se richiesto.
+3. Dubbi su policy commerciale / sentiment ARRABBIATO / budget >10k / recesso-rimborsi → search_policy
+   (ricerca semantica: usa sinonimi concettuali, non solo parole esatte) poi notify_manager se richiesto.
 4. Output finale SOLO JSON (nessun markdown).
 
 TOOL DISPONIBILI:
 - search_long_term_history(cliente_nome, hours?): storico ticket del cliente da audit log.
-- search_policy(query): policy commerciale (sconti, budget, escalation).
+- search_policy(query): policy commerciale via RAG semantica (sconti, budget, rimborsi, recesso, escalation).
 - notify_manager(message, priority): escalation manager (priority 1-4).
 
 REGOLE OUTPUT JSON:

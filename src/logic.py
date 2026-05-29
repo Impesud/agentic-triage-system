@@ -1,5 +1,5 @@
 """
-Nucleo del loop agentico (logic.py) — Lezione 9: memoria short/long-term.
+Nucleo del loop agentico (logic.py) — Lezione 9: memoria; Lezione 10: tool search_policy con RAG.
 """
 
 import json
