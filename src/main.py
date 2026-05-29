@@ -1,9 +1,10 @@
 """
-Orchestrazione ticket e demo didattiche Lezione 9 (memoria short/long-term).
+Orchestrazione ticket e demo didattiche Lezione 9/10.
 
 Esecuzione demo:
   PYTHONPATH=src python src/main.py              # M3 → M1 → M2
   PYTHONPATH=src python src/main.py --scenario m1
+  PYTHONPATH=src python src/main.py --scenario l10   # RAG semantica su policy
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ from storage.store import get_current_ticket, next_ticket_id, save_ticket
 from tools import history_tools
 from tools.enrichment import enrich_priority
 from tools.logger import log_event
+from tools.office_tools import search_policy
 from tools.router import assign_to_team
 
 # --- Testi demo (distinti dai few-shot in triage_v1.py) ---
@@ -39,6 +41,10 @@ LTM_MARCO_TICKET = (
 )
 
 SMOKE_IT_TICKET = "Non riesco ad accedere alla casella aziendale, risulta bloccata."
+
+L10_SYNONYM_QUERY = (
+    "Voglio annullare il contratto e riavere i soldi: è possibile un rimborso?"
+)
 
 
 @dataclass(frozen=True)
@@ -325,6 +331,35 @@ def run_stm_demo() -> None:
     continue_ticket(ticket.id, STM_TURN2)
 
 
+def run_l10_rag_demo() -> None:
+    """Demo Lezione 10: RAG semantica su policy (sinonimi vs keyword matching)."""
+    print("\n" + "=" * 72)
+    print("SCENARIO L10 — RAG semantica su data/policy.txt")
+    print("=" * 72)
+    print(
+        "Obiettivo: mostrare che una query con sinonimi concettuali "
+        "(annullare contratto / riavere soldi) recupera il paragrafo su "
+        "recesso/rimborso 14 giorni senza match lessicale esatto."
+    )
+    print(f"\nQuery utente: {L10_SYNONYM_QUERY}")
+    print("-" * 72)
+
+    result = search_policy(L10_SYNONYM_QUERY)
+    print("\n[RISULTATO search_policy]")
+    print(result)
+    print("-" * 72)
+    if "14 giorni" in result or "recesso" in result.lower() or "rimborso" in result.lower():
+        print(
+            "[OK] Chunk policy rilevante recuperato via similarità semantica "
+            "(o fallback keyword)."
+        )
+    else:
+        print(
+            "[NOTA] Verificare OPENAI_API_KEY in .env per embeddings reali; "
+            "in assenza di API key si usa il fallback keyword."
+        )
+
+
 def run_ltm_demo() -> None:
     scenario = next(s for s in DEMO_SCENARIOS if s.id == "M2")
     _print_scenario_intro(scenario)
@@ -354,11 +389,11 @@ def run_demo() -> None:
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Demo Lezione 9 — memoria short/long-term (richiede OPENAI_API_KEY)",
+        description="Demo Lezione 9/10 — memoria agentica e RAG semantica (OPENAI_API_KEY)",
     )
     parser.add_argument(
         "--scenario",
-        choices=["m1", "m2", "m3", "all"],
+        choices=["m1", "m2", "m3", "l10", "all"],
         default="all",
         help="Esegue un solo scenario o tutti (default: all = M3→M1→M2)",
     )
@@ -375,3 +410,5 @@ if __name__ == "__main__":
         run_ltm_demo()
     elif args.scenario == "m3":
         run_smoke_demo()
+    elif args.scenario == "l10":
+        run_l10_rag_demo()

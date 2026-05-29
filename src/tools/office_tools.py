@@ -1,4 +1,5 @@
 from paths import POLICY_PATH
+from rag.policy_semantic import format_semantic_result, semantic_policy_search
 from tools.logger import log_event
 
 
@@ -20,12 +21,8 @@ def notify_manager(message: str, priority: int) -> str:
     return "Notifica di escalation inviata con successo al manager di turno."
 
 
-def search_policy(query: str) -> str:
-    """
-    Effettua una ricerca all'interno delle policy aziendali e dei manuali interni di Impesud.
-    USARE QUESTO TOOL quando il ticket richiede verifiche su sconti, rimborsi,
-    termini di servizio o procedure.
-    """
+def _search_policy_keyword(query: str) -> str:
+    """Fallback keyword matching (Lezione 6) se la RAG semantica non è disponibile."""
     if POLICY_PATH.exists():
         content = POLICY_PATH.read_text(encoding="utf-8")
         query_lower = query.lower()
@@ -69,3 +66,18 @@ def search_policy(query: str) -> str:
         )
 
     return "Policy generale: Gestire la richiesta secondo gli standard di qualità Impesud."
+
+
+def search_policy(query: str) -> str:
+    """
+    Cerca nelle policy aziendali tramite RAG semantica (embeddings + cosine similarity).
+    In caso di errore API o score sotto soglia, ripiega sul keyword matching.
+    """
+    try:
+        result = semantic_policy_search(query, POLICY_PATH)
+        if result is not None:
+            return format_semantic_result(result)
+    except (ValueError, OSError, RuntimeError):
+        pass
+
+    return _search_policy_keyword(query)

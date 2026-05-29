@@ -38,7 +38,9 @@ TOOLS_DEFINITION = [
         "function": {
             "name": "search_policy",
             "description": (
-                "Cerca in data/policy.txt: sconti, budget, rimborsi, escalation, sentiment ARRABBIATO."
+                "Cerca in data/policy.txt tramite similarità semantica (RAG): sconti, budget, "
+                "rimborsi, recesso, escalation, sentiment ARRABBIATO. Usa sinonimi concettuali, "
+                "non solo parole esatte."
             ),
             "parameters": {
                 "type": "object",

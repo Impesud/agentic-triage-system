@@ -1,7 +1,7 @@
 [project]
 name = "primo-agente"
 version = "0.1.0"
-description = "Agentic customer-care triage demo (Lezione 9): LLM, tool locali, memoria short/long-term"
+description = "Agentic customer-care triage demo (Lezione 9-10): LLM, tool locali, memoria, RAG semantica"
 dependencies = [
     "openai",
     "python-dotenv",
