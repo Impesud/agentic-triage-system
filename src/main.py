@@ -18,7 +18,8 @@ from pathlib import Path
 from logic import ClarificationNeeded, triage_message
 from memory.extractors import detect_sentiment_label, extract_cliente_nome
 from memory.session_manager import SessionManager
-from paths import DEMO_M2_LOG_PATH, LOG_FILE_PATH, MANUALE_IT_PATH
+from paths import DEMO_M2_LOG_PATH, LOG_FILE_PATH, MANUALE_IT_PATH, POLICY_PATH
+from rag.policy_semantic import format_semantic_result, semantic_policy_search
 from schemas.ticket import Ticket
 from storage.store import get_current_ticket, next_ticket_id, save_ticket
 from tools import history_tools
@@ -43,7 +44,7 @@ LTM_MARCO_TICKET = (
 SMOKE_IT_TICKET = "Non riesco ad accedere alla casella aziendale, risulta bloccata."
 
 L10_SYNONYM_QUERY = (
-    "Voglio annullare il contratto e riavere i soldi: è possibile un rimborso?"
+    "Voglio annullare il contratto e riavere i soldi: quali sono i termini?"
 )
 
 
@@ -344,19 +345,24 @@ def run_l10_rag_demo() -> None:
     print(f"\nQuery utente: {L10_SYNONYM_QUERY}")
     print("-" * 72)
 
-    result = search_policy(L10_SYNONYM_QUERY)
-    print("\n[RISULTATO search_policy]")
-    print(result)
-    print("-" * 72)
-    if "14 giorni" in result or "recesso" in result.lower() or "rimborso" in result.lower():
-        print(
-            "[OK] Chunk policy rilevante recuperato via similarità semantica "
-            "(o fallback keyword)."
-        )
+    print("\n[RISULTATO RAG semantica]")
+    try:
+        result = semantic_policy_search(L10_SYNONYM_QUERY, POLICY_PATH)
+    except (ValueError, OSError, RuntimeError) as exc:
+        print(f"[ERRORE embeddings] {exc}")
+        result = None
+
+    if result is not None:
+        print(format_semantic_result(result))
+        print("-" * 72)
+        print(f"[OK] RAG semantica: score={result.score:.3f} (soglia 0.38)")
     else:
+        fallback = search_policy(L10_SYNONYM_QUERY)
+        print(fallback)
+        print("-" * 72)
         print(
-            "[NOTA] Verificare OPENAI_API_KEY in .env per embeddings reali; "
-            "in assenza di API key si usa il fallback keyword."
+            "[NOTA] Nessun chunk sopra soglia o API non disponibile — "
+            "mostrato fallback keyword."
         )
 
 
