@@ -105,9 +105,9 @@ flowchart TD
 
 Il fallback **non è un errore**: è una guardia operativa in `_run_agent_loop` dopo la prima risposta LLM; le observation entrano nel contesto della seconda chiamata. Se un tool solleva eccezione, il boundary in `main.py` cattura `ValueError`/`OSError`.
 
-**RAG `search_policy` (Lezione 10):** in `office_tools.py`, errori API key / rete / embeddings (`ValueError`, `OSError`, `RuntimeError`) non propagano al boundary del ticket: `search_policy` ripiega su `_search_policy_keyword`. Score sotto soglia 0.38 → stesso fallback. La demo L10 cattura esplicitamente gli errori embeddings e mostra il fallback didattico.
+**RAG `search_policy` (Lezione 10):** percorso **principale** = `semantic_policy_search` (embeddings + soglia 0.38). In condizioni normali l’LLM riceve `[RAG semantica | score=…]` — **non** si usano keyword. **Eccezione:** in `office_tools.py`, errori API key / rete / embeddings (`ValueError`, `OSError`, `RuntimeError`) o score sotto 0.38 non propagano al ticket: `search_policy` ripiega su `_search_policy_keyword` (Lezione 6). La demo L10 invoca `semantic_policy_search` direttamente; il fallback keyword compare solo se la RAG fallisce (messaggio `[NOTA] …` in `main.py`).
 
-**ChromaDB (Lezione 10B — sotto-lezione):** installazione, persistenza in `data/chroma/` e laboratorio guidato sono in [docs/LEZIONE_10B_CHROMADB.md](docs/LEZIONE_10B_CHROMADB.md). Dopo l’integrazione nel codice, errori di I/O su disco o collection corrotta seguiranno lo stesso principio del RAG: fallback keyword, senza far fallire il ticket.
+**ChromaDB (Lezione 10B — sotto-lezione):** installazione e laboratorio in [docs/LEZIONE_10B_CHROMADB.md](docs/LEZIONE_10B_CHROMADB.md). Chroma sostituisce la cache RAM dell’indice, non il contratto di `search_policy`. Errori I/O su `data/chroma/` → stessa **eccezione** keyword, senza far fallire il ticket.
 
 ```mermaid
 flowchart TD
@@ -486,7 +486,7 @@ Suite essenziale: **48 test** (`pytest tests/ -q`, `pythonpath = src` in `pyproj
 | `test_router.py` | Routing 4 categorie |
 | `test_logic.py` | Loop mock; fallback policy |
 | `test_tools.py` | Tool + registry (mock embeddings per `search_policy`) |
-| `test_policy_semantic.py` | Chunking, cosine, RAG sinonimi, fallback keyword |
+| `test_policy_semantic.py` | Chunking, cosine, RAG sinonimi, fallback keyword (solo eccezione) |
 | `test_session_manager.py` | Short-term memory |
 | `test_extractors.py` | `cliente_nome`, sentiment |
 | `test_history_tools.py` | Long-term memory |
@@ -530,7 +530,7 @@ Fixture in `tests/conftest.py`: `triaged_ticket`, isolamento `TICKETS_PATH` su f
 - `src/paths.py` — percorsi assoluti (log, dati, manuale, policy, `.env`)
 - `src/parsing/parser.py` — parsing e incapsulamento
 - `src/rag/policy_semantic.py` — chunking, embeddings, cosine similarity (Lezione 10)
-- `src/tools/office_tools.py` — `search_policy` (RAG + fallback keyword), `notify_manager`
+- `src/tools/office_tools.py` — `search_policy` (RAG principale; keyword in eccezione), `notify_manager`
 - `src/tools/history_tools.py` — `search_long_term_history`
 - `src/memory/` — `SessionManager`, extractors
 - `tests/conftest.py` — fixture condivise

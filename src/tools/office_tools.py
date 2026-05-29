@@ -22,7 +22,7 @@ def notify_manager(message: str, priority: int) -> str:
 
 
 def _search_policy_keyword(query: str) -> str:
-    """Fallback keyword matching (Lezione 6) se la RAG semantica non è disponibile."""
+    """Rete di sicurezza (Lezione 6): keyword matching solo se la RAG semantica fallisce o è sotto soglia."""
     if POLICY_PATH.exists():
         content = POLICY_PATH.read_text(encoding="utf-8")
         query_lower = query.lower()
@@ -70,8 +70,9 @@ def _search_policy_keyword(query: str) -> str:
 
 def search_policy(query: str) -> str:
     """
-    Cerca nelle policy aziendali tramite RAG semantica (embeddings + cosine similarity).
-    In caso di errore API o score sotto soglia, ripiega sul keyword matching.
+    Cerca nelle policy con RAG semantica (percorso principale, Lezione 10).
+
+    Solo in eccezione (errore API/embeddings o score < 0.38) ripiega su keyword matching (Lezione 6).
     """
     try:
         result = semantic_policy_search(query, POLICY_PATH)

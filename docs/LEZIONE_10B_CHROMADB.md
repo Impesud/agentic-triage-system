@@ -306,7 +306,7 @@ PYTHONPATH=src python scripts/esercizio_chroma_policy.py
 | `[INFO] Chunk trovati: N` | Stesso chunking della Lezione 10 (`\n\n`) |
 | Primo run: chiamate OpenAI | Costo indicizzazione (una tantum per hash) |
 | Secondo run: «già allineata» / nessun upsert | Persistenza funziona |
-| Risultato #1 con score ≥ 0.38 e testo su **14 giorni** / **recesso** | Sinonimi battono keyword matching |
+| Risultato #1 con score ≥ 0.38 e testo su **14 giorni** / **recesso** | RAG semantica ok (su questa query il fallback keyword non troverebbe quel paragrafo) |
 | Cartella `data/chroma/` popolata | Indice su disco, non in RAM |
 
 ### Ispezionare la persistenza
@@ -366,19 +366,51 @@ pytest tests/test_policy_semantic.py tests/test_tools.py -q
 
 ## 7. Collegamento concettuale con `search_policy`
 
-Il tool `search_policy` oggi:
+### Cosa è cambiato dalla Lezione 6 alla 10
 
-1. Prova `semantic_policy_search` (RAG).
-2. Se errore API o score < 0.38 → `_search_policy_keyword` (Lezione 6).
+| Lezione | Meccanismo policy | Ruolo delle parole chiave |
+|---------|-------------------|---------------------------|
+| **6** | `_search_policy_keyword` | **Unico** modo: match su token nella query |
+| **10** | `semantic_policy_search` (embeddings + similarità) | **Percorso principale** dell’agente |
+| **10B** | come 10, ma indice su ChromaDB | Invariato per la ricerca; cambia solo dove vivono i vettori |
 
-Con ChromaDB, il passo 1 userà il vector store; il **fallback keyword resta** per robustezza didattica (vedi [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md)).
+Dalla Lezione 10 in poi **non usiamo più le keyword per la ricerca policy in condizioni normali**. L’agente invoca `search_policy`, che delega subito alla RAG semantica. Le keyword restano solo come **rete di sicurezza** nel codice (`_search_policy_keyword`), non come strategia predefinita.
 
-Messaggio tipico verso l’LLM (invariato):
+### Flusso reale di `search_policy` (agente in triage)
+
+In [`src/tools/office_tools.py`](../src/tools/office_tools.py):
+
+```mermaid
+flowchart TD
+    Q[query utente] --> RAG[semantic_policy_search]
+    RAG -->|score >= 0.38| OK["format_semantic_result → LLM"]
+    RAG -->|score < 0.38| KW[_search_policy_keyword]
+    RAG -->|errore API / disco| KW
+    KW --> KWOut[risposta senza prefisso RAG semantica]
+```
+
+| Percorso | Quando si attiva | Cosa vede l’LLM |
+|----------|------------------|-----------------|
+| **RAG semantica** (normale) | API ok e miglior chunk sopra soglia 0.38 | `[RAG semantica \| score=0.xxx]` + testo chunk |
+| **Fallback keyword** (eccezione) | Embedding fallito, Chroma non disponibile, o score sotto soglia | Testo policy senza prefisso `[RAG semantica …]` (match per parole o messaggio generico) |
+
+**Demo L10** (`--scenario l10`): chiama direttamente `semantic_policy_search`, non `search_policy`. In caso di successo mostri **solo** il ramo RAG; il fallback keyword compare solo nel messaggio `[NOTA] …` se la RAG fallisce o è sotto soglia (vedi [`src/main.py`](../src/main.py)).
+
+### Cosa cambia con ChromaDB
+
+ChromaDB sostituisce la **cache in RAM** dentro `semantic_policy_search` (indicizzazione + query). **Non** sostituisce il tool `search_policy` e **non** elimina il fallback keyword: in caso di errore o score basso il comportamento resta quello descritto sopra (vedi anche [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md)).
+
+### Messaggio tipico verso l’LLM (percorso principale)
+
+Quando la RAG va a buon fine — caso atteso in lezione e in produzione con API configurata:
 
 ```text
 [RAG semantica | score=0.842]
-2.2 Recesso per ripensamento ...
+2.2 Recesso per ripensamento (Clienti Consumer):
+- Il recesso per ripensamento segue le norme di legge vigenti ...
 ```
+
+Esempio di **fallback keyword** (solo se la RAG non passa la soglia): risposta senza intestazione `[RAG semantica | score=…]`, spesso generica o basata su parole presenti nella query (es. «rimborso» nella query utente, non «annullare contratto» come in L10).
 
 ---
 
@@ -399,7 +431,7 @@ Messaggio tipico verso l’LLM (invariato):
 1. Perché salviamo gli embedding su disco invece di ricalcolarli a ogni avvio?
 2. Cosa succede al punteggio se usiamo metrica `l2` invece di `cosine`?
 3. Perché la query L10 trova il paragrafo sul recesso senza le parole «recesso» o «rimborso»?
-4. In quale caso `search_policy` usa ancora il fallback keyword?
+4. Perché la demo L10 non «usa le keyword», ma `search_policy` nel codice ha ancora `_search_policy_keyword`?
 
 ---
 

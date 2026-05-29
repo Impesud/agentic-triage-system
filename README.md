@@ -16,7 +16,7 @@ Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSO
 | [`memory/extractors.py`](src/memory/extractors.py) | Estrazione `cliente_nome` e `sentiment` per audit log |
 | [`tools/history_tools.py`](src/tools/history_tools.py) | Long-term: `search_long_term_history` |
 | [`rag/policy_semantic.py`](src/rag/policy_semantic.py) | Chunking policy, embeddings, cosine similarity (Lezione 10) |
-| [`tools/office_tools.py`](src/tools/office_tools.py) | `search_policy` (RAG + fallback keyword), `notify_manager` |
+| [`tools/office_tools.py`](src/tools/office_tools.py) | `search_policy` (RAG semantica; keyword solo in eccezione), `notify_manager` |
 | [`tools/registry.py`](src/tools/registry.py) | `TOOL_MAP` e schema OpenAI |
 | [`prompts/triage_v1.py`](src/prompts/triage_v1.py) | System prompt, 2 few-shot, `build_chat_messages(history=…)` |
 | [`paths.py`](src/paths.py) | Percorsi repo (`LOG_FILE_PATH`, `DEMO_M2_LOG_PATH`, …) |
@@ -112,7 +112,7 @@ flowchart TD
 | Tool | Quando |
 |------|--------|
 | `search_long_term_history` | Cliente identificabile nel thread (`context_text`) |
-| `search_policy` | Policy via RAG semantica (embeddings + cosine); fallback keyword se API assente o score sotto 0.38 |
+| `search_policy` | **Percorso principale:** RAG semantica (embeddings + cosine). **Eccezione:** `_search_policy_keyword` (Lezione 6) solo se API assente, score &lt; 0.38 o errore indice |
 | `notify_manager` | VIP >10k€, ARRABBIATO, o storico cliente critico |
 
 [`_apply_all_fallbacks`](src/logic.py) in `logic.py` unisce fallback **policy** (VIP, ARRABBIATO) e **long-term** (storico Marco). I tool mancanti vengono eseguiti e le observation sono aggiunte alla conversazione prima del JSON finale.
@@ -131,29 +131,32 @@ flowchart TD
 
 ## RAG semantica (Lezione 10)
 
-Il tool `search_policy` non confronta più parole esatte su `data/policy.txt`. Pipeline in [`rag/policy_semantic.py`](src/rag/policy_semantic.py):
+Dalla Lezione 10 la ricerca policy **non usa più il match per parole chiave come strategia predefinita** (quello restava in Lezione 6). L’agente chiama `search_policy`, che delega a `semantic_policy_search` in [`rag/policy_semantic.py`](src/rag/policy_semantic.py):
 
 1. **Paragraph chunking** — split su `\n\n` (paragrafi autocontenuti)
 2. **Embeddings** — OpenAI `text-embedding-3-small` (chunk policy + query utente)
 3. **Cosine similarity** — selezione del chunk con score massimo
-4. **Soglia** — 0.38; sotto soglia → fallback keyword (Lezione 6)
+4. **Soglia** — 0.38; sopra soglia → risposta RAG all’LLM
 
-L’observation restituita all’LLM include score e testo del chunk: `[RAG semantica | score=0.xxx]`.
+**Percorso principale (atteso):** observation con `[RAG semantica | score=0.xxx]` e testo del chunk.
+
+**Eccezione (rete di sicurezza):** se embedding/API fallisce o score &lt; 0.38, `search_policy` ripiega su `_search_policy_keyword` (Lezione 6) — risposta **senza** prefisso `[RAG semantica …]`. Dettaglio in [docs/LEZIONE_10B_CHROMADB.md — §7](docs/LEZIONE_10B_CHROMADB.md#7-collegamento-concettuale-con-search_policy).
 
 ```mermaid
 flowchart LR
-    Q[query utente] --> EmbQ[embedding query]
+    Q[query utente] --> RAG[semantic_policy_search]
     Policy[data/policy.txt] --> Chunk[chunk_policy]
-    Chunk --> EmbC[embedding chunk cached]
-    EmbQ --> Cos[cosine similarity]
-    EmbC --> Cos
-    Cos -->|score >= 0.38| Obs[Observation al LLM]
-    Cos -->|score < 0.38| KW[fallback keyword]
+    Chunk --> EmbC[embedding chunk]
+    RAG --> EmbQ[embedding query]
+    EmbC --> Cos[cosine similarity]
+    EmbQ --> Cos
+    Cos -->|score >= 0.38| Obs["[RAG semantica] → LLM"]
+    Cos -->|eccezione| KW["keyword Lezione 6"]
 ```
 
 ### Demo L10
 
-Query **senza parole in comune** con la policy (es. «annullare contratto e riavere i soldi» → paragrafo «recesso per ripensamento / 14 giorni»). Il successo si valuta dal **score**, non da match lessicali nel testo.
+La demo chiama **direttamente** `semantic_policy_search` (non il wrapper `search_policy`). Query **senza parole in comune** con la policy (es. «annullare contratto e riavere i soldi» → paragrafo «recesso / 14 giorni»). Con API ok vedi solo il ramo RAG; il fallback keyword appare solo nel messaggio `[NOTA] …` se la RAG fallisce.
 
 ```bash
 PYTHONPATH=src python3 src/main.py --scenario l10
@@ -269,7 +272,7 @@ pytest tests/ -q
 | `test_history_tools.py` | Storico e soglia escalation |
 | `test_logic.py` | Loop, history, fallback |
 | `test_tools.py` | Registry e tool (mock embeddings) |
-| `test_policy_semantic.py` | Chunking, cosine, RAG sinonimi, fallback |
+| `test_policy_semantic.py` | Chunking, cosine, RAG sinonimi, fallback keyword (eccezione) |
 | `test_main.py` | Scenari M1–M3, seed `reset` |
 
 Errori e stati parziali: [`GESTIONE_ERRORI.md`](GESTIONE_ERRORI.md).

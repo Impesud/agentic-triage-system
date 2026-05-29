@@ -333,7 +333,7 @@ def run_stm_demo() -> None:
 
 
 def run_l10_rag_demo() -> None:
-    """Demo Lezione 10: RAG semantica su policy (sinonimi vs keyword matching)."""
+    """Demo Lezione 10: RAG semantica su policy (percorso principale; keyword solo se fallisce)."""
     print("\n" + "=" * 72)
     print("SCENARIO L10 — RAG semantica su data/policy.txt")
     print("=" * 72)
@@ -361,8 +361,8 @@ def run_l10_rag_demo() -> None:
         print(fallback)
         print("-" * 72)
         print(
-            "[NOTA] Nessun chunk sopra soglia o API non disponibile — "
-            "mostrato fallback keyword."
+            "[NOTA] RAG non disponibile o sotto soglia — "
+            "mostrato fallback keyword (eccezione, non percorso principale)."
         )
 
 
