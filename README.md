@@ -108,6 +108,30 @@ Eventi in `logs/activity.jsonl`: `triage_json_retry`, `emergency_fallback`.
 PYTHONPATH=src python3 src/main.py --scenario l11
 ```
 
+## Benchmark e Log Analytics (Lezione 12)
+
+| Componente | Ruolo |
+|------------|--------|
+| [`benchmark.py`](src/benchmark.py) | 5 ticket di stress → report KPI a terminale |
+| [`analytics/log_kpi.py`](src/analytics/log_kpi.py) | KPI da `logs/activity.jsonl` |
+| [`docs/LEZIONE_12_PROMPT_OPTIMIZATION.md`](docs/LEZIONE_12_PROMPT_OPTIMIZATION.md) | Workflow v1 → `triage_v2` senza cambiare Python |
+| [`prompts/triage_v2.py`](src/prompts/triage_v2.py) | Few-shot estensione ARRABBIATO (stub, non attivo di default) |
+
+Report benchmark (formato corso):
+
+```text
+=== REPORT DI BENCHMARK AGENTE ===
+Successi immediati o riparati: N/5
+Interventi di Fallback di emergenza: M/5
+```
+
+KPI log: accuratezza triage (con golden set manuale), tool usage rate, conteggio `triage_json_retry` come proxy costo riparazione.
+
+```bash
+PYTHONPATH=src python3 src/benchmark.py
+PYTHONPATH=src python3 -m analytics.log_kpi
+```
+
 ## Memoria (Lezione 9)
 
 ### Short-term (9.1)
@@ -275,7 +299,8 @@ agentic-triage-system/
 ├── docs/
 │   ├── CORSO_LEZIONI.md
 │   ├── LEZIONE_10B_CHROMADB.md
-│   └── LEZIONE_11_RESILIENZA.md
+│   ├── LEZIONE_11_RESILIENZA.md
+│   └── LEZIONE_12_PROMPT_OPTIMIZATION.md
 ├── data/
 │   ├── manuale_it.txt
 │   ├── policy.txt
@@ -292,7 +317,10 @@ agentic-triage-system/
 │   ├── paths.py
 │   ├── memory/
 │   ├── rag/                   # policy_semantic.py, chroma_store.py (L10/10B)
+│   ├── analytics/log_kpi.py   # KPI JSONL (Lezione 12)
+│   ├── benchmark.py           # Suite benchmark (Lezione 12)
 │   ├── prompts/triage_v1.py
+│   ├── prompts/triage_v2.py   # Ottimizzazione prompt (L12, opt-in)
 │   ├── parsing/parser.py
 │   ├── schemas/ticket.py
 │   ├── storage/store.py
@@ -310,7 +338,7 @@ pip install -e ".[test]"
 pytest tests/ -q
 ```
 
-**54 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
+**62 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
 
 | File | Verifica |
 |------|----------|
@@ -321,6 +349,8 @@ pytest tests/ -q
 | `test_tools.py` | Registry e tool (mock embeddings) |
 | `test_policy_semantic.py` | Chunking, cosine, RAG sinonimi, fallback keyword (eccezione) |
 | `test_main.py` | Scenari M1–M3, seed `reset` |
+| `test_benchmark.py` | Report benchmark (mock) |
+| `test_log_kpi.py` | KPI su fixture JSONL |
 
 Errori e stati parziali: [`GESTIONE_ERRORI.md`](GESTIONE_ERRORI.md).
 

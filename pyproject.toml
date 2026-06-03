@@ -1,7 +1,7 @@
 [project]
 name = "primo-agente"
 version = "0.1.0"
-description = "Agentic customer-care triage demo (Lezione 9-10): LLM, memoria, RAG semantica, ChromaDB"
+description = "Agentic customer-care triage demo (Lezione 9-12): LLM, memoria, RAG, ChromaDB, resilienza, benchmark"
 dependencies = [
     "chromadb>=0.5",
     "openai",
@@ -27,6 +27,9 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[project.scripts]
+triage-benchmark = "benchmark:run_triage_benchmark"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
