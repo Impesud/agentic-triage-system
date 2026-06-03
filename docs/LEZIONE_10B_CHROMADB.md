@@ -4,7 +4,7 @@
 Indice lezioni e branch: [CORSO_LEZIONI.md](CORSO_LEZIONI.md).  
 Complementa la [Lezione 10 (RAG semantica)](../README.md#rag-semantica-lezione-10): qui passiamo dalla **cache in-memory** degli embedding a un **database vettoriale persistente** su disco.
 
-> **Stato del codice nel repository:** al momento la pipeline in `src/rag/policy_semantic.py` usa ancora una cache Python in RAM. Questa lezione prepara studenti e docente all’integrazione ChromaDB (prossimo passo di sviluppo). Gli esercizi sotto funzionano **subito** con uno script autonomo; dopo l’integrazione, gli stessi concetti vivranno in `src/rag/chroma_store.py`.
+> **Stato del codice nel repository:** integrazione completata su branch `lesson-10-rag-semantica`. `semantic_policy_search` usa [`src/rag/chroma_store.py`](../src/rag/chroma_store.py) con persistenza in `data/chroma/`. Lo script [`scripts/esercizio_chroma_policy.py`](../scripts/esercizio_chroma_policy.py) riusa la stessa pipeline.
 
 ---
 
@@ -451,15 +451,17 @@ Per errori nel flusso ticket (non solo RAG), resta valida la guida [GESTIONE_ERR
 
 ---
 
-## 10. Prossimi passi (sviluppo repository)
+## 10. Integrazione completata nel repository
 
-1. Aggiungere `chromadb` in `pyproject.toml`.
-2. Implementare `src/rag/chroma_store.py`.
-3. Refactor `policy_semantic.py` per usare Chroma al posto di `_policy_index_cache`.
-4. Aggiornare test con `EphemeralClient` nei pytest.
-5. Aggiungere `data/chroma/` a `.gitignore`.
-
-Piano tecnico dettagliato: file piano interno *ChromaDB RAG vettoriale* (Cursor plan).
+| File | Ruolo |
+|------|--------|
+| [`pyproject.toml`](../pyproject.toml) | dipendenza `chromadb>=0.5` |
+| [`src/paths.py`](../src/paths.py) | `CHROMA_PATH` → `data/chroma/` |
+| [`src/rag/chroma_store.py`](../src/rag/chroma_store.py) | client, upsert, query, hash policy |
+| [`src/rag/policy_semantic.py`](../src/rag/policy_semantic.py) | chunk + embed + Chroma (no cache RAM) |
+| [`scripts/esercizio_chroma_policy.py`](../scripts/esercizio_chroma_policy.py) | laboratorio studenti |
+| [`tests/conftest.py`](../tests/conftest.py) | `EphemeralClient` in pytest |
+| [`.gitignore`](../.gitignore) | `data/chroma/` escluso da git |
 
 ---
 

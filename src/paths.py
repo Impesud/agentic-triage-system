@@ -6,6 +6,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 MANUALE_IT_PATH = REPO_ROOT / "data" / "manuale_it.txt"
 POLICY_PATH = REPO_ROOT / "data" / "policy.txt"
+CHROMA_PATH = REPO_ROOT / "data" / "chroma"
 TICKETS_PATH = REPO_ROOT / "data" / "tickets.jsonl"
 LOG_FILE_PATH = REPO_ROOT / "logs" / "activity.jsonl"
 DEMO_M2_LOG_PATH = REPO_ROOT / "logs" / "demo_m2_activity.jsonl"

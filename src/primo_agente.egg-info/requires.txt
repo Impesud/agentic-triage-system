@@ -1,3 +1,4 @@
+chromadb>=0.5
 openai
 python-dotenv
 pydantic

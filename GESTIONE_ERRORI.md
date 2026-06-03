@@ -109,7 +109,7 @@ Il fallback **non è un errore**: è una guardia operativa in `_run_agent_loop` 
 
 **RAG `search_policy` (Lezione 10):** percorso **principale** = `semantic_policy_search` (embeddings + soglia 0.38). In condizioni normali l’LLM riceve `[RAG semantica | score=…]` — **non** si usano keyword. **Eccezione:** in `office_tools.py`, errori API key / rete / embeddings (`ValueError`, `OSError`, `RuntimeError`) o score sotto 0.38 non propagano al ticket: `search_policy` ripiega su `_search_policy_keyword` (Lezione 6). La demo L10 invoca `semantic_policy_search` direttamente; il fallback keyword compare solo se la RAG fallisce (messaggio `[NOTA] …` in `main.py`).
 
-**ChromaDB (Lezione 10B — sotto-lezione):** installazione e laboratorio in [docs/LEZIONE_10B_CHROMADB.md](docs/LEZIONE_10B_CHROMADB.md). Chroma sostituisce la cache RAM dell’indice, non il contratto di `search_policy`. Errori I/O su `data/chroma/` → stessa **eccezione** keyword, senza far fallire il ticket.
+**ChromaDB (Lezione 10B):** indice in [`src/rag/chroma_store.py`](src/rag/chroma_store.py), persistenza `data/chroma/`. Errori Chroma/I/O o score &lt; 0.38 → fallback keyword in `search_policy`. Guida: [LEZIONE_10B_CHROMADB.md](docs/LEZIONE_10B_CHROMADB.md).
 
 ```mermaid
 flowchart TD

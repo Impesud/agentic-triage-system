@@ -1,7 +1,8 @@
 Metadata-Version: 2.4
 Name: primo-agente
 Version: 0.1.0
-Summary: Mini demo agentic: tool locali + (opzionale) chiamata LLM via CLI
+Summary: Agentic customer-care triage demo (Lezione 9-10): LLM, tool locali, memoria, RAG semantica
+Requires-Dist: chromadb>=0.5
 Requires-Dist: openai
 Requires-Dist: python-dotenv
 Requires-Dist: pydantic

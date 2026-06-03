@@ -1,5 +1,7 @@
+import chromadb
 import pytest
 
+from rag.chroma_store import reset_policy_store, set_chroma_client
 from schemas.ticket import Ticket
 
 ANALISI_FIXTURE = (
@@ -32,6 +34,16 @@ def triaged_ticket():
         )
 
     return _make
+
+
+@pytest.fixture(autouse=True)
+def isolated_chroma_store():
+    """ChromaDB in-memory per tutti i test (no data/chroma/ condivisa)."""
+    reset_policy_store()
+    set_chroma_client(chromadb.EphemeralClient())
+    yield
+    reset_policy_store()
+    set_chroma_client(None)
 
 
 @pytest.fixture(autouse=True)

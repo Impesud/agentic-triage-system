@@ -1,7 +1,7 @@
 """
-RAG semantica su data/policy.txt — Lezione 10.
+RAG semantica su data/policy.txt — Lezione 10 + 10B (ChromaDB).
 
-Pipeline: paragraph chunking → embeddings OpenAI → cosine similarity.
+Pipeline: paragraph chunking → embeddings OpenAI → query su ChromaDB (cosine).
 """
 
 from __future__ import annotations
@@ -12,17 +12,10 @@ from pathlib import Path
 from typing import Any
 
 from client import get_client
+from rag.chroma_store import get_policy_collection, query_similar, reset_policy_store, upsert_policy_chunks
 
 EMBEDDING_MODEL = "text-embedding-3-small"
 DEFAULT_THRESHOLD = 0.38
-
-
-@dataclass(frozen=True)
-class PolicyChunk:
-    """Frammento di policy con embedding pre-calcolato."""
-
-    text: str
-    embedding: tuple[float, ...]
 
 
 @dataclass(frozen=True)
@@ -33,10 +26,6 @@ class SemanticSearchResult:
     score: float
 
 
-# Cache in-process: path policy → lista chunk vettorizzati
-_policy_index_cache: dict[Path, list[PolicyChunk]] = {}
-
-
 def chunk_policy(text: str) -> list[str]:
     """Paragraph chunking: split su doppia interruzione di riga."""
     raw_chunks = text.split("\n\n")
@@ -44,7 +33,7 @@ def chunk_policy(text: str) -> list[str]:
 
 
 def cosine_similarity(vec_a: list[float], vec_b: list[float]) -> float:
-    """Similarità del coseno tra due vettori densi."""
+    """Similarità del coseno tra due vettori densi (utile in test)."""
     dot = sum(a * b for a, b in zip(vec_a, vec_b, strict=True))
     norm_a = math.sqrt(sum(a * a for a in vec_a))
     norm_b = math.sqrt(sum(b * b for b in vec_b))
@@ -61,36 +50,9 @@ def embed_texts(client: Any, texts: list[str]) -> list[list[float]]:
     return [item.embedding for item in response.data]
 
 
-def _load_policy_chunks(policy_path: Path) -> list[str]:
-    if not policy_path.exists():
-        return []
-    return chunk_policy(policy_path.read_text(encoding="utf-8"))
-
-
-def _build_policy_index(policy_path: Path) -> list[PolicyChunk]:
-    """Costruisce (e cachea) l'indice vettoriale dei chunk policy."""
-    resolved = policy_path.resolve()
-    if resolved in _policy_index_cache:
-        return _policy_index_cache[resolved]
-
-    chunks = _load_policy_chunks(resolved)
-    if not chunks:
-        _policy_index_cache[resolved] = []
-        return []
-
-    client = get_client()
-    embeddings = embed_texts(client, chunks)
-    indexed = [
-        PolicyChunk(text=text, embedding=tuple(vec))
-        for text, vec in zip(chunks, embeddings, strict=True)
-    ]
-    _policy_index_cache[resolved] = indexed
-    return indexed
-
-
 def clear_policy_index_cache() -> None:
-    """Svuota la cache (utile nei test)."""
-    _policy_index_cache.clear()
+    """Alias storico per i test: reset store Chroma."""
+    reset_policy_store()
 
 
 def semantic_policy_search(
@@ -101,29 +63,33 @@ def semantic_policy_search(
     top_k: int = 1,
 ) -> SemanticSearchResult | None:
     """
-    Cerca il chunk policy più simile alla query.
+    Cerca il chunk policy più simile alla query via ChromaDB.
 
     Restituisce None se nessun chunk supera la soglia.
     """
-    indexed = _build_policy_index(policy_path)
-    if not indexed:
+    if not policy_path.exists():
         return None
 
     client = get_client()
+    collection = get_policy_collection(policy_path)
+
+    if collection.count() == 0:
+        chunks = chunk_policy(policy_path.read_text(encoding="utf-8"))
+        if not chunks:
+            return None
+        chunk_embeddings = embed_texts(client, chunks)
+        collection = upsert_policy_chunks(policy_path, chunks, chunk_embeddings)
+
     query_vec = embed_texts(client, [query])[0]
+    scored = query_similar(collection, query_vec, top_k=top_k)
+    if not scored:
+        return None
 
-    scored: list[tuple[float, PolicyChunk]] = []
-    for chunk in indexed:
-        score = cosine_similarity(query_vec, list(chunk.embedding))
-        scored.append((score, chunk))
-
-    scored.sort(key=lambda item: item[0], reverse=True)
-    best_score, best_chunk = scored[0]
-
+    best_text, best_score = scored[0]
     if best_score < threshold:
         return None
 
-    return SemanticSearchResult(chunk_text=best_chunk.text, score=best_score)
+    return SemanticSearchResult(chunk_text=best_text, score=best_score)
 
 
 def format_semantic_result(result: SemanticSearchResult) -> str:

@@ -1,4 +1,4 @@
-"""Test RAG semantica — Lezione 10."""
+"""Test RAG semantica — Lezione 10 / 10B ChromaDB."""
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -7,7 +7,6 @@ import pytest
 
 from rag.policy_semantic import (
     chunk_policy,
-    clear_policy_index_cache,
     cosine_similarity,
     semantic_policy_search,
 )
@@ -38,13 +37,6 @@ def _mock_embeddings_create(*_args, input: list[str], **_kwargs):
     response = MagicMock()
     response.data = data
     return response
-
-
-@pytest.fixture(autouse=True)
-def _clear_cache():
-    clear_policy_index_cache()
-    yield
-    clear_policy_index_cache()
 
 
 def test_chunk_policy_paragraph_split():
@@ -118,6 +110,24 @@ def test_search_policy_uses_semantic_path(tmp_path: Path, monkeypatch):
 
     assert "[RAG semantica" in result
     assert "14 giorni" in result or "recesso" in result.lower()
+
+
+def test_semantic_search_skips_reindex_when_collection_populated(tmp_path: Path):
+    policy = tmp_path / "policy.txt"
+    policy.write_text(
+        "2. Recesso per ripensamento: valido entro 14 giorni dalla firma.\n\n",
+        encoding="utf-8",
+    )
+    mock_client = MagicMock()
+    mock_client.embeddings.create.side_effect = _mock_embeddings_create
+
+    with patch("rag.policy_semantic.get_client", return_value=mock_client):
+        semantic_policy_search("annullare contratto", policy)
+        calls_after_first = mock_client.embeddings.create.call_count
+        semantic_policy_search("annullare contratto", policy)
+        calls_after_second = mock_client.embeddings.create.call_count
+
+    assert calls_after_second == calls_after_first + 1
 
 
 def test_search_policy_fallback_on_api_error(monkeypatch):

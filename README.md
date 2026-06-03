@@ -150,11 +150,11 @@ flowchart TD
 
 ## RAG semantica (Lezione 10)
 
-Dalla Lezione 10 la ricerca policy **non usa più il match per parole chiave come strategia predefinita** (quello restava in Lezione 6). L’agente chiama `search_policy`, che delega a `semantic_policy_search` in [`rag/policy_semantic.py`](src/rag/policy_semantic.py):
+Dalla Lezione 10 la ricerca policy **non usa più il match per parole chiave come strategia predefinita** (quello restava in Lezione 6). L’agente chiama `search_policy`, che delega a `semantic_policy_search` in [`rag/policy_semantic.py`](src/rag/policy_semantic.py) e [`rag/chroma_store.py`](src/rag/chroma_store.py) (Lezione 10B):
 
 1. **Paragraph chunking** — split su `\n\n` (paragrafi autocontenuti)
-2. **Embeddings** — OpenAI `text-embedding-3-small` (chunk policy + query utente)
-3. **Cosine similarity** — selezione del chunk con score massimo
+2. **Embeddings** — OpenAI `text-embedding-3-small` (indicizzazione chunk + query)
+3. **ChromaDB** — indice persistente in `data/chroma/`, metrica cosine, `score = 1 - distance`
 4. **Soglia** — 0.38; sopra soglia → risposta RAG all’LLM
 
 **Percorso principale (atteso):** observation con `[RAG semantica | score=0.xxx]` e testo del chunk.
@@ -166,11 +166,11 @@ flowchart LR
     Q[query utente] --> RAG[semantic_policy_search]
     Policy[data/policy.txt] --> Chunk[chunk_policy]
     Chunk --> EmbC[embedding chunk]
+    EmbC --> Chroma[(data/chroma/)]
     RAG --> EmbQ[embedding query]
-    EmbC --> Cos[cosine similarity]
-    EmbQ --> Cos
-    Cos -->|score >= 0.38| Obs["[RAG semantica] → LLM"]
-    Cos -->|eccezione| KW["keyword Lezione 6"]
+    EmbQ --> Chroma
+    Chroma -->|score >= 0.38| Obs["[RAG semantica] → LLM"]
+    Chroma -->|eccezione| KW["keyword Lezione 6"]
 ```
 
 ### Demo L10
@@ -189,8 +189,7 @@ Per **installare, configurare e usare** un database vettoriale persistente (Chro
 
 **[docs/LEZIONE_10B_CHROMADB.md](docs/LEZIONE_10B_CHROMADB.md)**
 
-Contiene: prerequisiti, `pip install chromadb`, configurazione `data/chroma/`, script di laboratorio `scripts/esercizio_chroma_policy.py`, checklist docente e troubleshooting.  
-L’integrazione nel codice di `policy_semantic.py` è il passo successivo; la sotto-lezione funziona già con lo script autonomo.
+Contiene: prerequisiti, `pip install -e .` (include `chromadb`), configurazione `data/chroma/`, script `scripts/esercizio_chroma_policy.py`, checklist docente e troubleshooting. L’indice vettoriale è integrato in `chroma_store.py` + `policy_semantic.py`.
 
 ## Demo Lezione 9 (M1–M3)
 
@@ -264,7 +263,8 @@ agentic-triage-system/
 │   ├── client.py
 │   ├── paths.py
 │   ├── memory/
-│   ├── rag/                   # policy_semantic.py (Lezione 10)
+│   ├── rag/                   # policy_semantic.py, chroma_store.py (L10/10B)
+│   ├── scripts/esercizio_chroma_policy.py
 │   ├── prompts/triage_v1.py
 │   ├── parsing/parser.py
 │   ├── schemas/ticket.py
@@ -283,7 +283,7 @@ pip install -e ".[test]"
 pytest tests/ -q
 ```
 
-**48 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock su `logic.get_client` e `rag.policy_semantic.get_client`.
+**49 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
 
 | File | Verifica |
 |------|----------|
