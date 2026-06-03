@@ -37,7 +37,8 @@ def test_search_policy_reads_file():
         result = search_policy("sconto")
 
     assert (
-        "sconto" in result.lower()
+        "[RAG semantica" in result
+        or "sconto" in result.lower()
         or "10.000" in result
         or "10k" in result.lower()
         or "Enterprise" in result

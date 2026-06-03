@@ -308,7 +308,7 @@ pip install -e ".[test]"
 pytest tests/ -q
 ```
 
-**53 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
+**54 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
 
 | File | Verifica |
 |------|----------|

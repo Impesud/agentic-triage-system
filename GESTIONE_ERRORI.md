@@ -29,7 +29,7 @@ L’abbonamento a Cursor **non è necessario** per questo argomento. Conta molto
 
 ## Stato attuale del progetto
 
-Il codice ha una gestione errori di **livello 1–3**: fail-fast con `ValueError`, boundary in `main.py`, parser con `raise ... from e`, loop in `logic.py` (`_run_agent_loop` + `_finalize_with_self_correction` — Lezione 11), memoria, RAG + ChromaDB (Lezione 10/10B), self-correction (Lezione 11), suite di **53 test** su branch `lesson-11-resilienza-self-correction`. Benchmark/log KPI: branch `lesson-12` (~61 test). Manca ancora una **gerarchia di eccezioni di dominio** opzionale (`errors.py`, moduli 2–4).
+Il codice ha una gestione errori di **livello 1–3**: fail-fast con `ValueError`, boundary in `main.py`, parser con `raise ... from e`, loop in `logic.py` (`_run_agent_loop` + `_finalize_with_self_correction` — Lezione 11), memoria, RAG + ChromaDB (Lezione 10/10B), self-correction (Lezione 11), suite di **54 test** su branch `lesson-11-resilienza-self-correction`. Benchmark/log KPI: branch `lesson-12` (~61 test). Manca ancora una **gerarchia di eccezioni di dominio** opzionale (`errors.py`, moduli 2–4).
 
 **Indice corso e branch:** [docs/CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md).
 
