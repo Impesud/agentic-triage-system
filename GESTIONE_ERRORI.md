@@ -110,7 +110,7 @@ flowchart TD
 | 9 | `ClarificationNeeded`, stati OPEN parziali | README — Memoria |
 | 10 | RAG + ChromaDB; fallback keyword se RAG/Chroma fallisce | README — RAG, [LEZIONE_10B](docs/LEZIONE_10B_CHROMADB.md) |
 | 11 | Self-correction, `emergency_fallback` | [LEZIONE_11_RESILIENZA.md](docs/LEZIONE_11_RESILIENZA.md) |
-| 12 | KPI su `triage_json_retry` / benchmark | branch `lesson-12` — [LEZIONE_12_PROMPT_OPTIMIZATION.md](docs/LEZIONE_12_PROMPT_OPTIMIZATION.md) (solo su L12) |
+| 12 | KPI su `triage_json_retry` / benchmark | [LEZIONE_12_PROMPT_OPTIMIZATION.md](docs/LEZIONE_12_PROMPT_OPTIMIZATION.md) |
 
 **Lezione 11:** `_finalize_with_self_correction`, `MAX_TRIAGE_JSON_RETRIES = 3`, `_emergency_triage_result` — non confondere con retry HTTP illimitato.
 

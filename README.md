@@ -1,8 +1,8 @@
 # Agentic Customer Care Triage System
 
-Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSON), tool locali, **memoria short/long-term** (Lezione 9), **RAG semantica su policy con ChromaDB** (Lezione 10/10B), **self-correction e emergency fallback** (Lezione 11), persistenza append-only.
+Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSON), tool locali, **memoria short/long-term** (Lezione 9), **RAG semantica su policy con ChromaDB** (Lezione 10/10B), **self-correction e emergency fallback** (Lezione 11), **benchmark e log analytics** (Lezione 12) e persistenza append-only.
 
-**Branch corrente:** `lesson-11-resilienza-self-correction` — include le **lezioni 9–11**. Lezione 12 (benchmark): branch `lesson-12-benchmark-log-analytics`.
+**Branch corrente:** `lesson-12-benchmark-log-analytics` — include le **lezioni 9–12**.
 
 ## Percorso didattico e branch Git
 
@@ -12,15 +12,16 @@ Indice completo: **[docs/CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md)**.
 |--------|----------------|
 | `main` | 9 — Memoria |
 | `lesson-10-rag-semantica` | 10 — RAG + ChromaDB |
-| `lesson-11-resilienza-self-correction` | **11 — Resilienza** (questo branch) |
-| `lesson-12-benchmark-log-analytics` | 12 — Benchmark |
+| `lesson-11-resilienza-self-correction` | 11 — Resilienza |
+| `lesson-12-benchmark-log-analytics` | **12 — Benchmark** (questo branch) |
 
 | Guida | File |
 |-------|------|
 | 10B ChromaDB | [docs/LEZIONE_10B_CHROMADB.md](docs/LEZIONE_10B_CHROMADB.md) |
 | 11 Resilienza | [docs/LEZIONE_11_RESILIENZA.md](docs/LEZIONE_11_RESILIENZA.md) |
+| 12 Benchmark | [docs/LEZIONE_12_PROMPT_OPTIMIZATION.md](docs/LEZIONE_12_PROMPT_OPTIMIZATION.md) |
 
-[GESTIONE_ERRORI.md](GESTIONE_ERRORI.md) · Lezione 12 → `git checkout lesson-12-benchmark-log-analytics`
+[GESTIONE_ERRORI.md](GESTIONE_ERRORI.md)
 
 ## Architettura
 
@@ -28,6 +29,7 @@ Indice completo: **[docs/CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md)**.
 |--------|--------|
 | [`main.py`](src/main.py) | Orchestrazione, `SessionManager`, demo M1–M3, L10, L11 |
 | [`logic.py`](src/logic.py) | Loop agentico: LLM → tool → fallback → self-correction JSON |
+| [`benchmark.py`](src/benchmark.py) | Suite benchmark 5 ticket (Lezione 12) |
 | [`client.py`](src/client.py) | Client OpenAI (`OPENAI_API_KEY` solo nel file `.env`, non dalla shell) |
 
 | Package / file | Ruolo |
@@ -237,9 +239,9 @@ PYTHONPATH=src python3 src/main.py --scenario m1
 PYTHONPATH=src python3 src/main.py --scenario m2
 PYTHONPATH=src python3 src/main.py --scenario l10   # RAG semantica (Lezione 10)
 PYTHONPATH=src python3 src/main.py --scenario l11   # Self-correction (Lezione 11)
+PYTHONPATH=src python3 src/benchmark.py           # Benchmark (Lezione 12, richiede API)
+PYTHONPATH=src python3 -m analytics.log_kpi         # KPI da activity.jsonl (Lezione 12)
 ```
-
-Lezione 12: `git checkout lesson-12-benchmark-log-analytics` poi `src/benchmark.py` e `analytics.log_kpi`.
 
 **API key:** imposta `OPENAI_API_KEY=sk-...` nel file `.env` alla root del repo. Non viene letta da `export` in shell (`client.py` usa solo `dotenv_values` sul file).
 

@@ -1,7 +1,7 @@
 Metadata-Version: 2.4
 Name: primo-agente
 Version: 0.1.0
-Summary: Agentic customer-care triage demo (Lezione 9-11): LLM, memoria, RAG semantica, ChromaDB
+Summary: Agentic customer-care triage demo (Lezione 9-12): LLM, memoria, RAG, ChromaDB, benchmark
 Requires-Dist: chromadb>=0.5
 Requires-Dist: openai
 Requires-Dist: python-dotenv
