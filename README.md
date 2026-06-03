@@ -1,6 +1,21 @@
 # Agentic Customer Care Triage System
 
-Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSON), tool locali, **memoria short/long-term** (Lezione 9) e persistenza append-only.
+Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSON), tool locali e **memoria short/long-term** (Lezione 9).
+
+**Branch corrente:** `main` — include fino alla **Lezione 9** (memoria M1–M3). RAG, resilienza e benchmark: branch `lesson-10-*` → `lesson-12-*`.
+
+## Percorso didattico e branch Git
+
+Indice completo del corso: **[docs/CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md)**.
+
+| Branch | Fino a lezione |
+|--------|----------------|
+| `main` | **9 — Memoria** (questo branch) |
+| `lesson-10-rag-semantica` | 10 — RAG + doc 10B |
+| `lesson-11-resilienza-self-correction` | 11 — Self-correction |
+| `lesson-12-benchmark-log-analytics` | 12 — Benchmark |
+
+[GESTIONE_ERRORI.md](GESTIONE_ERRORI.md)
 
 ## Architettura
 
@@ -176,6 +191,8 @@ agentic-triage-system/
 ├── .env
 ├── README.md
 ├── GESTIONE_ERRORI.md
+├── docs/
+│   └── CORSO_LEZIONI.md         # indice lezioni e branch Git
 ├── data/
 │   ├── manuale_it.txt
 │   ├── policy.txt
@@ -207,7 +224,7 @@ pip install -e ".[test]"
 pytest tests/ -q
 ```
 
-**40 test**, senza chiamate LLM reali (mock su `logic.get_client`).
+**~40 test** su `main` ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi su branch successivi). Mock su `logic.get_client`.
 
 | File | Verifica |
 |------|----------|
