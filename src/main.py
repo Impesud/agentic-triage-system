@@ -420,7 +420,7 @@ def run_demo() -> None:
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Demo Lezione 9/10/11 — memoria, RAG, resilienza (OPENAI_API_KEY)",
+        description="Demo Lezioni 9–12 — memoria, RAG, resilienza, benchmark (OPENAI_API_KEY)",
     )
     parser.add_argument(
         "--scenario",

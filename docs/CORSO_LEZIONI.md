@@ -10,7 +10,7 @@ Ogni branch contiene il codice **cumulativo** fino alla lezione indicata; le lez
 | [`main`](.) | **Lezione 9** — Memoria agentica | `git checkout main` | ~40 |
 | [`lesson-10-rag-semantica`](.) | **Lezione 10** — RAG + ChromaDB 10B | `git checkout lesson-10-rag-semantica` | ~49 |
 | [`lesson-11-resilienza-self-correction`](.) | **Lezione 11** — Self-correction | `git checkout lesson-11-resilienza-self-correction` | ~54 |
-| [`lesson-12-benchmark-log-analytics`](.) | **Lezione 12** — Benchmark e analytics | `git checkout lesson-12-benchmark-log-analytics` | ~61 |
+| [`lesson-12-benchmark-log-analytics`](.) | **Lezione 12** — Benchmark e analytics | `git checkout lesson-12-benchmark-log-analytics` | ~62 |
 
 ```mermaid
 gitGraph

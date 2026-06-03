@@ -29,7 +29,7 @@ L’abbonamento a Cursor **non è necessario** per questo argomento. Conta molto
 
 ## Stato attuale del progetto
 
-Il codice ha una gestione errori di **livello 1–3**: fail-fast con `ValueError`, boundary in `main.py`, parser con `raise ... from e`, loop in `logic.py` (`_run_agent_loop` + `_finalize_with_self_correction` — Lezione 11), memoria, RAG + ChromaDB (Lezione 10/10B), self-correction (Lezione 11), benchmark/log KPI (Lezione 12), suite di **~62 test** su branch `lesson-12-benchmark-log-analytics`. Manca ancora una **gerarchia di eccezioni di dominio** opzionale (`errors.py`, moduli 2–4).
+Il codice ha una gestione errori di **livello 1–3**: fail-fast con `ValueError`, boundary in `main.py`, parser con `raise ... from e`, loop in `logic.py` (`_run_agent_loop` + `_finalize_with_self_correction` — Lezione 11), memoria, RAG + ChromaDB (Lezione 10/10B), self-correction (Lezione 11), benchmark/log KPI (Lezione 12), suite di **62 test** su branch `lesson-12-benchmark-log-analytics`. Manca ancora una **gerarchia di eccezioni di dominio** opzionale (`errors.py`, moduli 2–4).
 
 **Indice corso e branch:** [docs/CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md).
 
@@ -138,7 +138,7 @@ flowchart TD
     N2 --> End
 ```
 
-Dettaglio scenari: [README — Demo](README.md#demo-lezione-9-m1m3), [CORSO_LEZIONI](docs/CORSO_LEZIONI.md).
+Dettaglio scenari: [README — Demo](README.md#demo-ed-esecuzione), [CORSO_LEZIONI](docs/CORSO_LEZIONI.md).
 
 ### Cosa esiste oggi
 

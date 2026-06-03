@@ -6,14 +6,14 @@ Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSO
 
 ## Percorso didattico e branch Git
 
-Indice completo: **[docs/CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md)**.
+Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md)**.
 
-| Branch | Fino a lezione |
-|--------|----------------|
-| `main` | 9 — Memoria |
-| `lesson-10-rag-semantica` | 10 — RAG + ChromaDB |
-| `lesson-11-resilienza-self-correction` | 11 — Resilienza |
-| `lesson-12-benchmark-log-analytics` | **12 — Benchmark** (questo branch) |
+| Branch | Fino a lezione | Uso |
+|--------|----------------|-----|
+| `main` | 9 — Memoria | Base M1–M3 senza RAG |
+| `lesson-10-rag-semantica` | 10 — RAG + ChromaDB | + `rag/chroma_store.py`, demo `l10` |
+| `lesson-11-resilienza-self-correction` | 11 — Resilienza | + self-correction, emergency fallback |
+| `lesson-12-benchmark-log-analytics` | **12 — Benchmark** | + `benchmark.py`, `analytics/log_kpi.py` (questo branch) |
 
 | Guida | File |
 |-------|------|
@@ -40,7 +40,8 @@ Indice completo: **[docs/CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md)**.
 | [`rag/policy_semantic.py`](src/rag/policy_semantic.py), [`rag/chroma_store.py`](src/rag/chroma_store.py) | RAG policy + indice ChromaDB (Lezione 10/10B) |
 | [`tools/office_tools.py`](src/tools/office_tools.py) | `search_policy` (RAG semantica; keyword solo in eccezione), `notify_manager` |
 | [`tools/registry.py`](src/tools/registry.py) | `TOOL_MAP` e schema OpenAI |
-| [`prompts/triage_v1.py`](src/prompts/triage_v1.py) | System prompt, 2 few-shot, `build_chat_messages(history=…)` |
+| [`prompts/triage_v1.py`](src/prompts/triage_v1.py) | System prompt, few-shot, `build_chat_messages(history=…)` |
+| [`analytics/log_kpi.py`](src/analytics/log_kpi.py) | KPI da `activity.jsonl` (Lezione 12) |
 | [`paths.py`](src/paths.py) | Percorsi repo (`LOG_FILE_PATH`, `DEMO_M2_LOG_PATH`, …) |
 
 ```mermaid
@@ -87,50 +88,8 @@ flowchart TB
 | `continue_ticket(ticket_id, messaggio)` | Turno successivo (short-term memory) |
 | `seed_marco_angry_history(n, log_path, reset=…)` | Seed demo M2 (storico Marco) |
 | `run_demo()` / `run_*_demo()` | Scenari didattici M3 → M1 → M2 |
-| `run_l10_rag_demo()` | Demo Lezione 10: RAG semantica su `data/policy.txt` |
-| `run_l11_resilience_demo()` | Demo Lezione 11: self-correction e emergency fallback |
-
-## Resilienza e Self-Correction (Lezione 11)
-
-Dopo tool e fallback policy/LTM, la validazione JSON passa da [`_finalize_with_self_correction`](src/logic.py) con `max_retries=3` (`MAX_TRIAGE_JSON_RETRIES`).
-
-| Tipo errore | Esempio | Comportamento |
-|-------------|---------|---------------|
-| **Hard error** | API key assente, timeout, `FileNotFoundError` manuale | Propaga a `main.py` → `[ERRORE]` |
-| **Soft error** | JSON malformato, campi Pydantic mancanti | Self-correction: errore reinviato all’LLM come turno `user` |
-| **Emergency fallback** | 3 tentativi falliti | `TriageResult` deterministico: `GENERAL` / `CRITICAL`, `azione_eseguita="Emergency Fallback attivato"` |
-
-`ClarificationNeeded` (turno ambiguo M1) **non** attiva il self-correction.
-
-Eventi in `logs/activity.jsonl`: `triage_json_retry`, `emergency_fallback`.
-
-```bash
-PYTHONPATH=src python3 src/main.py --scenario l11
-```
-
-## Benchmark e Log Analytics (Lezione 12)
-
-| Componente | Ruolo |
-|------------|--------|
-| [`benchmark.py`](src/benchmark.py) | 5 ticket di stress → report KPI a terminale |
-| [`analytics/log_kpi.py`](src/analytics/log_kpi.py) | KPI da `logs/activity.jsonl` |
-| [`docs/LEZIONE_12_PROMPT_OPTIMIZATION.md`](docs/LEZIONE_12_PROMPT_OPTIMIZATION.md) | Workflow v1 → `triage_v2` senza cambiare Python |
-| [`prompts/triage_v2.py`](src/prompts/triage_v2.py) | Few-shot estensione ARRABBIATO (stub, non attivo di default) |
-
-Report benchmark (formato corso):
-
-```text
-=== REPORT DI BENCHMARK AGENTE ===
-Successi immediati o riparati: N/5
-Interventi di Fallback di emergenza: M/5
-```
-
-KPI log: accuratezza triage (con golden set manuale), tool usage rate, conteggio `triage_json_retry` come proxy costo riparazione.
-
-```bash
-PYTHONPATH=src python3 src/benchmark.py
-PYTHONPATH=src python3 -m analytics.log_kpi
-```
+| `run_l10_rag_demo()` | Demo Lezione 10: RAG semantica |
+| `run_l11_resilience_demo()` | Demo Lezione 11: self-correction |
 
 ## Memoria (Lezione 9)
 
@@ -152,10 +111,8 @@ Ogni `ticket_processed` in `logs/activity.jsonl` include `cliente_nome` e `senti
 | Operazione | File |
 |------------|------|
 | Seed storico (`seed_marco_angry_history`) | `logs/demo_m2_activity.jsonl` |
-| Lettura storico + soglia escalation (`search_long_term_history`, `should_escalate_repeat_customer`) | `demo_m2_activity.jsonl` durante il patch in `run_ltm_demo()` |
-| Eventi live della run (`log_event`, es. `ticket_received`, `ticket_processed`) | `logs/activity.jsonl` (sempre) |
-
-Il seed con `reset=True` rende ripetibile la lezione; la **ricerca** long-term in M2 non legge il log principale, ma gli eventi della sessione corrente vengono comunque auditati in `activity.jsonl`.
+| Lettura storico + soglia escalation | `demo_m2_activity.jsonl` durante `run_ltm_demo()` |
+| Eventi live della run | `logs/activity.jsonl` |
 
 ## Pipeline ticket
 
@@ -177,21 +134,22 @@ flowchart TD
 
 | Tool | Quando |
 |------|--------|
-| `search_long_term_history` | Cliente identificabile nel thread (`context_text`) |
-| `search_policy` | **Percorso principale:** RAG semantica (embeddings + cosine). **Eccezione:** `_search_policy_keyword` (Lezione 6) solo se API assente, score &lt; 0.38 o errore indice |
+| `search_long_term_history` | Cliente identificabile nel thread |
+| `search_policy` | **Principale:** RAG semantica. **Eccezione:** keyword (Lezione 6) se API/score fallisce |
 | `notify_manager` | VIP >10k€, ARRABBIATO, o storico cliente critico |
 
-[`_apply_all_fallbacks`](src/logic.py) in `logic.py` unisce fallback **policy** (VIP, ARRABBIATO) e **long-term** (storico Marco). I tool mancanti vengono eseguiti e le observation sono aggiunte alla conversazione prima del JSON finale.
+[`_apply_all_fallbacks`](src/logic.py) unisce fallback policy e long-term prima della fase JSON finale.
 
 ## Output LLM
 
 ```json
 {
   "analisi_problema": "1. Problema: … 2. Contesto: … 3. Categoria: … 4. Priorità: …",
-  "categoria": "IT | BILLING | SALES | SECURITY",
+  "categoria": "IT | BILLING | SALES | SECURITY | GENERAL",
   "priorita": "LOW | MEDIUM | HIGH | CRITICAL",
   "riassunto_breve": "max 15 parole",
-  "messaggio_originale": "ultimo input utente del turno corrente"
+  "messaggio_originale": "ultimo input utente del turno corrente",
+  "azione_eseguita": "opzionale; valorizzato in emergency fallback (L11)"
 }
 ```
 
@@ -206,7 +164,7 @@ Dalla Lezione 10 la ricerca policy **non usa più il match per parole chiave com
 
 **Percorso principale (atteso):** observation con `[RAG semantica | score=0.xxx]` e testo del chunk.
 
-**Eccezione (rete di sicurezza):** se embedding/API fallisce o score &lt; 0.38, `search_policy` ripiega su `_search_policy_keyword` (Lezione 6) — risposta **senza** prefisso `[RAG semantica …]`. Dettaglio in [docs/LEZIONE_10B_CHROMADB.md — §7](docs/LEZIONE_10B_CHROMADB.md#7-collegamento-concettuale-con-search_policy).
+**Eccezione (rete di sicurezza):** se embedding/API/Chroma fallisce o score &lt; 0.38, `search_policy` ripiega su `_search_policy_keyword` (Lezione 6). Dettaglio: [LEZIONE_10B — §7](docs/LEZIONE_10B_CHROMADB.md#7-collegamento-concettuale-con-search_policy).
 
 ```mermaid
 flowchart LR
@@ -222,78 +180,82 @@ flowchart LR
 
 ### Demo L10
 
-La demo chiama **direttamente** `semantic_policy_search` (non il wrapper `search_policy`). Query **senza parole in comune** con la policy (es. «annullare contratto e riavere i soldi» → paragrafo «recesso / 14 giorni»). Con API ok vedi solo il ramo RAG; il fallback keyword appare solo nel messaggio `[NOTA] …` se la RAG fallisce.
+La demo chiama **direttamente** `semantic_policy_search`. Query **senza parole in comune** con la policy (es. «annullare contratto e riavere i soldi» → paragrafo «recesso / 14 giorni»).
 
 ```bash
 PYTHONPATH=src python3 src/main.py --scenario l10
 ```
 
-Richiede `OPENAI_API_KEY` in `.env` per embeddings reali.
+### Lezione 10B — ChromaDB
 
-### Lezione 10B — ChromaDB (sotto-lezione)
+[docs/LEZIONE_10B_CHROMADB.md](docs/LEZIONE_10B_CHROMADB.md) — `pip install -e .` (include `chromadb`), `data/chroma/`, script `scripts/esercizio_chroma_policy.py`, indice in `chroma_store.py` + `policy_semantic.py`.
 
-Per **installare, configurare e usare** un database vettoriale persistente (ChromaDB embedded), seguire la guida didattica dedicata:
+## Resilienza e Self-Correction (Lezione 11)
 
-**[docs/LEZIONE_10B_CHROMADB.md](docs/LEZIONE_10B_CHROMADB.md)**
+[`_finalize_with_self_correction`](src/logic.py) — `MAX_TRIAGE_JSON_RETRIES = 3`.
 
-Contiene: prerequisiti, `pip install -e .` (include `chromadb`), configurazione `data/chroma/`, script `scripts/esercizio_chroma_policy.py`, checklist docente e troubleshooting. L’indice vettoriale è integrato in `chroma_store.py` + `policy_semantic.py`.
+| Tipo errore | Comportamento |
+|-------------|---------------|
+| Hard error | `main.py` → `[ERRORE]` |
+| Soft error | Retry in-context con messaggio Pydantic |
+| Emergency fallback | `GENERAL` / `CRITICAL`, `azione_eseguita` |
 
-## Demo Lezione 9 (M1–M3)
+Eventi log: `triage_json_retry`, `emergency_fallback`. Guida: [LEZIONE_11_RESILIENZA.md](docs/LEZIONE_11_RESILIENZA.md).
 
-Metadati in `DEMO_SCENARIOS` (`Lesson9Scenario`: obiettivo, messaggi, cosa osservare). Ordine in `run_demo()`: **M3 → M1 → M2**.
+```bash
+PYTHONPATH=src python3 src/main.py --scenario l11
+```
 
-| ID | Domanda guida | Segnale di successo |
-|----|----------------|---------------------|
-| **M3** | La pipeline funziona senza memoria? | `=== TICKET PROCESSATO ===`, categoria IT |
-| **M1** | Perché serve il turno 2 senza ID server? | `[CHIARIMENTO]` o nota didattica, poi triage con server-X |
-| **M2** | Cosa cambia con 4 ticket passati di Marco? | `[SEED]`, `search_long_term_history`, eventuale `🚨 [ESCALATION LIVE]` |
+## Benchmark e Log Analytics (Lezione 12)
 
-### Esecuzione
+| Componente | Ruolo |
+|------------|--------|
+| [`benchmark.py`](src/benchmark.py) | 5 ticket stress → report KPI |
+| [`analytics/log_kpi.py`](src/analytics/log_kpi.py) | Analisi `activity.jsonl` |
+
+Guida: [LEZIONE_12_PROMPT_OPTIMIZATION.md](docs/LEZIONE_12_PROMPT_OPTIMIZATION.md). Stub prompt: [`triage_v2.py`](src/prompts/triage_v2.py).
+
+```bash
+PYTHONPATH=src python3 src/benchmark.py
+PYTHONPATH=src python3 -m analytics.log_kpi
+```
+
+## Demo ed esecuzione
+
+Ordine `run_demo()`: **M3 → M1 → M2**.
+
+| ID | Focus |
+|----|--------|
+| **M3** | Pipeline base senza memoria multi-turno |
+| **M1** | Short-term: chiarimento → triage con server-X |
+| **M2** | Long-term: storico Marco, escalation |
 
 ```bash
 source .venv/bin/activate
 pip install -e ".[test]"
 
-# Tutti gli scenari (M3 → M1 → M2)
-PYTHONPATH=src python3 src/main.py
-
-# Un solo scenario
+PYTHONPATH=src python3 src/main.py              # M3 → M1 → M2
 PYTHONPATH=src python3 src/main.py --scenario m3
 PYTHONPATH=src python3 src/main.py --scenario m1
 PYTHONPATH=src python3 src/main.py --scenario m2
-PYTHONPATH=src python3 src/main.py --scenario l10   # RAG semantica (Lezione 10)
-PYTHONPATH=src python3 src/main.py --scenario l11   # Self-correction (Lezione 11)
-PYTHONPATH=src python3 src/benchmark.py           # Benchmark (Lezione 12, richiede API)
-PYTHONPATH=src python3 -m analytics.log_kpi         # KPI da activity.jsonl (Lezione 12)
+PYTHONPATH=src python3 src/main.py --scenario l10
+PYTHONPATH=src python3 src/main.py --scenario l11
+PYTHONPATH=src python3 src/benchmark.py
+PYTHONPATH=src python3 -m analytics.log_kpi
 ```
 
-**API key:** imposta `OPENAI_API_KEY=sk-...` nel file `.env` alla root del repo. Non viene letta da `export` in shell (`client.py` usa solo `dotenv_values` sul file).
-
-### Testi demo (distinti dai few-shot)
+**API key:** `OPENAI_API_KEY=sk-...` in `.env` (non `export` in shell).
 
 | Scenario | Messaggi |
 |----------|----------|
-| **M1** | 1) «Ho un problema urgente con un server in produzione… non ho altri dettagli» → 2) «È il server-X in datacenter Roma.» |
-| **M2** | «Sono Marco… cluster **db-primary** offline… quinto incidente» (few-shot usa `prod-02`) |
-| **M3** | Accesso casella aziendale bloccata |
-
-### Uso programmatico
-
-```bash
-PYTHONPATH=src python3 -c "
-from main import process_ticket, continue_ticket
-t = process_ticket('Ho un problema urgente con un server in produzione.')
-if t:
-    continue_ticket(t.id, 'È il server-X in datacenter Roma.')
-"
-```
+| **M1** | Server vago → «È il server-X in datacenter Roma.» |
+| **M2** | Marco, cluster **db-primary** offline, quinto incidente |
+| **M3** | Casella aziendale bloccata |
 
 ## Struttura progetto
 
 ```
 agentic-triage-system/
-├── .env
-├── .env.example
 ├── README.md
 ├── GESTIONE_ERRORI.md
 ├── docs/
@@ -304,27 +266,13 @@ agentic-triage-system/
 ├── data/
 │   ├── manuale_it.txt
 │   ├── policy.txt
-│   ├── chroma/                  # indice ChromaDB (runtime, gitignored dopo integrazione)
-│   └── tickets.jsonl          # runtime, gitignored
-├── logs/                      # gitignored
-│   ├── activity.jsonl
-│   └── demo_m2_activity.jsonl
+│   ├── chroma/                  # indice ChromaDB (runtime, gitignored)
+│   └── tickets.jsonl
+├── logs/
 ├── scripts/esercizio_chroma_policy.py
 ├── src/
-│   ├── main.py
-│   ├── logic.py
-│   ├── client.py
-│   ├── paths.py
-│   ├── memory/
-│   ├── rag/                   # policy_semantic.py, chroma_store.py (L10/10B)
-│   ├── analytics/log_kpi.py   # KPI JSONL (Lezione 12)
-│   ├── benchmark.py           # Suite benchmark (Lezione 12)
-│   ├── prompts/triage_v1.py
-│   ├── prompts/triage_v2.py   # Ottimizzazione prompt (L12, opt-in)
-│   ├── parsing/parser.py
-│   ├── schemas/ticket.py
-│   ├── storage/store.py
-│   └── tools/                 # registry, history, office, enrichment, router, logger
+│   ├── main.py, logic.py, benchmark.py
+│   ├── memory/, rag/, analytics/, prompts/, tools/, …
 └── tests/
 ```
 
@@ -334,7 +282,6 @@ agentic-triage-system/
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[test]"
-# Crea .env nella root: OPENAI_API_KEY=sk-...  (obbligatorio per demo live, non basta export)
 pytest tests/ -q
 ```
 
@@ -342,16 +289,11 @@ pytest tests/ -q
 
 | File | Verifica |
 |------|----------|
-| `test_session_manager.py` | Thread per `ticket_id` |
-| `test_extractors.py` | `cliente_nome`, `sentiment` |
-| `test_history_tools.py` | Storico e soglia escalation |
-| `test_logic.py` | Loop, history, fallback |
-| `test_tools.py` | Registry e tool (mock embeddings) |
-| `test_policy_semantic.py` | Chunking, cosine, RAG sinonimi, fallback keyword (eccezione) |
-| `test_main.py` | Scenari M1–M3, seed `reset` |
+| `test_logic.py` | Loop, self-correction, fallback |
+| `test_policy_semantic.py` | RAG + Chroma, sinonimi, soglia |
 | `test_benchmark.py` | Report benchmark (mock) |
 | `test_log_kpi.py` | KPI su fixture JSONL |
 
-Errori e stati parziali: [`GESTIONE_ERRORI.md`](GESTIONE_ERRORI.md).
+Errori: [`GESTIONE_ERRORI.md`](GESTIONE_ERRORI.md).
 
 Modello: `gpt-4.1-mini`, `temperature=0`.

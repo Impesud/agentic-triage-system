@@ -1,6 +1,8 @@
 # Lezione 12 — Ottimizzazione prompt da log e benchmark
 
-**Settimana 8** — complementa [README — Lezione 12](../README.md#benchmark-e-log-analytics-lezione-12).
+**Settimana 8 (parte 2)** — complementa [README — Lezione 12](../README.md#benchmark-e-log-analytics-lezione-12) e [CORSO_LEZIONI.md](CORSO_LEZIONI.md).
+
+**Branch:** `lesson-12-benchmark-log-analytics`.
 
 ## Obiettivo
 
