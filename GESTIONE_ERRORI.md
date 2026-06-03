@@ -103,7 +103,9 @@ flowchart TD
 
 **Caso didattico importante:** se la chiamata LLM fallisce dopo il save `OPEN`, il ticket resta in JSONL senza classificazione. È uno **stato parziale** da discutere (rollback, flag `FAILED`, retry manuale).
 
-**Demo e lezioni:** Lezione 9 (M1–M3), Lezione 10 (L10 RAG) — [README.md](README.md), [CORSO_LEZIONI](docs/CORSO_LEZIONI.md). Lezioni 11–12 su branch dedicati. **M1** può lasciare il ticket `OPEN` se l’LLM chiede chiarimento (`ClarificationNeeded`). **M2** verifica long-term + fallback escalation su storico Marco. **L10** invoca `semantic_policy_search` con query sinonimica (successo = score ≥ 0.38, non match lessicale). I fallback policy (VIP, ARRABBIATO) e long-term restano in `_apply_all_fallbacks`.
+**Demo attuali:** Lezione 9 (M1–M3), Lezione 10 (L10 RAG + ChromaDB), Lezione 11 (L11 self-correction) — [README.md](README.md), [CORSO_LEZIONI](docs/CORSO_LEZIONI.md). Lezione 12 su branch dedicato.
+
+**Lezione 11 — Self-Correction (implementato in `logic.py`):** i **soft error** (JSON/schema Pydantic) sono gestiti da `_finalize_with_self_correction` con al massimo `MAX_TRIAGE_JSON_RETRIES = 3` tentativi in-context. Non è un retry HTTP illimitato: il `for` è tassativo. Dopo esaurimento tentativi, `_emergency_triage_result` produce un `TriageResult` valido (`GENERAL` / `CRITICAL`, `azione_eseguita`) e `log_event("emergency_fallback")`. Gli **hard error** (API key, rete, file mancanti) non entrano nel loop di autocorrezione. `ClarificationNeeded` resta separato (M1). **M1** può lasciare il ticket `OPEN` se l’LLM chiede chiarimento (`ClarificationNeeded`). **M2** verifica long-term + fallback escalation su storico Marco. **L10** invoca `semantic_policy_search` con query sinonimica (successo = score ≥ 0.38, non match lessicale). I fallback policy (VIP, ARRABBIATO) e long-term restano in `_apply_all_fallbacks`.
 
 Il fallback **non è un errore**: è una guardia operativa in `_run_agent_loop` dopo la prima risposta LLM; le observation entrano nel contesto della seconda chiamata. Se un tool solleva eccezione, il boundary in `main.py` cattura `ValueError`/`OSError`.
 

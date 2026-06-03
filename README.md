@@ -1,8 +1,8 @@
 # Agentic Customer Care Triage System
 
-Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSON), tool locali, memoria e RAG semantica su policy.
+Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSON), tool locali, **memoria short/long-term** (Lezione 9), **RAG semantica su policy con ChromaDB** (Lezione 10/10B), **self-correction e emergency fallback** (Lezione 11), persistenza append-only.
 
-**Branch corrente:** `lesson-10-rag-semantica` — include le **lezioni 9–10** (+ doc 10B ChromaDB). Lezioni 11–12: branch `lesson-11-*` e `lesson-12-*`.
+**Branch corrente:** `lesson-11-resilienza-self-correction` — include le **lezioni 9–11**. Lezione 12: branch `lesson-12-benchmark-log-analytics`.
 
 ## Percorso didattico e branch Git
 
@@ -11,13 +11,14 @@ Indice completo: **[docs/CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md)**.
 | Branch | Fino a lezione |
 |--------|----------------|
 | `main` | 9 — Memoria |
-| `lesson-10-rag-semantica` | **10 — RAG** (questo branch) |
-| `lesson-11-resilienza-self-correction` | 11 — Self-correction |
+| `lesson-10-rag-semantica` | 10 — RAG + ChromaDB |
+| `lesson-11-resilienza-self-correction` | **11 — Self-correction** (questo branch) |
 | `lesson-12-benchmark-log-analytics` | 12 — Benchmark |
 
 | Guida | File |
 |-------|------|
 | 10B ChromaDB | [docs/LEZIONE_10B_CHROMADB.md](docs/LEZIONE_10B_CHROMADB.md) |
+| 11 Resilienza | [docs/LEZIONE_11_RESILIENZA.md](docs/LEZIONE_11_RESILIENZA.md) |
 
 [GESTIONE_ERRORI.md](GESTIONE_ERRORI.md)
 
@@ -25,8 +26,8 @@ Indice completo: **[docs/CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md)**.
 
 | Modulo | Ruolo |
 |--------|--------|
-| [`main.py`](src/main.py) | Orchestrazione, `SessionManager`, demo didattiche M1–M3 e L10 |
-| [`logic.py`](src/logic.py) | Loop agentico: LLM → tool → fallback → JSON |
+| [`main.py`](src/main.py) | Orchestrazione, `SessionManager`, demo M1–M3, L10, L11 |
+| [`logic.py`](src/logic.py) | Loop agentico: LLM → tool → fallback → self-correction JSON |
 | [`client.py`](src/client.py) | Client OpenAI (`OPENAI_API_KEY` solo nel file `.env`, non dalla shell) |
 
 | Package / file | Ruolo |
@@ -34,7 +35,7 @@ Indice completo: **[docs/CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md)**.
 | [`memory/session_manager.py`](src/memory/session_manager.py) | Short-term: cronologia `user`/`assistant` per `ticket_id` |
 | [`memory/extractors.py`](src/memory/extractors.py) | Estrazione `cliente_nome` e `sentiment` per audit log |
 | [`tools/history_tools.py`](src/tools/history_tools.py) | Long-term: `search_long_term_history` |
-| [`rag/policy_semantic.py`](src/rag/policy_semantic.py) | Chunking policy, embeddings, cosine similarity (Lezione 10) |
+| [`rag/policy_semantic.py`](src/rag/policy_semantic.py), [`rag/chroma_store.py`](src/rag/chroma_store.py) | RAG policy + indice ChromaDB (Lezione 10/10B) |
 | [`tools/office_tools.py`](src/tools/office_tools.py) | `search_policy` (RAG semantica; keyword solo in eccezione), `notify_manager` |
 | [`tools/registry.py`](src/tools/registry.py) | `TOOL_MAP` e schema OpenAI |
 | [`prompts/triage_v1.py`](src/prompts/triage_v1.py) | System prompt, 2 few-shot, `build_chat_messages(history=…)` |
@@ -55,7 +56,8 @@ flowchart TB
         FB[_apply_all_fallbacks]
         TM --> Loop
         Loop --> FB
-        FB --> JSON[_request_final_json]
+        FB --> SC[_finalize_with_self_correction]
+        SC --> JSON[_request_final_json]
     end
     subgraph tools_pkg [tools]
         LTM[search_long_term_history]
@@ -84,6 +86,25 @@ flowchart TB
 | `seed_marco_angry_history(n, log_path, reset=…)` | Seed demo M2 (storico Marco) |
 | `run_demo()` / `run_*_demo()` | Scenari didattici M3 → M1 → M2 |
 | `run_l10_rag_demo()` | Demo Lezione 10: RAG semantica su `data/policy.txt` |
+| `run_l11_resilience_demo()` | Demo Lezione 11: self-correction e emergency fallback |
+
+## Resilienza e Self-Correction (Lezione 11)
+
+Dopo tool e fallback policy/LTM, la validazione JSON passa da [`_finalize_with_self_correction`](src/logic.py) con `max_retries=3` (`MAX_TRIAGE_JSON_RETRIES`).
+
+| Tipo errore | Esempio | Comportamento |
+|-------------|---------|---------------|
+| **Hard error** | API key assente, timeout, `FileNotFoundError` manuale | Propaga a `main.py` → `[ERRORE]` |
+| **Soft error** | JSON malformato, campi Pydantic mancanti | Self-correction: errore reinviato all’LLM come turno `user` |
+| **Emergency fallback** | 3 tentativi falliti | `TriageResult` deterministico: `GENERAL` / `CRITICAL`, `azione_eseguita="Emergency Fallback attivato"` |
+
+`ClarificationNeeded` (turno ambiguo M1) **non** attiva il self-correction.
+
+Eventi in `logs/activity.jsonl`: `triage_json_retry`, `emergency_fallback`.
+
+```bash
+PYTHONPATH=src python3 src/main.py --scenario l11
+```
 
 ## Memoria (Lezione 9)
 
@@ -215,6 +236,7 @@ PYTHONPATH=src python3 src/main.py --scenario m3
 PYTHONPATH=src python3 src/main.py --scenario m1
 PYTHONPATH=src python3 src/main.py --scenario m2
 PYTHONPATH=src python3 src/main.py --scenario l10   # RAG semantica (Lezione 10)
+PYTHONPATH=src python3 src/main.py --scenario l11   # Self-correction (Lezione 11)
 ```
 
 **API key:** imposta `OPENAI_API_KEY=sk-...` nel file `.env` alla root del repo. Non viene letta da `export` in shell (`client.py` usa solo `dotenv_values` sul file).
@@ -264,7 +286,7 @@ agentic-triage-system/
 │   ├── paths.py
 │   ├── memory/
 │   ├── rag/                   # policy_semantic.py, chroma_store.py (L10/10B)
-│   ├── scripts/esercizio_chroma_policy.py
+├── scripts/esercizio_chroma_policy.py
 │   ├── prompts/triage_v1.py
 │   ├── parsing/parser.py
 │   ├── schemas/ticket.py
@@ -283,7 +305,7 @@ pip install -e ".[test]"
 pytest tests/ -q
 ```
 
-**49 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
+**53 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
 
 | File | Verifica |
 |------|----------|

@@ -5,6 +5,7 @@ TEAM_BY_CATEGORY: dict[Category, str] = {
     "BILLING": "amministrazione",
     "SALES": "commerciale",
     "SECURITY": "sicurezza",
+    "GENERAL": "GeneralQueue",
 }
 
 

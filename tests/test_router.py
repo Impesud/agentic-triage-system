@@ -10,6 +10,7 @@ from tools.router import assign_to_team
         ("BILLING", "amministrazione"),
         ("SALES", "commerciale"),
         ("SECURITY", "sicurezza"),
+        ("GENERAL", "GeneralQueue"),
     ],
 )
 def test_assign_to_team(triaged_ticket, categoria, team):

@@ -4,12 +4,15 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from logic import (
+    MAX_TRIAGE_JSON_RETRIES,
     _build_context_text,
     _detects_angry_sentiment,
+    _emergency_triage_result,
     _extract_max_budget_eur,
     _requires_vip_escalation,
     triage_message,
 )
+from schemas.ticket import TriageResult
 from prompts.triage_v1 import build_chat_messages
 
 
@@ -232,3 +235,72 @@ def test_fallback_appends_tool_messages_to_conversation(mock_get_client):
     tool_messages = [m for m in second_call_messages if isinstance(m, dict) and m.get("role") == "tool"]
     assert any(m.get("name") == "notify_manager" for m in tool_messages)
     assert any(m.get("tool_call_id") == "fallback-nm-1" for m in tool_messages)
+
+
+def test_emergency_triage_result_is_valid_pydantic():
+    result = _emergency_triage_result("input di test")
+    assert isinstance(result, TriageResult)
+    assert result.categoria == "GENERAL"
+    assert result.priorita == "CRITICAL"
+    assert result.azione_eseguita == "Emergency Fallback attivato"
+    assert "FALLBACK" in result.riassunto_breve
+
+
+@patch("logic.get_client")
+def test_self_correction_repairs_invalid_json(mock_get_client):
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    invalid = '{"categoria":"IT"}'
+    valid = (
+        '{"analisi_problema":"1. P. 2. C. 3. IT. 4. LOW.",'
+        '"categoria":"IT","priorita":"LOW","riassunto_breve":"ok retry",'
+        '"messaggio_originale":"help"}'
+    )
+    mock_client.chat.completions.create.side_effect = [
+        _completion(content=invalid),
+        _completion(content=valid),
+    ]
+
+    result, stats = triage_message("help", manuale="", return_stats=True)
+
+    assert result.categoria == "IT"
+    assert stats.used_self_correction is True
+    assert stats.used_emergency_fallback is False
+    assert stats.attempts == 2
+    assert mock_client.chat.completions.create.call_count == 2
+
+
+@patch("logic.get_client")
+def test_emergency_fallback_after_max_retries(mock_get_client):
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    invalid = '{"categoria":"IT"}'
+    mock_client.chat.completions.create.side_effect = [
+        _completion(content=invalid),
+        _completion(content=invalid),
+        _completion(content=invalid),
+    ]
+
+    result, stats = triage_message("help", manuale="", return_stats=True)
+
+    assert result.categoria == "GENERAL"
+    assert "Fallback" in (result.azione_eseguita or "")
+    assert stats.used_emergency_fallback is True
+    assert stats.attempts == MAX_TRIAGE_JSON_RETRIES
+    assert mock_client.chat.completions.create.call_count == MAX_TRIAGE_JSON_RETRIES
+
+
+@patch("logic.get_client")
+def test_max_json_retries_bounds_api_calls(mock_get_client):
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    invalid = '{"categoria":"IT"}'
+    mock_client.chat.completions.create.side_effect = [
+        _completion(content=invalid),
+        _completion(content=invalid),
+        _completion(content=invalid),
+    ]
+
+    triage_message("x", manuale="", return_stats=True)
+
+    assert mock_client.chat.completions.create.call_count == MAX_TRIAGE_JSON_RETRIES

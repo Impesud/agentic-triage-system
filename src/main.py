@@ -1,10 +1,11 @@
 """
-Orchestrazione ticket e demo didattiche Lezione 9/10.
+Orchestrazione ticket e demo didattiche Lezione 9/10/11.
 
 Esecuzione demo:
   PYTHONPATH=src python src/main.py              # M3 → M1 → M2
   PYTHONPATH=src python src/main.py --scenario m1
   PYTHONPATH=src python src/main.py --scenario l10   # RAG semantica su policy
+  PYTHONPATH=src python src/main.py --scenario l11   # Self-correction (Lezione 11)
 """
 
 from __future__ import annotations
@@ -332,6 +333,30 @@ def run_stm_demo() -> None:
     continue_ticket(ticket.id, STM_TURN2)
 
 
+def run_l11_resilience_demo() -> None:
+    """Demo Lezione 11: pipeline resiliente con self-correction (API reale)."""
+    print("\n" + "=" * 72)
+    print("SCENARIO L11 — Resilienza e Self-Correction")
+    print("=" * 72)
+    print(
+        "Obiettivo: osservare validazione JSON con retry in-context "
+        "(max 3) e emergency fallback se la validazione fallisce."
+    )
+    print("Messaggio di test: ticket IT standard (VPN).")
+    print("-" * 72)
+    manuale = load_it_manual()
+    testo = (
+        "Urgente! Ho un blocco completo sulla VPN tecnica e non riesco "
+        "ad accedere ai sistemi da stamattina."
+    )
+    result, stats = triage_message(testo, manuale, return_stats=True)
+    print(f"\n[RISULTATO] categoria={result.categoria} priorita={result.priorita}")
+    print(f"[STATS] tentativi={stats.attempts} self_correction={stats.used_self_correction}")
+    print(f"        emergency_fallback={stats.used_emergency_fallback}")
+    if result.azione_eseguita:
+        print(f"        azione_eseguita={result.azione_eseguita}")
+
+
 def run_l10_rag_demo() -> None:
     """Demo Lezione 10: RAG semantica su policy (percorso principale; keyword solo se fallisce)."""
     print("\n" + "=" * 72)
@@ -395,11 +420,11 @@ def run_demo() -> None:
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Demo Lezione 9/10 — memoria agentica e RAG semantica (OPENAI_API_KEY)",
+        description="Demo Lezione 9/10/11 — memoria, RAG, resilienza (OPENAI_API_KEY)",
     )
     parser.add_argument(
         "--scenario",
-        choices=["m1", "m2", "m3", "l10", "all"],
+        choices=["m1", "m2", "m3", "l10", "l11", "all"],
         default="all",
         help="Esegue un solo scenario o tutti (default: all = M3→M1→M2)",
     )
@@ -418,3 +443,5 @@ if __name__ == "__main__":
         run_smoke_demo()
     elif args.scenario == "l10":
         run_l10_rag_demo()
+    elif args.scenario == "l11":
+        run_l11_resilience_demo()

@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-Category = Literal["IT", "BILLING", "SALES", "SECURITY"]
+Category = Literal["IT", "BILLING", "SALES", "SECURITY", "GENERAL"]
 Priority = Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"]
 TicketStatus = Literal["OPEN", "TRIAGED"]
 
@@ -26,6 +26,10 @@ class TriageResult(BaseModel):
     priorita: Priority
     riassunto_breve: str
     messaggio_originale: str
+    azione_eseguita: str | None = Field(
+        default=None,
+        description="Azione eseguita dall'agente; valorizzato in emergency fallback",
+    )
 
     @field_validator("analisi_problema")
     @classmethod
