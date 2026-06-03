@@ -1,6 +1,25 @@
 # Agentic Customer Care Triage System
 
-Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSON), tool locali, **memoria short/long-term** (Lezione 9), **RAG semantica su policy** (Lezione 10) e persistenza append-only.
+Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSON), tool locali, memoria e RAG semantica su policy.
+
+**Branch corrente:** `lesson-10-rag-semantica` — include le **lezioni 9–10** (+ doc 10B ChromaDB). Lezioni 11–12: branch `lesson-11-*` e `lesson-12-*`.
+
+## Percorso didattico e branch Git
+
+Indice completo: **[docs/CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md)**.
+
+| Branch | Fino a lezione |
+|--------|----------------|
+| `main` | 9 — Memoria |
+| `lesson-10-rag-semantica` | **10 — RAG** (questo branch) |
+| `lesson-11-resilienza-self-correction` | 11 — Self-correction |
+| `lesson-12-benchmark-log-analytics` | 12 — Benchmark |
+
+| Guida | File |
+|-------|------|
+| 10B ChromaDB | [docs/LEZIONE_10B_CHROMADB.md](docs/LEZIONE_10B_CHROMADB.md) |
+
+[GESTIONE_ERRORI.md](GESTIONE_ERRORI.md)
 
 ## Architettura
 
@@ -229,7 +248,8 @@ agentic-triage-system/
 ├── README.md
 ├── GESTIONE_ERRORI.md
 ├── docs/
-│   └── LEZIONE_10B_CHROMADB.md   # sotto-lezione ChromaDB
+│   ├── CORSO_LEZIONI.md
+│   └── LEZIONE_10B_CHROMADB.md
 ├── data/
 │   ├── manuale_it.txt
 │   ├── policy.txt
@@ -263,7 +283,7 @@ pip install -e ".[test]"
 pytest tests/ -q
 ```
 
-**48 test**, senza chiamate LLM reali (mock su `logic.get_client` e `rag.policy_semantic.get_client`).
+**48 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock su `logic.get_client` e `rag.policy_semantic.get_client`.
 
 | File | Verifica |
 |------|----------|

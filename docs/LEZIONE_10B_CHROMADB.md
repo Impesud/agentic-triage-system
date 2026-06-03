@@ -1,6 +1,7 @@
 # Lezione 10B — ChromaDB: installazione, configurazione e uso
 
 **Sotto-lezione** del corso *Agentic Customer Care Triage System*.  
+Indice lezioni e branch: [CORSO_LEZIONI.md](CORSO_LEZIONI.md).  
 Complementa la [Lezione 10 (RAG semantica)](../README.md#rag-semantica-lezione-10): qui passiamo dalla **cache in-memory** degli embedding a un **database vettoriale persistente** su disco.
 
 > **Stato del codice nel repository:** al momento la pipeline in `src/rag/policy_semantic.py` usa ancora una cache Python in RAM. Questa lezione prepara studenti e docente all’integrazione ChromaDB (prossimo passo di sviluppo). Gli esercizi sotto funzionano **subito** con uno script autonomo; dopo l’integrazione, gli stessi concetti vivranno in `src/rag/chroma_store.py`.
@@ -465,6 +466,7 @@ Piano tecnico dettagliato: file piano interno *ChromaDB RAG vettoriale* (Cursor 
 ## Riferimenti
 
 - [README — RAG semantica (Lezione 10)](../README.md#rag-semantica-lezione-10)
+- [CORSO_LEZIONI.md](CORSO_LEZIONI.md) — mappa branch e lezioni
 - [README — Demo L10](../README.md#demo-l10)
 - [GESTIONE_ERRORI.md — RAG search_policy](../GESTIONE_ERRORI.md)
 - Documentazione ChromaDB: https://docs.trychroma.com/

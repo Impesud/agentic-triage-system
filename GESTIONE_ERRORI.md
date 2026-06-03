@@ -29,7 +29,9 @@ L’abbonamento a Cursor **non è necessario** per questo argomento. Conta molto
 
 ## Stato attuale del progetto
 
-Il codice ha una gestione errori di **livello 1–2**: fail-fast con `ValueError`, boundary in `main.py`, parser con `raise ... from e` su JSON e Pydantic, nucleo loop in `logic.py` (`_run_agent_loop`), memoria short/long-term, RAG semantica su policy (Lezione 10), suite di **48 test** sui fallimenti principali e sui fallback. Manca ancora una **gerarchia di eccezioni di dominio**.
+Il codice ha una gestione errori di **livello 1–2**: fail-fast con `ValueError`, boundary in `main.py`, parser con `raise ... from e`, loop in `logic.py` (`_run_agent_loop`), memoria, RAG (Lezione 10), **48 test** su branch `lesson-10-rag-semantica`. Self-correction (L11) e benchmark (L12): branch successivi — vedi [docs/CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md).
+
+**Indice corso e branch:** [docs/CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md).
 
 ### Nucleo agentico (`logic.py`) — riferimento rapido
 
@@ -101,7 +103,7 @@ flowchart TD
 
 **Caso didattico importante:** se la chiamata LLM fallisce dopo il save `OPEN`, il ticket resta in JSONL senza classificazione. È uno **stato parziale** da discutere (rollback, flag `FAILED`, retry manuale).
 
-**Demo attuali:** Lezione 9 (M1–M3) e Lezione 10 (L10 RAG) — vedi [README.md](README.md). **M1** può lasciare il ticket `OPEN` se l’LLM chiede chiarimento (`ClarificationNeeded`). **M2** verifica long-term + fallback escalation su storico Marco. **L10** invoca `semantic_policy_search` con query sinonimica (successo = score ≥ 0.38, non match lessicale). I fallback policy (VIP, ARRABBIATO) e long-term restano in `_apply_all_fallbacks`.
+**Demo e lezioni:** Lezione 9 (M1–M3), Lezione 10 (L10 RAG) — [README.md](README.md), [CORSO_LEZIONI](docs/CORSO_LEZIONI.md). Lezioni 11–12 su branch dedicati. **M1** può lasciare il ticket `OPEN` se l’LLM chiede chiarimento (`ClarificationNeeded`). **M2** verifica long-term + fallback escalation su storico Marco. **L10** invoca `semantic_policy_search` con query sinonimica (successo = score ≥ 0.38, non match lessicale). I fallback policy (VIP, ARRABBIATO) e long-term restano in `_apply_all_fallbacks`.
 
 Il fallback **non è un errore**: è una guardia operativa in `_run_agent_loop` dopo la prima risposta LLM; le observation entrano nel contesto della seconda chiamata. Se un tool solleva eccezione, il boundary in `main.py` cattura `ValueError`/`OSError`.
 
@@ -123,7 +125,7 @@ flowchart TD
     N2 --> End
 ```
 
-Dettaglio scenari e comandi: [README — Demo Lezione 9](README.md#demo-lezione-9-m1m3), [README — RAG Lezione 10](README.md#rag-semantica-lezione-10).
+Dettaglio scenari: [README](README.md), [CORSO_LEZIONI](docs/CORSO_LEZIONI.md).
 
 ### Cosa esiste oggi
 
