@@ -45,7 +45,7 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 | [`tools/registry.py`](src/tools/registry.py) | `TOOL_MAP` e schema OpenAI |
 | [`prompts/triage_v1.py`](src/prompts/triage_v1.py) | System prompt, few-shot, `build_chat_messages(history=…)` |
 | [`analytics/log_kpi.py`](src/analytics/log_kpi.py) | KPI da `activity.jsonl` (Lezione 12) |
-| [`paths.py`](src/paths.py) | Percorsi repo (`LOG_FILE_PATH`, `DEMO_M2_LOG_PATH`, …) |
+| [`paths.py`](src/paths.py) | Percorsi repo (`TRIAGE_DB_PATH`, `LOG_FILE_PATH`, `DEMO_M2_DB_PATH`, …) |
 
 ```mermaid
 flowchart TB
@@ -82,6 +82,10 @@ flowchart TB
     FB --> LTM
     FB --> NM
 ```
+
+### Motore ReAct (Lezione 13)
+
+[`react_triage`](src/logic.py) — loop **Thought → Action → Observation** con `max_steps=8` (default). Coesiste con `triage_message` (benchmark L12, demo M1–M3). Dettaglio: [LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md).
 
 ### API principali (`main.py`)
 
@@ -267,6 +271,7 @@ PYTHONPATH=src python3 -m analytics.log_kpi
 | **M1** | Server vago → «È il server-X in datacenter Roma.» |
 | **M2** | Marco, cluster **db-primary** offline, quinto incidente |
 | **M3** | Casella aziendale bloccata |
+| **L13** | Marco Rossi, budget 15k, ReAct + SQLite |
 
 ## Struttura progetto
 
@@ -284,6 +289,7 @@ agentic-triage-system/
 │   ├── manuale_it.txt
 │   ├── policy.txt
 │   ├── triage_system.db         # LTM SQLite (runtime, gitignored)
+│   ├── demo_m2_triage.db        # seed demo M2 isolato (gitignored)
 │   ├── chroma/                  # indice ChromaDB (runtime, gitignored)
 │   └── tickets.jsonl
 ├── logs/

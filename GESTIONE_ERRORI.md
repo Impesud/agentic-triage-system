@@ -29,7 +29,7 @@ L’abbonamento a Cursor **non è necessario** per questo argomento. Conta molto
 
 ## Stato attuale del progetto
 
-Il codice ha una gestione errori di **livello 1–3**: fail-fast con `ValueError`, boundary in `main.py`, parser con `raise ... from e`, loop in `logic.py` (`_run_agent_loop` + `_finalize_with_self_correction` — Lezione 11), memoria, RAG + ChromaDB (Lezione 10/10B), self-correction (Lezione 11), benchmark/log KPI (Lezione 12), suite di **62 test** su branch `lesson-12-benchmark-log-analytics`. Manca ancora una **gerarchia di eccezioni di dominio** opzionale (`errors.py`, moduli 2–4).
+Il codice ha una gestione errori di **livello 1–3**: fail-fast con `ValueError`, boundary in `main.py`, parser con `raise ... from e`, loop in `logic.py` (`_run_agent_loop` + `_finalize_with_self_correction` — Lezione 11), memoria, RAG + ChromaDB (Lezione 10/10B), self-correction (Lezione 11), benchmark/log KPI (Lezione 12), **ReAct multi-step + SQLite LTM** (Lezione 13), suite di **66 test** su branch `lesson-13-react-sqlite`. Manca ancora una **gerarchia di eccezioni di dominio** opzionale (`errors.py`, moduli 2–4).
 
 **Indice corso e branch:** [docs/CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md).
 
@@ -42,6 +42,8 @@ Il triage LLM vive in un unico loop (vedi [README — Architettura](README.md#ar
 3. `_execute_tool_calls` — tool locali (se `tool_calls`)  
 4. `_apply_all_fallbacks` — policy (VIP, ARRABBIATO) + long-term (storico cliente)  
 5. `_finalize_with_self_correction` — `_request_final_json` + `parse_llm_output` con retry (max 3) e emergency fallback  
+
+**Percorso parallelo (L13):** `react_triage()` — loop ReAct con `max_steps=8` (default), validazione via `_finalize_with_self_correction` (L11). Lezione 14 aggiunge `max_steps=4`, STM e self-correction in-loop.
 
 Se la prima risposta non è JSON e non ci sono tool, `logic` solleva `ClarificationNeeded` (non è un errore fatale: `main` stampa `[CHIARIMENTO]` e il ticket resta `OPEN`).
 
@@ -111,12 +113,15 @@ flowchart TD
 | 10 | RAG + ChromaDB; fallback keyword se RAG/Chroma fallisce | README — RAG, [LEZIONE_10B](docs/LEZIONE_10B_CHROMADB.md) |
 | 11 | Self-correction, `emergency_fallback` | [LEZIONE_11_RESILIENZA.md](docs/LEZIONE_11_RESILIENZA.md) |
 | 12 | KPI su `triage_json_retry` / benchmark | [LEZIONE_12_PROMPT_OPTIMIZATION.md](docs/LEZIONE_12_PROMPT_OPTIMIZATION.md) |
+| 13 | ReAct loop, SQLite LTM, dual-write | [LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md) |
 
-**Lezione 12 — Benchmark e log:** suite in [`src/benchmark.py`](src/benchmark.py), KPI in [`src/analytics/log_kpi.py`](src/analytics/log_kpi.py). Eventi `triage_json_retry` e `emergency_fallback` alimentano le metriche di self-correction.
+**Lezione 12 — Benchmark e log:** suite in [`src/benchmark.py`](src/benchmark.py), KPI in [`src/analytics/log_kpi.py`](src/analytics/log_kpi.py). Eventi `triage_json_retry` e `emergency_fallback` alimentano le metriche.
 
 **Lezione 11:** `_finalize_with_self_correction`, `MAX_TRIAGE_JSON_RETRIES = 3`, `_emergency_triage_result` — non confondere con retry HTTP illimitato.
 
-**M1** → ticket `OPEN` su chiarimento. **M2** → long-term + escalation Marco. **L10** → RAG sinonimica (score ≥ 0.38). Fallback policy/LTM in `_apply_all_fallbacks` (non sono errori).
+**Lezione 13 — ReAct:** `react_triage` usa lo stesso pattern di fallback L11 alla convergenza JSON; se esaurisce `max_steps` restituisce `TriageResult` strutturato (non `None`). Su L14: self-correction in-loop e `react_max_steps_fallback`.
+
+**M1** → ticket `OPEN` su chiarimento. **M2** → long-term SQLite + escalation Marco (`seed_marco_sqlite`). **L13** → demo ReAct (`react_triage`). Fallback policy/LTM in `_apply_all_fallbacks` (non sono errori).
 
 Il fallback **non è un errore**: è una guardia operativa in `_run_agent_loop` dopo la prima risposta LLM; le observation entrano nel contesto della seconda chiamata. Se un tool solleva eccezione, il boundary in `main.py` cattura `ValueError`/`OSError`.
 
@@ -147,7 +152,7 @@ Dettaglio scenari: [README — Demo](README.md#demo-ed-esecuzione), [CORSO_LEZIO
 | `raise ValueError(...)` | `client.py`, `logic.py`, `parser.py`, `enrichment.py`, `router.py`, `schemas/ticket.py` | Messaggi in italiano |
 | `raise ... from e` | `parser.py` — `JSONDecodeError`, `ValidationError` | Catena traceback preservata |
 | Boundary tipizzato | `main.py` — `except (FileNotFoundError, ValueError, OSError)` | Cattura errori da tutta la pipeline |
-| Suite test essenziale | `tests/` — **61 test** (branch `lesson-12`), alcuni `pytest.raises` | Vedi tabella sotto |
+| Suite test essenziale | `tests/` — **66 test** (branch `lesson-13`), alcuni `pytest.raises` | Vedi tabella sotto |
 | Percorsi centralizzati | `paths.py` | Manuale, policy, ticket, log, `.env` |
 | Separazione agente / orchestrazione | `logic.py` (`_run_agent_loop`) vs `main.py` | Errori LLM nascono nel nucleo loop, gestiti in `main` |
 | Nessuna eccezione di dominio | — | Obiettivo dei moduli 2–4 |
@@ -477,7 +482,8 @@ Checklist Modulo 0 — aggiornare dopo ogni migrazione.
 | File | Tipo attuale | Esempio | Target |
 |------|--------------|---------|--------|
 | `client.py` | `ValueError` | API key mancante | `ConfigError` |
-| `logic.py` | `ValueError` | Risposta vuota dal modello | `LLMError` o `ParseError` |
+| `logic.py` | `ValueError` | Risposta vuota nel ciclo ReAct | `LLMError` o `ParseError` |
+| `logic.py` | Fallback ReAct | `max_steps` esauriti | `TriageResult` strutturato + `react_max_steps_fallback` (non raise) |
 | `logic.py` | `ClarificationNeeded` | `_apply_all_fallbacks` — tool in conversation, non raise | Documentato in README; opz. `BusinessRuleError` se tool fallisce |
 | `parser.py` | `ValueError` + `from e` | JSON / schema | `ParseError` + `from e` |
 | `schemas/ticket.py` | `ValueError` (Pydantic) | Campi vuoti, TRIAGED incompleto | Resta in Pydantic; parser → `ParseError` |
@@ -491,7 +497,7 @@ Checklist Modulo 0 — aggiornare dopo ogni migrazione.
 
 ## Test e copertura fallimenti
 
-Suite essenziale: **61 test** su branch `lesson-12-benchmark-log-analytics` (`pytest tests/ -q`). Nessuna chiamata API reale (mock su LLM e embeddings). Su `main` ~40 test; su `lesson-10` ~48 — vedi [CORSO_LEZIONI](docs/CORSO_LEZIONI.md).
+Suite essenziale: **66 test** su branch `lesson-13-react-sqlite` (`pytest tests/ -q`). Conteggi per branch: [CORSO_LEZIONI](docs/CORSO_LEZIONI.md).
 
 | File test | Cosa copre |
 |-----------|------------|
@@ -504,7 +510,8 @@ Suite essenziale: **61 test** su branch `lesson-12-benchmark-log-analytics` (`py
 | `test_policy_semantic.py` | Chunking, cosine, RAG sinonimi, fallback keyword (solo eccezione) |
 | `test_session_manager.py` | Short-term memory |
 | `test_extractors.py` | `cliente_nome`, sentiment |
-| `test_history_tools.py` | Long-term memory |
+| `test_history_tools.py` | Long-term memory (SQLite) |
+| `test_logger_sqlite.py` | Init DB, insert, query indicizzata (L13) |
 | `test_main.py` | Scenari demo M1–M3 |
 | `test_benchmark.py` | Report benchmark (L12) |
 | `test_log_kpi.py` | KPI JSONL (L12) |
@@ -530,11 +537,7 @@ Fixture in `tests/conftest.py`: `triaged_ticket`, isolamento `TICKETS_PATH` su f
 
 ## Messaggio riassuntivo
 
-> Il progetto ha boundary in `main.py`, self-correction su soft error (L11), emergency fallback validato Pydantic, memoria, RAG, benchmark/log KPI (L12) e 61 test. Non serve rifare tutto né un refactor unico con Cursor.
->
-> Percorso opzionale residuo: gerarchia `errors.py` (Moduli 2–4) per messaggi boundary più granulari — **dopo** L11/L12.
->
-> Prossimo passo didattico opzionale: **Modulo 2** (`ConfigError` in `client.py`) oppure ottimizzazione **triage_v2** guidata da benchmark (L12).
+> Il progetto ha boundary in `main.py`, self-correction (L11), ReAct + SQLite (L13) e 66 test. Percorso opzionale residuo: gerarchia `errors.py` (Moduli 2–4).
 
 ---
 
@@ -544,14 +547,16 @@ Fixture in `tests/conftest.py`: `triaged_ticket`, isolamento `TICKETS_PATH` su f
 - [docs/CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md) — indice lezioni e branch
 - [docs/LEZIONE_11_RESILIENZA.md](docs/LEZIONE_11_RESILIENZA.md) — self-correction e fallback
 - [docs/LEZIONE_12_PROMPT_OPTIMIZATION.md](docs/LEZIONE_12_PROMPT_OPTIMIZATION.md) — benchmark e prompt
+- [docs/LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md) — ReAct e SQLite LTM
 - `src/main.py` — orchestrazione e boundary
-- `src/logic.py` — nucleo loop agentico (`_run_agent_loop`, tool locali, fallback, JSON finale)
+- `src/logic.py` — `triage_message`, `react_triage`
+- `src/tools/logger.py` — audit JSONL + SQLite LTM (`init_db`, `log_triage_to_sqlite`)
 - `src/client.py` — connessione OpenAI
-- `src/paths.py` — percorsi assoluti (log, dati, manuale, policy, `.env`)
+- `src/paths.py` — percorsi assoluti (log, dati, `TRIAGE_DB_PATH`, manuale, policy, `.env`)
 - `src/parsing/parser.py` — parsing e incapsulamento
 - `src/rag/policy_semantic.py` — chunking, embeddings, cosine similarity (Lezione 10)
 - `src/tools/office_tools.py` — `search_policy` (RAG principale; keyword in eccezione), `notify_manager`
-- `src/tools/history_tools.py` — `search_long_term_history`
+- `src/tools/history_tools.py` — `search_long_term_history` (delega a SQLite)
 - `src/memory/` — `SessionManager`, extractors
 - `tests/conftest.py` — fixture condivise
-- `tests/test_*.py` — suite essenziale (61 test su L12); estendere dopo ogni migrazione errori
+- `tests/test_*.py` — suite essenziale (66 test su L13)
