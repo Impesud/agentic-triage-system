@@ -572,6 +572,8 @@ def _parse_args() -> argparse.Namespace:
 
 
 if __name__ == "__main__":
+    init_db()
+    print(f"[SQLite] Database pronto: {TRIAGE_DB_PATH}", flush=True)
     args = _parse_args()
     if args.scenario == "all":
         run_demo()

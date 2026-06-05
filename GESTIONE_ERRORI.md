@@ -107,6 +107,8 @@ flowchart TD
 
 **Demo e lezioni:** vedi [README.md](README.md) e [docs/CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md).
 
+**SQLite (L13–L14):** `data/triage_system.db` è gitignored e creato da `init_db()` all'avvio di `main.py` o via `scripts/init_triage_db.py`. Assenza del file dopo clone non è un errore finché non serve LTM.
+
 | Lezione | Errori / resilienza | Documentazione |
 |---------|---------------------|----------------|
 | 9 | `ClarificationNeeded`, stati OPEN parziali | README — Memoria |
@@ -554,6 +556,8 @@ Fixture in `tests/conftest.py`: `triaged_ticket`, isolamento `TICKETS_PATH` su f
 - [docs/LEZIONE_12_PROMPT_OPTIMIZATION.md](docs/LEZIONE_12_PROMPT_OPTIMIZATION.md) — benchmark e prompt
 - [docs/LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md) — ReAct e SQLite LTM
 - [docs/LEZIONE_14_PLANNING_LOOPS.md](docs/LEZIONE_14_PLANNING_LOOPS.md) — max_steps, STM, self-correction in-loop
+- [`scripts/init_triage_db.py`](scripts/init_triage_db.py) — bootstrap SQLite post-clone
+- [`data/schema/triage_system.sql`](data/schema/triage_system.sql) — DDL LTM
 - `src/main.py` — orchestrazione e boundary
 - `src/logic.py` — nucleo loop agentico (`triage_message`, `react_triage`, tool, fallback)
 - `src/tools/logger.py` — audit JSONL + SQLite LTM (`init_db`, `log_triage_to_sqlite`)

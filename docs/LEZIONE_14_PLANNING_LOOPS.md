@@ -83,6 +83,10 @@ Due ticket Marco Rossi sulla stessa `session_01`:
 
 ```bash
 git checkout lesson-14-planning-loops
+
+# Bootstrap SQLite (se assente)
+PYTHONPATH=src python3 scripts/init_triage_db.py
+
 PYTHONPATH=src python3 src/main.py --scenario l14
 ```
 
@@ -104,10 +108,12 @@ pytest tests/ -q   # ~69 su questo branch
 | File | Modifica L14 |
 |------|----------------|
 | [`logic.py`](../src/logic.py) | `session_id`, `_SHORT_TERM_STORE`, in-loop self-correction, `max_steps=4` |
-| [`main.py`](../src/main.py) | `process_ticket_react`, `run_l14_planning_demo`, `--scenario l14` |
+| [`main.py`](../src/main.py) | `process_ticket_react`, `run_l14_planning_demo`, bootstrap `init_db` |
+| [`scripts/init_triage_db.py`](../scripts/init_triage_db.py) | Setup SQLite post-clone (eredita da L13) |
 
 ## Checklist docente
 
+- [ ] Dopo checkout, bootstrap SQLite con `init_triage_db.py` o `main.py`
 - [ ] Studente spiega perché `max_steps=4` è un hard stop deterministico
 - [ ] Demo L14: secondo ticket sfrutta STM + LTM
 - [ ] Evento `react_max_steps_fallback` visibile in `logs/activity.jsonl` se si forza loop
