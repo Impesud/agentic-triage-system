@@ -1,60 +1,58 @@
-import json
-from datetime import UTC, datetime, timedelta
-
+import paths
 from tools.history_tools import (
     count_angry_technical_tickets,
     search_long_term_history,
     should_escalate_repeat_customer,
 )
+from tools.logger import log_triage_to_sqlite
 
 
-def _write_processed(path, cliente, categoria, sentiment, hours_ago=1):
-    ts = (datetime.now(UTC) - timedelta(hours=hours_ago)).isoformat()
-    entry = {
-        "timestamp": ts,
-        "event_type": "ticket_processed",
-        "payload": {
-            "cliente_nome": cliente,
-            "sentiment": sentiment,
-            "ticket": {
-                "categoria": categoria,
+def _seed_marco_it_angry(db_file, n: int = 4) -> None:
+    for i in range(n):
+        log_triage_to_sqlite(
+            {
+                "cliente_nome": "Marco",
+                "categoria": "IT",
                 "priorita": "HIGH",
-                "riassunto_breve": "test",
+                "sentiment": "ARRABBIATO",
+                "riassunto_breve": f"Incidente #{i + 1}",
+                "lingua": "Italiano",
+                "azione_eseguita": "Nessuna",
             },
-        },
-    }
-    with open(path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(entry) + "\n")
+            db_path=str(db_file),
+        )
 
 
-def test_search_long_term_history_counts(tmp_path):
-    log_file = tmp_path / "activity.jsonl"
-    for i in range(4):
-        _write_processed(log_file, "Marco", "IT", "ARRABBIATO", hours_ago=0.5 + i * 0.1)
+def test_search_long_term_history_counts(tmp_path, monkeypatch):
+    db_file = tmp_path / "history.db"
+    monkeypatch.setattr(paths, "TRIAGE_DB_PATH", db_file)
+    _seed_marco_it_angry(db_file, 4)
 
-    result = search_long_term_history("Marco", hours=24, log_path=log_file)
+    result = search_long_term_history("Marco", hours=24)
     assert "Marco" in result
     assert "4" in result
     assert "ARRABBIATO" in result
 
 
 def test_should_escalate_repeat_customer(tmp_path, monkeypatch):
-    log_file = tmp_path / "activity.jsonl"
-    monkeypatch.setattr("tools.history_tools.LOG_FILE_PATH", log_file)
-    for i in range(4):
-        _write_processed(log_file, "Marco", "IT", "ARRABBIATO")
+    db_file = tmp_path / "history.db"
+    monkeypatch.setattr(paths, "TRIAGE_DB_PATH", db_file)
+    _seed_marco_it_angry(db_file, 4)
 
     assert should_escalate_repeat_customer("Marco", hours=24) is True
     assert should_escalate_repeat_customer("Altro", hours=24) is False
 
 
-def test_should_escalate_explicit_log_path(tmp_path):
-    log_file = tmp_path / "demo.jsonl"
-    for i in range(4):
-        _write_processed(log_file, "Marco", "IT", "ARRABBIATO")
+def test_should_escalate_isolated_db(tmp_path, monkeypatch):
+    seeded = tmp_path / "seeded.db"
+    empty = tmp_path / "empty.db"
+    _seed_marco_it_angry(seeded, 4)
 
-    assert should_escalate_repeat_customer("Marco", hours=24, log_path=log_file) is True
-    assert should_escalate_repeat_customer("Marco", hours=24, log_path=tmp_path / "empty.jsonl") is False
+    monkeypatch.setattr(paths, "TRIAGE_DB_PATH", seeded)
+    assert should_escalate_repeat_customer("Marco", hours=24) is True
+
+    monkeypatch.setattr(paths, "TRIAGE_DB_PATH", empty)
+    assert should_escalate_repeat_customer("Marco", hours=24) is False
 
 
 def test_count_angry_technical():

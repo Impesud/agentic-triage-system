@@ -10,6 +10,7 @@ from logic import (
     _emergency_triage_result,
     _extract_max_budget_eur,
     _requires_vip_escalation,
+    react_triage,
     triage_message,
 )
 from schemas.ticket import TriageResult
@@ -304,3 +305,43 @@ def test_max_json_retries_bounds_api_calls(mock_get_client):
     triage_message("x", manuale="", return_stats=True)
 
     assert mock_client.chat.completions.create.call_count == MAX_TRIAGE_JSON_RETRIES
+
+
+@patch("logic.get_client")
+def test_react_triage_with_tool_then_json(mock_get_client, tmp_path, monkeypatch):
+    import paths as paths_module
+    from tools.logger import log_triage_to_sqlite
+
+    monkeypatch.setattr(paths_module, "TRIAGE_DB_PATH", tmp_path / "react.db")
+    log_triage_to_sqlite(
+        {
+            "cliente_nome": "Marco Rossi",
+            "categoria": "SALES",
+            "priorita": "HIGH",
+            "sentiment": "NEUTRALE",
+            "riassunto_breve": "Progetto AI precedente",
+            "lingua": "Italiano",
+            "azione_eseguita": "Nessuna",
+        }
+    )
+
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    tc = _tool_call("search_long_term_history", {"cliente_nome": "Marco Rossi"})
+    final = (
+        '{"analisi_problema":"1. P. 2. Storico DB. 3. SALES. 4. HIGH.",'
+        '"categoria":"SALES","priorita":"HIGH","riassunto_breve":"Budget AI manager",'
+        '"messaggio_originale":"Marco Rossi budget 15k"}'
+    )
+    mock_client.chat.completions.create.side_effect = [
+        _completion(tool_calls=[tc]),
+        _completion(content=final),
+    ]
+
+    result = react_triage(
+        "Sono Marco Rossi, budget 15.000€, voglio un manager.",
+        manuale="Manuale IT",
+    )
+
+    assert result.categoria == "SALES"
+    assert mock_client.chat.completions.create.call_count == 2

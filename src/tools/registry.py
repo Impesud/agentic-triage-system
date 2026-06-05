@@ -1,10 +1,10 @@
-from tools.history_tools import search_long_term_history
+from tools.logger import search_long_term_history_sql
 from tools.office_tools import notify_manager, search_policy
 
 TOOL_MAP = {
     "notify_manager": notify_manager,
     "search_policy": search_policy,
-    "search_long_term_history": search_long_term_history,
+    "search_long_term_history": search_long_term_history_sql,
 }
 
 TOOLS_DEFINITION = [
@@ -59,10 +59,10 @@ TOOLS_DEFINITION = [
         "function": {
             "name": "search_long_term_history",
             "description": (
-                "Cerca nello storico audit (logs/activity.jsonl) i ticket passati dello stesso "
-                "cliente. Usare PRIMA del triage finale se il messaggio identifica un nome cliente "
-                "o azienda (es. 'sono Marco'). Se >=4 ticket IT con sentiment ARRABBIATO nelle "
-                "ultime 24h: elevare priorità e invocare notify_manager con priority 4."
+                "Cerca nello storico indicizzato SQLite (data/triage_system.db) i ticket passati "
+                "dello stesso cliente. Usare PRIMA del triage finale se il messaggio identifica "
+                "un nome cliente o azienda (es. 'sono Marco'). Se >=4 ticket IT con sentiment "
+                "ARRABBIATO nelle ultime 24h: elevare priorità e invocare notify_manager con priority 4."
             ),
             "parameters": {
                 "type": "object",

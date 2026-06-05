@@ -11,6 +11,7 @@ Ogni branch contiene il codice **cumulativo** fino alla lezione indicata; le lez
 | [`lesson-10-rag-semantica`](.) | **Lezione 10** — RAG + ChromaDB 10B | `git checkout lesson-10-rag-semantica` | ~49 |
 | [`lesson-11-resilienza-self-correction`](.) | **Lezione 11** — Self-correction | `git checkout lesson-11-resilienza-self-correction` | ~54 |
 | [`lesson-12-benchmark-log-analytics`](.) | **Lezione 12** — Benchmark e analytics | `git checkout lesson-12-benchmark-log-analytics` | ~62 |
+| [`lesson-13-react-sqlite`](.) | **Lezione 13** — ReAct + SQLite LTM | `git checkout lesson-13-react-sqlite` | ~66 |
 
 ```mermaid
 gitGraph
@@ -24,9 +25,14 @@ gitGraph
   branch lesson-12-benchmark-log-analytics
   checkout lesson-12-benchmark-log-analytics
   commit id: "L12-benchmark"
+  branch lesson-13-react-sqlite
+  checkout lesson-13-react-sqlite
+  commit id: "L13-react-sqlite"
 ```
 
 **Settimana 8 (lezioni 11–12):** resilienza, error recovery, benchmarking — vedi [LEZIONE_11_RESILIENZA.md](LEZIONE_11_RESILIENZA.md) e [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md).
+
+**Settimana 9 (lezioni 13–14):** ReAct, SQLite, planning multi-step — vedi [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md).
 
 ---
 
@@ -41,6 +47,7 @@ gitGraph
 | **10B** | ChromaDB (vettori persistenti) | `rag/chroma_store.py`, `data/chroma/`, `scripts/esercizio_chroma_policy.py` | [LEZIONE_10B_CHROMADB.md](LEZIONE_10B_CHROMADB.md) |
 | **11** | Self-correction, emergency fallback | `_finalize_with_self_correction`, `TriageStats` | [LEZIONE_11_RESILIENZA.md](LEZIONE_11_RESILIENZA.md) |
 | **12** | Benchmark, KPI log, prompt v2 | `benchmark.py`, `analytics/log_kpi.py` | [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md) |
+| **13** | ReAct multi-step, SQLite LTM | `react_triage`, `tools/logger.py` SQLite | [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) |
 
 ---
 
@@ -54,6 +61,7 @@ gitGraph
 | 11 — resilienza | `PYTHONPATH=src python3 src/main.py --scenario l11` |
 | 12 — benchmark | `PYTHONPATH=src python3 src/benchmark.py` |
 | 12 — KPI log | `PYTHONPATH=src python3 -m analytics.log_kpi` |
+| 13 — ReAct + SQLite | `PYTHONPATH=src python3 src/main.py --scenario l13` |
 | Test (qualsiasi branch) | `pytest tests/ -q` |
 
 **Prerequisito demo live:** `OPENAI_API_KEY` nel file `.env` (non `export` in shell).
@@ -67,6 +75,7 @@ gitGraph
 | Memoria e tool | Lezione 9 (M1–M3) | `main` |
 | Knowledge / RAG | Lezione 10 + 10B | `lesson-10-rag-semantica` |
 | **Settimana 8** | Resilienza, error recovery, benchmarking | `lesson-11-*` → `lesson-12-*` |
+| **Settimana 9** | ReAct, SQLite, planning multi-step | `lesson-13-*` → `lesson-14-*` |
 
 ---
 
@@ -79,6 +88,7 @@ gitGraph
 | [LEZIONE_10B_CHROMADB.md](LEZIONE_10B_CHROMADB.md) | Laboratorio ChromaDB |
 | [LEZIONE_11_RESILIENZA.md](LEZIONE_11_RESILIENZA.md) | Hard vs soft error, self-correction, fallback |
 | [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md) | Benchmark, analytics, triage_v2 |
+| [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) | ReAct, SQLite indicizzato, dual-write |
 
 ---
 

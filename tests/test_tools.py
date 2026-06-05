@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock, patch
 
+import paths
 from tools.history_tools import search_long_term_history
 from tools.office_tools import notify_manager, search_policy
 from tools.registry import TOOL_MAP
@@ -67,8 +68,8 @@ def test_notify_manager_and_registry():
     assert "successo" in notify_manager("VIP 15k", 4).lower()
 
 
-def test_search_long_term_history_empty(tmp_path):
-    log_file = tmp_path / "empty.jsonl"
-    log_file.write_text("", encoding="utf-8")
-    result = search_long_term_history("Marco", hours=24, log_path=log_file)
-    assert "Nessun ticket" in result
+def test_search_long_term_history_empty(tmp_path, monkeypatch):
+    db_file = tmp_path / "empty.db"
+    monkeypatch.setattr(paths, "TRIAGE_DB_PATH", db_file)
+    result = search_long_term_history("Marco", hours=24)
+    assert "Nessun ticket" in result or "Nessun record storico" in result

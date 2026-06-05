@@ -1,6 +1,7 @@
 """
 Nucleo del loop agentico (logic.py) — Lezione 9: memoria; Lezione 10: RAG;
-Lezione 11: self-correction su soft error e emergency fallback.
+Lezione 11: self-correction su soft error e emergency fallback;
+Lezione 13: loop ReAct multi-step; Lezione 14: max_steps, STM, self-correction in-loop.
 """
 
 from __future__ import annotations
@@ -20,6 +21,17 @@ from tools.logger import log_event
 from tools.registry import TOOL_MAP, TOOLS_DEFINITION
 
 MAX_TRIAGE_JSON_RETRIES = 3
+DEFAULT_REACT_MAX_STEPS = 8
+
+_REACT_PROMPT_SUFFIX = """
+Operi rigorosamente all'interno di un ciclo ReAct strutturato: Thought -> Action -> Observation.
+Per ogni iterazione:
+1. Produci un pensiero (Thought) spiegando quale dato ti manca o quale tool serve.
+2. Decidi se invocare uno strumento (Action) o concludere con il JSON finale.
+
+Quando hai raccolto tutti gli elementi utili dalle Observation precedenti, interrompi l'uso dei tool
+e genera IMMEDIATAMENTE il payload JSON finale conforme allo schema richiesto. Nessun markdown.
+"""
 
 _VIP_BUDGET_THRESHOLD = 10_000
 _BUDGET_PATTERN = re.compile(
@@ -475,3 +487,104 @@ def triage_message(
     if return_stats:
         return result, stats
     return result
+
+
+def _build_react_messages(
+    user_input: str,
+    manuale: str,
+    history: list[dict[str, str]] | None = None,
+) -> list[dict[str, Any]]:
+    messages = build_chat_messages(user_input, manuale, history=history)
+    system = messages[0]["content"] + "\n\n" + _REACT_PROMPT_SUFFIX.strip()
+    messages[0] = {"role": "system", "content": system}
+    return messages
+
+
+def react_triage(
+    user_input: str,
+    manuale: str,
+    *,
+    history: list[dict[str, str]] | None = None,
+    max_steps: int = DEFAULT_REACT_MAX_STEPS,
+    max_json_retries: int = MAX_TRIAGE_JSON_RETRIES,
+) -> TriageResult:
+    """
+    Motore di Triage Agentico ReAct Multi-Step (Lezione 13).
+    Esegue cicli iterativi Thought -> Action -> Observation fino a convergenza JSON.
+    """
+    client = get_client()
+    conversation: list[Any] = _build_react_messages(user_input, manuale, history=history)
+
+    print(
+        f"\n🎬 [ReAct Engine] Avvio pianificazione per ticket: '{user_input[:40]}...'",
+        flush=True,
+    )
+
+    for step in range(1, max_steps + 1):
+        print(f"🔄 [STEP {step}/{max_steps}] Riflessione cognitiva dell'agente...", flush=True)
+
+        response_message = _call_llm_with_tools(client, conversation)
+        tool_calls = response_message.tool_calls
+        conversation.append(response_message)
+
+        if tool_calls:
+            print("\n[AGENTE] Attivazione tool in corso (ReAct Action)...", flush=True)
+            for tool_call in tool_calls:
+                function_name = tool_call.function.name
+                function_args = json.loads(tool_call.function.arguments)
+                if function_name == "search_long_term_history" and "hours" not in function_args:
+                    function_args.setdefault("hours", 24)
+                print(
+                    f"   🛠️ [ACTION] Invocazione tool '{function_name}' con: {function_args}",
+                    flush=True,
+                )
+                tool_output = TOOL_MAP[function_name](**function_args)
+                preview = tool_output[:50] + ("..." if len(tool_output) > 50 else "")
+                print(f"   📥 [OBSERVATION] Risultato: {preview}", flush=True)
+                conversation.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "name": function_name,
+                        "content": tool_output,
+                    }
+                )
+            continue
+
+        content = response_message.content
+        if not content:
+            raise ValueError("Risposta vuota dal modello nel ciclo ReAct")
+
+        if not _looks_like_json(content):
+            raise ClarificationNeeded(content.strip())
+
+        print(
+            f"🏁 [ReAct Engine] Convergenza raggiunta al ciclo {step}. Validazione strutturale...",
+            flush=True,
+        )
+        result, _stats = _finalize_with_self_correction(
+            client,
+            conversation,
+            user_input,
+            content.strip(),
+            max_retries=max_json_retries,
+        )
+        return result
+
+    print(
+        "🚨 [CRITICO] Il ciclo di Planning ReAct ha esaurito max_steps. "
+        "Attivazione Fallback di emergenza.",
+        flush=True,
+    )
+    fallback = _emergency_triage_result(user_input)
+    return TriageResult(
+        analisi_problema=fallback.analisi_problema,
+        categoria=fallback.categoria,
+        priorita=fallback.priorita,
+        riassunto_breve=(
+            "FALLBACK: L'agente ha superato i max_steps di pianificazione ReAct "
+            "o ha corrotto la struttura."
+        ),
+        messaggio_originale=user_input,
+        azione_eseguita="Fallback per interruzione ciclo ReAct",
+    )

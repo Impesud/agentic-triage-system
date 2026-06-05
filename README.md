@@ -1,8 +1,8 @@
 # Agentic Customer Care Triage System
 
-Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSON), tool locali, **memoria short/long-term** (Lezione 9), **RAG semantica su policy con ChromaDB** (Lezione 10/10B), **self-correction e emergency fallback** (Lezione 11), **benchmark e log analytics** (Lezione 12) e persistenza append-only.
+Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSON), tool locali, **memoria short/long-term** (Lezione 9), **RAG semantica su policy con ChromaDB** (Lezione 10/10B), **self-correction e emergency fallback** (Lezione 11), **benchmark e log analytics** (Lezione 12) e **loop ReAct e SQLite LTM** (Lezione 13).
 
-**Branch corrente:** `lesson-12-benchmark-log-analytics` — include le **lezioni 9–12**.
+**Branch corrente:** `lesson-13-react-sqlite` — include le **lezioni 9–13**.
 
 ## Percorso didattico e branch Git
 
@@ -13,13 +13,15 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 | `main` | 9 — Memoria | Base M1–M3 senza RAG |
 | `lesson-10-rag-semantica` | 10 — RAG + ChromaDB | + `rag/chroma_store.py`, demo `l10` |
 | `lesson-11-resilienza-self-correction` | 11 — Resilienza | + self-correction, emergency fallback |
-| `lesson-12-benchmark-log-analytics` | **12 — Benchmark** | + `benchmark.py`, `analytics/log_kpi.py` (questo branch) |
+| `lesson-12-benchmark-log-analytics` | 12 — Benchmark | + `benchmark.py`, `analytics/log_kpi.py` |
+| `lesson-13-react-sqlite` | **13 — ReAct + SQLite** | + `react_triage`, LTM SQLite indicizzata (questo branch) |
 
 | Guida | File |
 |-------|------|
 | 10B ChromaDB | [docs/LEZIONE_10B_CHROMADB.md](docs/LEZIONE_10B_CHROMADB.md) |
 | 11 Resilienza | [docs/LEZIONE_11_RESILIENZA.md](docs/LEZIONE_11_RESILIENZA.md) |
 | 12 Benchmark | [docs/LEZIONE_12_PROMPT_OPTIMIZATION.md](docs/LEZIONE_12_PROMPT_OPTIMIZATION.md) |
+| 13 ReAct + SQLite | [docs/LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md) |
 
 [GESTIONE_ERRORI.md](GESTIONE_ERRORI.md)
 
@@ -27,8 +29,8 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 
 | Modulo | Ruolo |
 |--------|--------|
-| [`main.py`](src/main.py) | Orchestrazione, `SessionManager`, demo M1–M3, L10, L11 |
-| [`logic.py`](src/logic.py) | Loop agentico: LLM → tool → fallback → self-correction JSON |
+| [`main.py`](src/main.py) | Orchestrazione, `SessionManager`, demo M1–M3, L10, L11, L13 |
+| [`logic.py`](src/logic.py) | Loop agentico + `react_triage` (ReAct multi-step) |
 | [`benchmark.py`](src/benchmark.py) | Suite benchmark 5 ticket (Lezione 12) |
 | [`client.py`](src/client.py) | Client OpenAI (`OPENAI_API_KEY` solo nel file `.env`, non dalla shell) |
 
@@ -36,7 +38,8 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 |----------------|--------|
 | [`memory/session_manager.py`](src/memory/session_manager.py) | Short-term: cronologia `user`/`assistant` per `ticket_id` |
 | [`memory/extractors.py`](src/memory/extractors.py) | Estrazione `cliente_nome` e `sentiment` per audit log |
-| [`tools/history_tools.py`](src/tools/history_tools.py) | Long-term: `search_long_term_history` |
+| [`tools/history_tools.py`](src/tools/history_tools.py) | Long-term: delega a SQLite |
+| [`tools/logger.py`](src/tools/logger.py) | Audit JSONL + SQLite LTM (`init_db`, `log_triage_to_sqlite`) |
 | [`rag/policy_semantic.py`](src/rag/policy_semantic.py), [`rag/chroma_store.py`](src/rag/chroma_store.py) | RAG policy + indice ChromaDB (Lezione 10/10B) |
 | [`tools/office_tools.py`](src/tools/office_tools.py) | `search_policy` (RAG semantica; keyword solo in eccezione), `notify_manager` |
 | [`tools/registry.py`](src/tools/registry.py) | `TOOL_MAP` e schema OpenAI |
@@ -90,6 +93,8 @@ flowchart TB
 | `run_demo()` / `run_*_demo()` | Scenari didattici M3 → M1 → M2 |
 | `run_l10_rag_demo()` | Demo Lezione 10: RAG semantica |
 | `run_l11_resilience_demo()` | Demo Lezione 11: self-correction |
+| `run_l13_react_demo()` | Demo Lezione 13: ReAct + SQLite |
+| `seed_marco_sqlite(n, db_path, reset=…)` | Seed demo M2 su SQLite |
 
 ## Memoria (Lezione 9)
 
@@ -102,17 +107,17 @@ Stesso `ticket_id`, più turni. `SessionManager` (in-memory) conserva il thread;
 | 1 | Messaggio vago → LLM può rispondere con testo (`ClarificationNeeded`) → ticket resta `OPEN` |
 | 2+ | `continue_ticket` → triage JSON con tutto il thread |
 
-### Long-term (9.2)
+### Long-term (9.2 + 13)
 
-Ogni `ticket_processed` in `logs/activity.jsonl` include `cliente_nome` e `sentiment`. Il tool `search_long_term_history` legge lo storico; se ≥4 ticket **IT + ARRABBIATO** in 24h → fallback `notify_manager` (priority 4).
+Dual-write: ogni ticket processato va in `logs/activity.jsonl` (KPI L12) **e** in `data/triage_system.db` (LTM indicizzata). Il tool `search_long_term_history` interroga SQLite con indice `idx_cliente`; se ≥4 ticket **IT + ARRABBIATO** in 24h → fallback `notify_manager` (priority 4).
 
-**Demo M2 — due log distinti:**
+**Demo M2 — database isolato:**
 
 | Operazione | File |
 |------------|------|
-| Seed storico (`seed_marco_angry_history`) | `logs/demo_m2_activity.jsonl` |
-| Lettura storico + soglia escalation | `demo_m2_activity.jsonl` durante `run_ltm_demo()` |
-| Eventi live della run | `logs/activity.jsonl` |
+| Seed storico (`seed_marco_sqlite`) | `data/demo_m2_triage.db` |
+| Lettura storico + soglia escalation | `demo_m2_triage.db` durante `run_ltm_demo()` |
+| Eventi live + LTM principale | `logs/activity.jsonl` + `data/triage_system.db` |
 
 ## Pipeline ticket
 
@@ -220,6 +225,16 @@ PYTHONPATH=src python3 src/benchmark.py
 PYTHONPATH=src python3 -m analytics.log_kpi
 ```
 
+## ReAct e SQLite (Lezione 13)
+
+[`react_triage`](src/logic.py) implementa il ciclo **Thought → Action → Observation** con `max_steps` configurabile (default 8). La pipeline classica `triage_message` resta per benchmark e demo M1–M3.
+
+Guida: [LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md).
+
+```bash
+PYTHONPATH=src python3 src/main.py --scenario l13
+```
+
 ## Demo ed esecuzione
 
 Ordine `run_demo()`: **M3 → M1 → M2**.
@@ -240,6 +255,7 @@ PYTHONPATH=src python3 src/main.py --scenario m1
 PYTHONPATH=src python3 src/main.py --scenario m2
 PYTHONPATH=src python3 src/main.py --scenario l10
 PYTHONPATH=src python3 src/main.py --scenario l11
+PYTHONPATH=src python3 src/main.py --scenario l13
 PYTHONPATH=src python3 src/benchmark.py
 PYTHONPATH=src python3 -m analytics.log_kpi
 ```
@@ -262,10 +278,12 @@ agentic-triage-system/
 │   ├── CORSO_LEZIONI.md
 │   ├── LEZIONE_10B_CHROMADB.md
 │   ├── LEZIONE_11_RESILIENZA.md
-│   └── LEZIONE_12_PROMPT_OPTIMIZATION.md
+│   ├── LEZIONE_12_PROMPT_OPTIMIZATION.md
+│   └── LEZIONE_13_REACT_SQLITE.md
 ├── data/
 │   ├── manuale_it.txt
 │   ├── policy.txt
+│   ├── triage_system.db         # LTM SQLite (runtime, gitignored)
 │   ├── chroma/                  # indice ChromaDB (runtime, gitignored)
 │   └── tickets.jsonl
 ├── logs/
@@ -285,11 +303,12 @@ pip install -e ".[test]"
 pytest tests/ -q
 ```
 
-**62 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
+**66 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
 
 | File | Verifica |
 |------|----------|
-| `test_logic.py` | Loop, self-correction, fallback |
+| `test_logic.py` | Loop, self-correction, fallback, ReAct |
+| `test_logger_sqlite.py` | SQLite init, insert, query indicizzata |
 | `test_policy_semantic.py` | RAG + Chroma, sinonimi, soglia |
 | `test_benchmark.py` | Report benchmark (mock) |
 | `test_log_kpi.py` | KPI su fixture JSONL |

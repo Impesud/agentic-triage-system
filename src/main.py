@@ -1,31 +1,33 @@
 """
-Orchestrazione ticket e demo didattiche Lezione 9/10/11.
+Orchestrazione ticket e demo didattiche Lezione 9/10/11/13.
 
 Esecuzione demo:
   PYTHONPATH=src python src/main.py              # M3 → M1 → M2
   PYTHONPATH=src python src/main.py --scenario m1
   PYTHONPATH=src python src/main.py --scenario l10   # RAG semantica su policy
   PYTHONPATH=src python src/main.py --scenario l11   # Self-correction (Lezione 11)
+  PYTHONPATH=src python src/main.py --scenario l13   # ReAct + SQLite (Lezione 13)
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import sqlite3
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from logic import ClarificationNeeded, triage_message
+import paths
+from logic import ClarificationNeeded, react_triage, triage_message
 from memory.extractors import detect_sentiment_label, extract_cliente_nome
 from memory.session_manager import SessionManager
-from paths import DEMO_M2_LOG_PATH, LOG_FILE_PATH, MANUALE_IT_PATH, POLICY_PATH
+from paths import DEMO_M2_DB_PATH, DEMO_M2_LOG_PATH, LOG_FILE_PATH, MANUALE_IT_PATH, POLICY_PATH, TRIAGE_DB_PATH
 from rag.policy_semantic import format_semantic_result, semantic_policy_search
 from schemas.ticket import Ticket
 from storage.store import get_current_ticket, next_ticket_id, save_ticket
-from tools import history_tools
 from tools.enrichment import enrich_priority
-from tools.logger import log_event
+from tools.logger import init_db, log_event, log_triage_to_sqlite
 from tools.office_tools import search_policy
 from tools.router import assign_to_team
 
@@ -46,6 +48,11 @@ SMOKE_IT_TICKET = "Non riesco ad accedere alla casella aziendale, risulta blocca
 
 L10_SYNONYM_QUERY = (
     "Voglio annullare il contratto e riavere i soldi: quali sono i termini?"
+)
+
+L13_TICKET_1 = (
+    "Sono Marco Rossi. Ho un budget di 15.000€ per un progetto AI "
+    "e voglio parlare con un manager."
 )
 
 
@@ -99,7 +106,7 @@ DEMO_SCENARIOS: tuple[Lesson9Scenario, ...] = (
             "[AGENTE] Attivazione tool",
             "search_long_term_history",
             "🚨 [ESCALATION LIVE]",
-            "logs/demo_m2_activity.jsonl",
+            "data/demo_m2_triage.db",
         ),
         messages=(LTM_MARCO_TICKET,),
     ),
@@ -142,13 +149,26 @@ def _user_thread_text(ticket_id: int, latest: str) -> str:
 
 def _log_ticket_processed(ticket: Ticket) -> None:
     full_text = _user_thread_text(ticket.id, ticket.messaggio_originale)
+    cliente = extract_cliente_nome(full_text)
+    sentiment = detect_sentiment_label(full_text)
     log_event(
         "ticket_processed",
         {
             "ticket": ticket.model_dump(),
-            "cliente_nome": extract_cliente_nome(full_text),
-            "sentiment": detect_sentiment_label(full_text),
+            "cliente_nome": cliente,
+            "sentiment": sentiment,
         },
+    )
+    log_triage_to_sqlite(
+        {
+            "cliente_nome": cliente or "Anonimo",
+            "categoria": ticket.categoria or "GENERAL",
+            "priorita": ticket.priorita or "LOW",
+            "sentiment": sentiment,
+            "riassunto_breve": ticket.riassunto_breve or "",
+            "lingua": "Italiano",
+            "azione_eseguita": "Nessuna",
+        }
     )
 
 
@@ -248,6 +268,52 @@ def continue_ticket(ticket_id: int, user_input: str) -> Ticket | None:
         return None
 
 
+def seed_marco_sqlite(
+    n: int = 4,
+    db_path: Path | None = None,
+    *,
+    reset: bool = False,
+) -> Path:
+    """
+    Scrive n record IT+ARRABBIATO per Marco nel database SQLite (demo M2 / L13).
+    """
+    path = db_path or TRIAGE_DB_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if reset and path.exists():
+        path.unlink()
+
+    init_db(str(path))
+    now = datetime.now(UTC)
+    with sqlite3.connect(str(path)) as conn:
+        cursor = conn.cursor()
+        for i in range(n):
+            ts = (now - timedelta(hours=2 - i * 0.25)).strftime("%Y-%m-%d %H:%M:%S")
+            cursor.execute(
+                """
+                INSERT INTO tickets (
+                    cliente_nome, categoria, priorita, sentiment,
+                    riassunto_breve, lingua, azione_eseguita, created_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    "Marco",
+                    "IT",
+                    "HIGH",
+                    "ARRABBIATO",
+                    f"Incidente db-primary ripetuto #{i + 1}",
+                    "Italiano",
+                    "Nessuna",
+                    ts,
+                ),
+            )
+        conn.commit()
+
+    action = "Ricreato" if reset else "Aggiornato"
+    print(f"[SEED] {action} storico SQLite: {n} ticket IT+ARRABBIATO per Marco → {path}")
+    return path
+
+
 def seed_marco_angry_history(
     n: int = 4,
     log_path: Path | None = None,
@@ -288,24 +354,25 @@ def seed_marco_angry_history(
     return path
 
 
-def _patch_long_term_log(path: Path):
-    """Contesto: search_long_term_history legge da path isolato (solo demo M2)."""
-    return _LogPathPatch(path)
+class _SqliteDbPatch:
+    """Contesto: LTM ReAct legge da un DB SQLite isolato (demo M2)."""
 
-
-class _LogPathPatch:
     def __init__(self, path: Path) -> None:
         self._path = path
         self._previous: Path | None = None
 
     def __enter__(self) -> Path:
-        self._previous = history_tools.LOG_FILE_PATH
-        history_tools.LOG_FILE_PATH = self._path
+        self._previous = paths.TRIAGE_DB_PATH
+        paths.TRIAGE_DB_PATH = self._path
         return self._path
 
     def __exit__(self, *args: object) -> None:
         if self._previous is not None:
-            history_tools.LOG_FILE_PATH = self._previous
+            paths.TRIAGE_DB_PATH = self._previous
+
+
+def _patch_sqlite_db(path: Path) -> _SqliteDbPatch:
+    return _SqliteDbPatch(path)
 
 
 def run_smoke_demo() -> None:
@@ -395,23 +462,54 @@ def run_ltm_demo() -> None:
     scenario = next(s for s in DEMO_SCENARIOS if s.id == "M2")
     _print_scenario_intro(scenario)
 
-    demo_log = seed_marco_angry_history(4, DEMO_M2_LOG_PATH, reset=True)
+    demo_db = seed_marco_sqlite(4, DEMO_M2_DB_PATH, reset=True)
     print(
         f"[DEMO M2] Lo storico per search_long_term_history è in:\n"
-        f"         {demo_log}\n"
-        f"         (non mescolato con logs/activity.jsonl principale)"
+        f"         {demo_db}\n"
+        f"         (database SQLite isolato, non mescolato con data/triage_system.db)"
     )
 
     print("\n>>> Turno unico — quinto ticket di Marco (dopo 4 incidenti in seed)")
-    with _patch_long_term_log(demo_log):
+    with _patch_sqlite_db(demo_db):
         process_ticket(LTM_MARCO_TICKET)
+
+
+def run_l13_react_demo() -> None:
+    """Demo Lezione 13: loop ReAct + persistenza SQLite indicizzata."""
+    print("\n" + "=" * 72)
+    print("   IMPESUD AGENTIC TRIAGE - SUITE REACT & SQLITE   ")
+    print("=" * 72)
+    print(
+        "Obiettivo: osservare il ciclo Thought → Action → Observation "
+        "e la scrittura indicizzata su data/triage_system.db."
+    )
+    print(f"\nTicket: {L13_TICKET_1}")
+    print("-" * 72)
+
+    init_db()
+    manuale = load_it_manual()
+    result = react_triage(L13_TICKET_1, manuale)
+    cliente = extract_cliente_nome(L13_TICKET_1) or "Anonimo"
+    log_triage_to_sqlite(
+        {
+            "cliente_nome": cliente,
+            "categoria": result.categoria,
+            "priorita": result.priorita,
+            "sentiment": detect_sentiment_label(L13_TICKET_1),
+            "riassunto_breve": result.riassunto_breve,
+            "lingua": "Italiano",
+            "azione_eseguita": result.azione_eseguita or "Nessuna",
+        }
+    )
+    print(f"\n📊 Verdetto Finale Strutturato:\n{result.model_dump_json(indent=2)}")
 
 
 def run_demo() -> None:
     """Ordine didattico: smoke → short-term → long-term."""
+    init_db()
     print(
         "\nDEMO LEZIONE 9 — Memoria agentica\n"
-        "Ordine: M3 (pipeline) → M1 (thread) → M2 (storico audit)\n"
+        "Ordine: M3 (pipeline) → M1 (thread) → M2 (storico SQLite)\n"
     )
     run_smoke_demo()
     run_stm_demo()
@@ -420,11 +518,11 @@ def run_demo() -> None:
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Demo Lezioni 9–12 — memoria, RAG, resilienza, benchmark (OPENAI_API_KEY)",
+        description="Demo Lezioni 9–13 — memoria, RAG, resilienza, ReAct/SQLite (OPENAI_API_KEY)",
     )
     parser.add_argument(
         "--scenario",
-        choices=["m1", "m2", "m3", "l10", "l11", "all"],
+        choices=["m1", "m2", "m3", "l10", "l11", "l13", "all"],
         default="all",
         help="Esegue un solo scenario o tutti (default: all = M3→M1→M2)",
     )
@@ -445,3 +543,5 @@ if __name__ == "__main__":
         run_l10_rag_demo()
     elif args.scenario == "l11":
         run_l11_resilience_demo()
+    elif args.scenario == "l13":
+        run_l13_react_demo()
