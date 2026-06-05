@@ -51,7 +51,7 @@ gitGraph
 | **10B** | ChromaDB (vettori persistenti) | `rag/chroma_store.py`, `data/chroma/`, `scripts/esercizio_chroma_policy.py` | [LEZIONE_10B_CHROMADB.md](LEZIONE_10B_CHROMADB.md) |
 | **11** | Self-correction, emergency fallback | `_finalize_with_self_correction`, `TriageStats` | [LEZIONE_11_RESILIENZA.md](LEZIONE_11_RESILIENZA.md) |
 | **12** | Benchmark, KPI log, prompt v2 | `benchmark.py`, `analytics/log_kpi.py` | [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md) |
-| **13** | ReAct multi-step, SQLite LTM | `react_triage`, `tools/logger.py` SQLite | [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) |
+| **13** | ReAct multi-step, SQLite LTM | `react_triage`, `init_db`, `scripts/init_triage_db.py` | [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) |
 | **14** | max_steps, STM ReAct, self-correction in-loop | `_SHORT_TERM_STORE`, `session_id` | [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md) |
 
 ---
@@ -67,6 +67,7 @@ gitGraph
 | 12 — benchmark | `PYTHONPATH=src python3 src/benchmark.py` |
 | 12 — KPI log | `PYTHONPATH=src python3 -m analytics.log_kpi` |
 | 13 — ReAct + SQLite | `PYTHONPATH=src python3 src/main.py --scenario l13` |
+| 13 — init DB (post-clone) | `PYTHONPATH=src python3 scripts/init_triage_db.py` |
 | 14 — Planning multi-step | `PYTHONPATH=src python3 src/main.py --scenario l14` |
 | Test (qualsiasi branch) | `pytest tests/ -q` |
 
@@ -112,7 +113,7 @@ gitGraph
 
 | Criterio | Dove verificare |
 |----------|-----------------|
-| SQLite init + indice `idx_cliente` | `tests/test_logger_sqlite.py`, `tools/logger.init_db` |
+| SQLite init + indice `idx_cliente` | `scripts/init_triage_db.py`, `tests/test_logger_sqlite.py` |
 | LTM O(log N) vs JSONL audit | Dual-write in `main._log_ticket_processed` |
 | Loop ReAct base | `react_triage`, `test_react_triage_with_tool_then_json` |
 | `max_steps = 4` hard stop | `DEFAULT_REACT_MAX_STEPS`, `test_react_max_steps_fallback` |

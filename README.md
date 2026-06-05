@@ -93,12 +93,12 @@ flowchart TB
 |----------|-----|
 | `process_ticket(messaggio)` | Nuovo ticket (`OPEN` → triage → routing) |
 | `continue_ticket(ticket_id, messaggio)` | Turno successivo (short-term memory) |
-| `seed_marco_angry_history(n, log_path, reset=…)` | Seed demo M2 (storico Marco) |
+| `seed_marco_sqlite(n, db_path, reset=…)` | Seed demo M2 su SQLite (LTM indicizzata) |
+| `seed_marco_angry_history(…)` | Legacy JSONL (pre-L13); preferire `seed_marco_sqlite` |
 | `run_demo()` / `run_*_demo()` | Scenari didattici M3 → M1 → M2 |
 | `run_l10_rag_demo()` | Demo Lezione 10: RAG semantica |
 | `run_l11_resilience_demo()` | Demo Lezione 11: self-correction |
 | `run_l13_react_demo()` | Demo Lezione 13: ReAct + SQLite |
-| `seed_marco_sqlite(n, db_path, reset=…)` | Seed demo M2 su SQLite |
 
 ## Memoria (Lezione 9)
 
@@ -239,6 +239,30 @@ Guida: [LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md).
 PYTHONPATH=src python3 src/main.py --scenario l13
 ```
 
+## Database SQLite (Lezione 13)
+
+Il file [`data/triage_system.db`](data/triage_system.db) **non è in Git** (come `data/chroma/` e `logs/`): viene creato a runtime da `init_db()`.
+
+| Artefatto | In Git? | Ruolo |
+|-----------|---------|--------|
+| `data/schema/triage_system.sql` | Sì | DDL di riferimento |
+| `data/triage_system.db` | No (gitignored) | LTM runtime indicizzata |
+| `data/demo_m2_triage.db` | No (gitignored) | Seed isolato demo M2 |
+
+**Dopo checkout su `lesson-13-react-sqlite`:**
+
+```bash
+# Opzione A — script dedicato (senza chiamate LLM)
+PYTHONPATH=src python3 scripts/init_triage_db.py
+
+# Opzione B — qualsiasi avvio di main.py crea il DB all'inizio
+PYTHONPATH=src python3 src/main.py --scenario m3
+
+ls -la data/triage_system.db
+```
+
+Guida completa: [LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md).
+
 ## Demo ed esecuzione
 
 Ordine `run_demo()`: **M3 → M1 → M2**.
@@ -252,6 +276,9 @@ Ordine `run_demo()`: **M3 → M1 → M2**.
 ```bash
 source .venv/bin/activate
 pip install -e ".[test]"
+
+# Bootstrap SQLite (opzionale — anche main.py lo fa all'avvio)
+PYTHONPATH=src python3 scripts/init_triage_db.py
 
 PYTHONPATH=src python3 src/main.py              # M3 → M1 → M2
 PYTHONPATH=src python3 src/main.py --scenario m3
@@ -286,6 +313,7 @@ agentic-triage-system/
 │   ├── LEZIONE_12_PROMPT_OPTIMIZATION.md
 │   └── LEZIONE_13_REACT_SQLITE.md
 ├── data/
+│   ├── schema/triage_system.sql # DDL SQLite (versionato)
 │   ├── manuale_it.txt
 │   ├── policy.txt
 │   ├── triage_system.db         # LTM SQLite (runtime, gitignored)
@@ -293,7 +321,9 @@ agentic-triage-system/
 │   ├── chroma/                  # indice ChromaDB (runtime, gitignored)
 │   └── tickets.jsonl
 ├── logs/
-├── scripts/esercizio_chroma_policy.py
+├── scripts/
+│   ├── init_triage_db.py        # bootstrap SQLite post-clone
+│   └── esercizio_chroma_policy.py
 ├── src/
 │   ├── main.py, logic.py, benchmark.py
 │   ├── memory/, rag/, analytics/, prompts/, tools/, …
@@ -306,6 +336,10 @@ agentic-triage-system/
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[test]"
+
+# Crea il database SQLite locale
+PYTHONPATH=src python3 scripts/init_triage_db.py
+
 pytest tests/ -q
 ```
 

@@ -39,6 +39,8 @@ CREATE TABLE tickets (
 CREATE INDEX idx_cliente ON tickets(cliente_nome);
 ```
 
+> **Primo avvio:** `data/triage_system.db` **non è in Git** (`.gitignore`). Dopo checkout su branch L13/L14 eseguire `PYTHONPATH=src python3 scripts/init_triage_db.py` oppure qualsiasi `src/main.py` (bootstrap automatico all'avvio). DDL versionato: [`data/schema/triage_system.sql`](../data/schema/triage_system.sql).
+
 ### Dual-write in pipeline
 
 Ogni ticket processato via `main.process_ticket` scrive:
@@ -106,10 +108,13 @@ flowchart TB
 ```bash
 git checkout lesson-13-react-sqlite
 
-# Inizializza DB + demo ReAct (Marco Rossi, budget 15k)
+# 1. Crea data/triage_system.db (senza API key)
+PYTHONPATH=src python3 scripts/init_triage_db.py
+
+# 2. Demo ReAct (Marco Rossi, budget 15k) — richiede OPENAI_API_KEY in .env
 PYTHONPATH=src python3 src/main.py --scenario l13
 
-# Demo M2 aggiornata (seed SQLite isolato)
+# Demo M2 (seed SQLite isolato su demo_m2_triage.db)
 PYTHONPATH=src python3 src/main.py --scenario m2
 
 # Test mirati
@@ -133,10 +138,13 @@ pytest tests/ -q   # ~66 su questo branch
 | [`tools/history_tools.py`](../src/tools/history_tools.py) | Delega a SQLite (`log_path` deprecato) |
 | [`tools/registry.py`](../src/tools/registry.py) | Tool map → `search_long_term_history_sql` |
 | [`logic.py`](../src/logic.py) | `react_triage()` |
-| [`main.py`](../src/main.py) | Dual-write, `seed_marco_sqlite`, demo `--scenario l13` |
+| [`main.py`](../src/main.py) | Dual-write, `seed_marco_sqlite`, demo `--scenario l13`, bootstrap `init_db` |
+| [`scripts/init_triage_db.py`](../scripts/init_triage_db.py) | Setup SQLite post-clone |
+| [`data/schema/triage_system.sql`](../data/schema/triage_system.sql) | DDL versionato |
 
 ## Checklist docente
 
+- [ ] Dopo checkout, `data/triage_system.db` creato con `init_triage_db.py` o `main.py`
 - [ ] Studente spiega differenza O(N) vs O(log N) per LTM
 - [ ] Dual-write JSONL + SQLite compreso (KPI vs storico cliente)
 - [ ] Demo L13 mostra almeno un ciclo Action → Observation
