@@ -7,6 +7,7 @@ Esecuzione demo:
   PYTHONPATH=src python src/main.py --scenario l10   # RAG semantica su policy
   PYTHONPATH=src python src/main.py --scenario l11   # Self-correction (Lezione 11)
   PYTHONPATH=src python src/main.py --scenario l13   # ReAct + SQLite (Lezione 13)
+  PYTHONPATH=src python src/main.py --scenario l14   # Planning multi-step (Lezione 14)
 """
 
 from __future__ import annotations
@@ -53,6 +54,11 @@ L10_SYNONYM_QUERY = (
 L13_TICKET_1 = (
     "Sono Marco Rossi. Ho un budget di 15.000€ per un progetto AI "
     "e voglio parlare con un manager."
+)
+
+L14_TICKET_2 = (
+    "Salve, sono sempre Marco Rossi. Volevo sapere se applicate uno sconto "
+    "per il progetto di cui vi ho parlato prima."
 )
 
 
@@ -474,6 +480,29 @@ def run_ltm_demo() -> None:
         process_ticket(LTM_MARCO_TICKET)
 
 
+def _persist_react_result(user_input: str, result) -> None:
+    cliente = extract_cliente_nome(user_input) or "Anonimo"
+    log_triage_to_sqlite(
+        {
+            "cliente_nome": cliente,
+            "categoria": result.categoria,
+            "priorita": result.priorita,
+            "sentiment": detect_sentiment_label(user_input),
+            "riassunto_breve": result.riassunto_breve,
+            "lingua": "Italiano",
+            "azione_eseguita": result.azione_eseguita or "Nessuna",
+        }
+    )
+
+
+def process_ticket_react(user_input: str, session_id: str | None = None):
+    """Wrapper demo ReAct: triage multi-step con optional Short-Term Memory."""
+    manuale = load_it_manual()
+    result = react_triage(user_input, manuale, session_id=session_id)
+    _persist_react_result(user_input, result)
+    return result
+
+
 def run_l13_react_demo() -> None:
     """Demo Lezione 13: loop ReAct + persistenza SQLite indicizzata."""
     print("\n" + "=" * 72)
@@ -489,19 +518,32 @@ def run_l13_react_demo() -> None:
     init_db()
     manuale = load_it_manual()
     result = react_triage(L13_TICKET_1, manuale)
-    cliente = extract_cliente_nome(L13_TICKET_1) or "Anonimo"
-    log_triage_to_sqlite(
-        {
-            "cliente_nome": cliente,
-            "categoria": result.categoria,
-            "priorita": result.priorita,
-            "sentiment": detect_sentiment_label(L13_TICKET_1),
-            "riassunto_breve": result.riassunto_breve,
-            "lingua": "Italiano",
-            "azione_eseguita": result.azione_eseguita or "Nessuna",
-        }
-    )
+    _persist_react_result(L13_TICKET_1, result)
     print(f"\n📊 Verdetto Finale Strutturato:\n{result.model_dump_json(indent=2)}")
+
+
+def run_l14_planning_demo() -> None:
+    """Demo Lezione 14: ReAct multi-turn con STM, max_steps=4 e LTM SQLite."""
+    print("\n" + "=" * 72)
+    print("   IMPESUD AGENTIC TRIAGE - SUITE REACT & SQLITE   ")
+    print("=" * 72)
+    print(
+        "Obiettivo: verificare Short-Term Memory (session_01), max_steps=4 "
+        "e storico cliente su SQLite al secondo ticket."
+    )
+    print("-" * 72)
+
+    init_db()
+
+    print(f"\n📥 Ricezione Ticket 1: {L13_TICKET_1}")
+    process_ticket_react(L13_TICKET_1, session_id="session_01")
+
+    print("-" * 50)
+
+    print(f"📥 Ricezione Ticket 2 (Verifica ReAct Multi-Step): {L14_TICKET_2}")
+    risultato = process_ticket_react(L14_TICKET_2, session_id="session_01")
+
+    print(f"\n📊 Verdetto Finale Strutturato salvato in DB:\n{risultato.model_dump_json(indent=2)}")
 
 
 def run_demo() -> None:
@@ -518,11 +560,11 @@ def run_demo() -> None:
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Demo Lezioni 9–13 — memoria, RAG, resilienza, ReAct/SQLite (OPENAI_API_KEY)",
+        description="Demo Lezioni 9–14 — memoria, RAG, resilienza, ReAct/SQLite (OPENAI_API_KEY)",
     )
     parser.add_argument(
         "--scenario",
-        choices=["m1", "m2", "m3", "l10", "l11", "l13", "all"],
+        choices=["m1", "m2", "m3", "l10", "l11", "l13", "l14", "all"],
         default="all",
         help="Esegue un solo scenario o tutti (default: all = M3→M1→M2)",
     )
@@ -545,3 +587,5 @@ if __name__ == "__main__":
         run_l11_resilience_demo()
     elif args.scenario == "l13":
         run_l13_react_demo()
+    elif args.scenario == "l14":
+        run_l14_planning_demo()

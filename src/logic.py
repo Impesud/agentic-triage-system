@@ -18,10 +18,14 @@ from prompts.triage_v1 import build_chat_messages
 from schemas.ticket import TriageResult
 from tools.history_tools import should_escalate_repeat_customer
 from tools.logger import log_event
+from tools.logger import log_event
 from tools.registry import TOOL_MAP, TOOLS_DEFINITION
 
 MAX_TRIAGE_JSON_RETRIES = 3
-DEFAULT_REACT_MAX_STEPS = 8
+DEFAULT_REACT_MAX_STEPS = 4
+
+# Cache Short-Term Memory per sessioni ReAct multi-turno (Lezione 14)
+_SHORT_TERM_STORE: dict[str, list[Any]] = {}
 
 _REACT_PROMPT_SUFFIX = """
 Operi rigorosamente all'interno di un ciclo ReAct strutturato: Thought -> Action -> Observation.
@@ -505,15 +509,25 @@ def react_triage(
     manuale: str,
     *,
     history: list[dict[str, str]] | None = None,
+    session_id: str | None = None,
     max_steps: int = DEFAULT_REACT_MAX_STEPS,
     max_json_retries: int = MAX_TRIAGE_JSON_RETRIES,
 ) -> TriageResult:
     """
-    Motore di Triage Agentico ReAct Multi-Step (Lezione 13).
+    Motore di Triage Agentico ReAct Multi-Step (Lezioni 13–14).
     Esegue cicli iterativi Thought -> Action -> Observation fino a convergenza JSON.
+    Con session_id riusa la conversazione in _SHORT_TERM_STORE (Short-Term Memory).
     """
     client = get_client()
-    conversation: list[Any] = _build_react_messages(user_input, manuale, history=history)
+
+    if session_id and session_id in _SHORT_TERM_STORE:
+        conversation = _SHORT_TERM_STORE[session_id]
+        conversation.append({"role": "user", "content": user_input})
+    elif session_id:
+        conversation = _build_react_messages(user_input, manuale, history=history)
+        _SHORT_TERM_STORE[session_id] = conversation
+    else:
+        conversation = _build_react_messages(user_input, manuale, history=history)
 
     print(
         f"\n🎬 [ReAct Engine] Avvio pianificazione per ticket: '{user_input[:40]}...'",
@@ -562,25 +576,47 @@ def react_triage(
             f"🏁 [ReAct Engine] Convergenza raggiunta al ciclo {step}. Validazione strutturale...",
             flush=True,
         )
-        result, _stats = _finalize_with_self_correction(
-            client,
-            conversation,
-            user_input,
-            content.strip(),
-            max_retries=max_json_retries,
-        )
-        return result
+        try:
+            result = parse_llm_output(content.strip())
+            if session_id:
+                _SHORT_TERM_STORE[session_id] = conversation
+            return result
+        except ValueError as parsing_err:
+            print(
+                f"   ⚠️ [Self-Correction] Formato non valido. "
+                f"Tentativo di riallineamento in-context: {parsing_err}",
+                flush=True,
+            )
+            conversation.append(
+                {
+                    "role": "user",
+                    "content": (
+                        f"Il tuo JSON finale ha violato lo schema. Errore riscontrato da Pydantic: "
+                        f"{parsing_err}. Rigenera la struttura correggendo il campo."
+                    ),
+                }
+            )
+            if session_id:
+                _SHORT_TERM_STORE[session_id] = conversation
+            continue
 
     print(
         "🚨 [CRITICO] Il ciclo di Planning ReAct ha esaurito max_steps. "
         "Attivazione Fallback di emergenza.",
         flush=True,
     )
-    fallback = _emergency_triage_result(user_input)
-    return TriageResult(
-        analisi_problema=fallback.analisi_problema,
-        categoria=fallback.categoria,
-        priorita=fallback.priorita,
+    log_event(
+        "react_max_steps_fallback",
+        {
+            "max_steps": max_steps,
+            "session_id": session_id,
+            "input_preview": user_input[:200],
+        },
+    )
+    fallback = TriageResult(
+        analisi_problema=_emergency_triage_result(user_input).analisi_problema,
+        categoria="GENERAL",
+        priorita="CRITICAL",
         riassunto_breve=(
             "FALLBACK: L'agente ha superato i max_steps di pianificazione ReAct "
             "o ha corrotto la struttura."
@@ -588,3 +624,6 @@ def react_triage(
         messaggio_originale=user_input,
         azione_eseguita="Fallback per interruzione ciclo ReAct",
     )
+    if session_id:
+        _SHORT_TERM_STORE[session_id] = conversation
+    return fallback

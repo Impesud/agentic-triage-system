@@ -1,8 +1,8 @@
 # Agentic Customer Care Triage System
 
-Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSON), tool locali, **memoria short/long-term** (Lezione 9), **RAG semantica su policy con ChromaDB** (Lezione 10/10B), **self-correction e emergency fallback** (Lezione 11), **benchmark e log analytics** (Lezione 12) e **loop ReAct e SQLite LTM** (Lezione 13).
+Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSON), tool locali, **memoria short/long-term** (Lezione 9), **RAG semantica su policy con ChromaDB** (Lezione 10/10B), **self-correction e emergency fallback** (Lezione 11), **benchmark e log analytics** (Lezione 12), **loop ReAct e SQLite LTM** (Lezione 13) e **planning multi-step con controllo loop** (Lezione 14).
 
-**Branch corrente:** `lesson-13-react-sqlite` — include le **lezioni 9–13**.
+**Branch corrente:** `lesson-14-planning-loops` — include le **lezioni 9–14**.
 
 ## Percorso didattico e branch Git
 
@@ -14,7 +14,8 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 | `lesson-10-rag-semantica` | 10 — RAG + ChromaDB | + `rag/chroma_store.py`, demo `l10` |
 | `lesson-11-resilienza-self-correction` | 11 — Resilienza | + self-correction, emergency fallback |
 | `lesson-12-benchmark-log-analytics` | 12 — Benchmark | + `benchmark.py`, `analytics/log_kpi.py` |
-| `lesson-13-react-sqlite` | **13 — ReAct + SQLite** | + `react_triage`, LTM SQLite indicizzata (questo branch) |
+| `lesson-13-react-sqlite` | 13 — ReAct + SQLite | + `react_triage`, LTM SQLite indicizzata |
+| `lesson-14-planning-loops` | **14 — Planning loop** | + `max_steps=4`, STM ReAct, self-correction in-loop (questo branch) |
 
 | Guida | File |
 |-------|------|
@@ -22,6 +23,7 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 | 11 Resilienza | [docs/LEZIONE_11_RESILIENZA.md](docs/LEZIONE_11_RESILIENZA.md) |
 | 12 Benchmark | [docs/LEZIONE_12_PROMPT_OPTIMIZATION.md](docs/LEZIONE_12_PROMPT_OPTIMIZATION.md) |
 | 13 ReAct + SQLite | [docs/LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md) |
+| 14 Planning loop | [docs/LEZIONE_14_PLANNING_LOOPS.md](docs/LEZIONE_14_PLANNING_LOOPS.md) |
 
 [GESTIONE_ERRORI.md](GESTIONE_ERRORI.md)
 
@@ -29,7 +31,7 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 
 | Modulo | Ruolo |
 |--------|--------|
-| [`main.py`](src/main.py) | Orchestrazione, `SessionManager`, demo M1–M3, L10, L11, L13 |
+| [`main.py`](src/main.py) | Orchestrazione, `SessionManager`, demo M1–M3, L10–L14 |
 | [`logic.py`](src/logic.py) | Loop agentico + `react_triage` (ReAct multi-step) |
 | [`benchmark.py`](src/benchmark.py) | Suite benchmark 5 ticket (Lezione 12) |
 | [`client.py`](src/client.py) | Client OpenAI (`OPENAI_API_KEY` solo nel file `.env`, non dalla shell) |
@@ -94,6 +96,8 @@ flowchart TB
 | `run_l10_rag_demo()` | Demo Lezione 10: RAG semantica |
 | `run_l11_resilience_demo()` | Demo Lezione 11: self-correction |
 | `run_l13_react_demo()` | Demo Lezione 13: ReAct + SQLite |
+| `run_l14_planning_demo()` | Demo Lezione 14: STM + max_steps |
+| `process_ticket_react(msg, session_id=…)` | Wrapper demo ReAct multi-turn |
 | `seed_marco_sqlite(n, db_path, reset=…)` | Seed demo M2 su SQLite |
 
 ## Memoria (Lezione 9)
@@ -227,13 +231,23 @@ PYTHONPATH=src python3 -m analytics.log_kpi
 
 ## ReAct e SQLite (Lezione 13)
 
-[`react_triage`](src/logic.py) implementa il ciclo **Thought → Action → Observation** con `max_steps` configurabile (default 8). La pipeline classica `triage_message` resta per benchmark e demo M1–M3.
+[`react_triage`](src/logic.py) implementa il ciclo **Thought → Action → Observation** con `max_steps=4` (Lezione 14). Con `session_id` riusa `_SHORT_TERM_STORE` per thread multi-turno ReAct. La pipeline classica `triage_message` resta per benchmark e demo M1–M3.
 
-Guida: [LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md).
+Guide: [LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md), [LEZIONE_14_PLANNING_LOOPS.md](docs/LEZIONE_14_PLANNING_LOOPS.md).
 
 ```bash
 PYTHONPATH=src python3 src/main.py --scenario l13
+PYTHONPATH=src python3 src/main.py --scenario l14
 ```
+
+## Planning Multi-Step (Lezione 14)
+
+| Meccanismo | Dettaglio |
+|------------|-----------|
+| `max_steps = 4` | Hard stop deterministico sul loop ReAct |
+| `_SHORT_TERM_STORE` | Memoria conversazione per `session_id` stringa |
+| Self-correction in-loop | Errore Pydantic reiniettato nel ciclo prima del fallback |
+| Evento log | `react_max_steps_fallback` in `activity.jsonl` |
 
 ## Demo ed esecuzione
 
@@ -256,6 +270,7 @@ PYTHONPATH=src python3 src/main.py --scenario m2
 PYTHONPATH=src python3 src/main.py --scenario l10
 PYTHONPATH=src python3 src/main.py --scenario l11
 PYTHONPATH=src python3 src/main.py --scenario l13
+PYTHONPATH=src python3 src/main.py --scenario l14
 PYTHONPATH=src python3 src/benchmark.py
 PYTHONPATH=src python3 -m analytics.log_kpi
 ```
@@ -279,7 +294,8 @@ agentic-triage-system/
 │   ├── LEZIONE_10B_CHROMADB.md
 │   ├── LEZIONE_11_RESILIENZA.md
 │   ├── LEZIONE_12_PROMPT_OPTIMIZATION.md
-│   └── LEZIONE_13_REACT_SQLITE.md
+│   ├── LEZIONE_13_REACT_SQLITE.md
+│   └── LEZIONE_14_PLANNING_LOOPS.md
 ├── data/
 │   ├── manuale_it.txt
 │   ├── policy.txt
@@ -303,11 +319,11 @@ pip install -e ".[test]"
 pytest tests/ -q
 ```
 
-**66 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
+**69 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
 
 | File | Verifica |
 |------|----------|
-| `test_logic.py` | Loop, self-correction, fallback, ReAct |
+| `test_logic.py` | Loop, self-correction, ReAct, max_steps, STM |
 | `test_logger_sqlite.py` | SQLite init, insert, query indicizzata |
 | `test_policy_semantic.py` | RAG + Chroma, sinonimi, soglia |
 | `test_benchmark.py` | Report benchmark (mock) |

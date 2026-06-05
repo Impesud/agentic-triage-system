@@ -12,6 +12,7 @@ Ogni branch contiene il codice **cumulativo** fino alla lezione indicata; le lez
 | [`lesson-11-resilienza-self-correction`](.) | **Lezione 11** — Self-correction | `git checkout lesson-11-resilienza-self-correction` | ~54 |
 | [`lesson-12-benchmark-log-analytics`](.) | **Lezione 12** — Benchmark e analytics | `git checkout lesson-12-benchmark-log-analytics` | ~62 |
 | [`lesson-13-react-sqlite`](.) | **Lezione 13** — ReAct + SQLite LTM | `git checkout lesson-13-react-sqlite` | ~66 |
+| [`lesson-14-planning-loops`](.) | **Lezione 14** — Planning e controllo loop | `git checkout lesson-14-planning-loops` | ~69 |
 
 ```mermaid
 gitGraph
@@ -28,11 +29,14 @@ gitGraph
   branch lesson-13-react-sqlite
   checkout lesson-13-react-sqlite
   commit id: "L13-react-sqlite"
+  branch lesson-14-planning-loops
+  checkout lesson-14-planning-loops
+  commit id: "L14-planning"
 ```
 
 **Settimana 8 (lezioni 11–12):** resilienza, error recovery, benchmarking — vedi [LEZIONE_11_RESILIENZA.md](LEZIONE_11_RESILIENZA.md) e [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md).
 
-**Settimana 9 (lezioni 13–14):** ReAct, SQLite, planning multi-step — vedi [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md).
+**Settimana 9 (lezioni 13–14):** ReAct, SQLite, planning multi-step — vedi [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) e [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md).
 
 ---
 
@@ -48,6 +52,7 @@ gitGraph
 | **11** | Self-correction, emergency fallback | `_finalize_with_self_correction`, `TriageStats` | [LEZIONE_11_RESILIENZA.md](LEZIONE_11_RESILIENZA.md) |
 | **12** | Benchmark, KPI log, prompt v2 | `benchmark.py`, `analytics/log_kpi.py` | [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md) |
 | **13** | ReAct multi-step, SQLite LTM | `react_triage`, `tools/logger.py` SQLite | [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) |
+| **14** | max_steps, STM ReAct, self-correction in-loop | `_SHORT_TERM_STORE`, `session_id` | [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md) |
 
 ---
 
@@ -62,6 +67,7 @@ gitGraph
 | 12 — benchmark | `PYTHONPATH=src python3 src/benchmark.py` |
 | 12 — KPI log | `PYTHONPATH=src python3 -m analytics.log_kpi` |
 | 13 — ReAct + SQLite | `PYTHONPATH=src python3 src/main.py --scenario l13` |
+| 14 — Planning multi-step | `PYTHONPATH=src python3 src/main.py --scenario l14` |
 | Test (qualsiasi branch) | `pytest tests/ -q` |
 
 **Prerequisito demo live:** `OPENAI_API_KEY` nel file `.env` (non `export` in shell).
@@ -89,6 +95,7 @@ gitGraph
 | [LEZIONE_11_RESILIENZA.md](LEZIONE_11_RESILIENZA.md) | Hard vs soft error, self-correction, fallback |
 | [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md) | Benchmark, analytics, triage_v2 |
 | [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) | ReAct, SQLite indicizzato, dual-write |
+| [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md) | max_steps, STM, self-correction in-loop |
 
 ---
 

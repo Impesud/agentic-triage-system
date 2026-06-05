@@ -345,3 +345,68 @@ def test_react_triage_with_tool_then_json(mock_get_client, tmp_path, monkeypatch
 
     assert result.categoria == "SALES"
     assert mock_client.chat.completions.create.call_count == 2
+
+
+@patch("logic.get_client")
+def test_react_max_steps_fallback(mock_get_client):
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    tc = _tool_call("search_policy", {"query": "sconto"})
+    mock_client.chat.completions.create.return_value = _completion(tool_calls=[tc])
+
+    result = react_triage("test loop infinito", manuale="", max_steps=4)
+
+    assert "Fallback" in (result.azione_eseguita or "")
+    assert mock_client.chat.completions.create.call_count == 4
+
+
+@patch("logic.get_client")
+def test_react_self_correction_in_loop(mock_get_client):
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    invalid = '{"categoria":"IT"}'
+    valid = (
+        '{"analisi_problema":"1. P. 2. C. 3. IT. 4. LOW.",'
+        '"categoria":"IT","priorita":"LOW","riassunto_breve":"test ok",'
+        '"messaggio_originale":"help"}'
+    )
+    mock_client.chat.completions.create.side_effect = [
+        _completion(content=invalid),
+        _completion(content=valid),
+    ]
+
+    result = react_triage("help", manuale="", max_steps=4)
+
+    assert result.categoria == "IT"
+    assert mock_client.chat.completions.create.call_count == 2
+
+
+@patch("logic.get_client")
+def test_short_term_store_preserves_session(mock_get_client):
+    from logic import _SHORT_TERM_STORE
+
+    _SHORT_TERM_STORE.clear()
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    json_out = (
+        '{"analisi_problema":"1. P. 2. C. 3. IT. 4. LOW.",'
+        '"categoria":"IT","priorita":"LOW","riassunto_breve":"turno uno",'
+        '"messaggio_originale":"ticket uno"}'
+    )
+    json_out_2 = (
+        '{"analisi_problema":"1. P. 2. C. 3. IT. 4. LOW.",'
+        '"categoria":"IT","priorita":"LOW","riassunto_breve":"turno due",'
+        '"messaggio_originale":"ticket due"}'
+    )
+    mock_client.chat.completions.create.side_effect = [
+        _completion(content=json_out),
+        _completion(content=json_out_2),
+    ]
+
+    react_triage("ticket uno", manuale="", session_id="session_test")
+    messages_before = len(_SHORT_TERM_STORE["session_test"])
+    react_triage("ticket due", manuale="", session_id="session_test")
+
+    assert len(_SHORT_TERM_STORE["session_test"]) > messages_before
+    assert mock_client.chat.completions.create.call_count == 2
+    _SHORT_TERM_STORE.clear()
