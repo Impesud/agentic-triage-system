@@ -24,6 +24,7 @@ KPI disponibili:
 |-----|--------|
 | Conteggio `event_type` | `ticket_received`, `ticket_processed`, `error`, … |
 | Self-correction | `triage_json_retry`, `emergency_fallback` |
+| ReAct (L14) | `react_max_steps_fallback` |
 | Tool usage (proxy) | stringhe `search_policy`, `notify_manager`, … nei payload |
 
 Se `triage_json_retry` è alto → problema **sintassi JSON** (prompt o self-correction).
@@ -72,5 +73,6 @@ Dopo l’aggiunta, il benchmark con ticket budget 12k€ / tono aggressivo dovre
 ## Collegamenti
 
 - [Lezione 11 — Self-Correction](../README.md#resilienza-e-self-correction-lezione-11)
+- [Lezione 13 — ReAct + SQLite](LEZIONE_13_REACT_SQLITE.md) — dual-write JSONL + SQLite (KPI restano su JSONL)
 - [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md)
 - [LEZIONE_10B_CHROMADB.md](LEZIONE_10B_CHROMADB.md)

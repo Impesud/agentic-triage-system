@@ -1,48 +1,128 @@
 # Lezione 13 — Architettura ReAct e Upgrade Infrastrutturale (SQLite)
 
-**Settimana 9 (parte 1)** — complementa [README — Lezione 13](../README.md#react-e-sqlite-lezione-13) e [CORSO_LEZIONI.md](CORSO_LEZIONI.md).
+**Settimana 9 (parte 1)** — complementa [README — ReAct e SQLite](../README.md#react-e-sqlite-lezione-13) e [CORSO_LEZIONI.md](CORSO_LEZIONI.md).
 
 **Branch:** `lesson-13-react-sqlite` (include lezioni 9–12).
 
-## Obiettivi
+## Obiettivi didattici
 
-1. Migrare la Long-Term Memory da scansione JSONL O(N) a SQLite indicizzato O(log N).
-2. Introdurre il loop **ReAct** (Thought → Action → Observation) multi-step.
-3. Mantenere dual-write JSONL + SQLite per analytics L12 e audit operativo.
+1. Capire perché la Long-Term Memory su file flat JSONL non scala (O(N)).
+2. Migrare lo storico cliente su **SQLite indicizzato** (O(log N)).
+3. Introdurre il loop **ReAct** (Thought → Action → Observation) multi-step.
+4. Mantenere **dual-write** JSONL + SQLite (audit L12 + LTM L13).
 
 ## 13.1 Perché SQLite?
 
-Fino alla Settimana 8, `logs/activity.jsonl` resta lo strumento di audit per KPI e benchmark. Per la memoria a lungo termine del cliente, però, la scansione riga-per-riga non scala.
+Fino alla Settimana 8, `logs/activity.jsonl` è lo strumento di audit per KPI, benchmark e analytics. Per interrogare lo storico di un cliente specifico, però, scansionare riga per riga non è sostenibile in produzione.
 
-| Aspetto | JSONL (audit) | SQLite (LTM) |
-|---------|---------------|--------------|
-| Uso | KPI, eventi, benchmark L12 | Storico ticket per cliente |
-| Ricerca cliente | O(N) scan | O(log N) con indice `idx_cliente` |
-| Modulo | `log_event()` | `log_triage_to_sqlite()` |
+| Aspetto | JSONL (`log_event`) | SQLite (`log_triage_to_sqlite`) |
+|---------|---------------------|----------------------------------|
+| Scopo | Audit operativo, KPI L12 | Long-Term Memory per cliente |
+| Ricerca per `cliente_nome` | O(N) scan sequenziale | O(log N) con indice `idx_cliente` |
+| File | `logs/activity.jsonl` | `data/triage_system.db` |
+| Tool LLM | — | `search_long_term_history` |
 
-Database: `data/triage_system.db` — tabella `tickets` con indice su `cliente_nome`.
+### Schema tabella `tickets`
+
+```sql
+CREATE TABLE tickets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cliente_nome TEXT NOT NULL,
+    categoria TEXT NOT NULL,
+    priorita TEXT NOT NULL,      -- es. "HIGH" (allineato a TriageResult)
+    sentiment TEXT NOT NULL,
+    riassunto_breve TEXT NOT NULL,
+    lingua TEXT NOT NULL,
+    azione_eseguita TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_cliente ON tickets(cliente_nome);
+```
+
+### Dual-write in pipeline
+
+Ogni ticket processato via `main.process_ticket` scrive:
+
+1. `log_event("ticket_processed", …)` → JSONL (KPI, benchmark)
+2. `log_triage_to_sqlite({…})` → SQLite (LTM indicizzata)
+
+```mermaid
+flowchart LR
+    Triage[triage_message / react_triage] --> JSONL[log_event JSONL]
+    Triage --> SQL[log_triage_to_sqlite]
+    SQL --> DB[(data/triage_system.db)]
+    Tool[search_long_term_history] --> DB
+```
 
 ## 13.2 Framework ReAct
 
-Il tool calling single-step decide tutti gli strumenti in un turno. ReAct decompone dinamicamente:
+Il tool calling **single-step** (L9–L12) esegue tool e fallback in un unico turno LLM. ReAct decompone il problema in micro-obiettivi iterativi:
 
-1. **Thought** — l'LLM valuta cosa manca nel contesto.
-2. **Action** — invoca un tool (es. `search_long_term_history` su SQLite).
-3. **Observation** — il runtime esegue e restituisce il risultato grezzo.
+| Fase | Ruolo |
+|------|--------|
+| **Thought** | L'LLM valuta il contesto e pianifica il prossimo passo |
+| **Action** | Invoca un tool (es. `search_long_term_history` su SQLite) |
+| **Observation** | Il runtime Python esegue la query e restituisce il risultato grezzo |
 
-Il ciclo ripete fino a convergenza JSON o esaurimento `max_steps` (default 8 in L13; 4 in L14).
+Il ciclo ripete finché l'agente produce JSON finale **senza** ulteriori `tool_calls`, o finché si esaurisce `max_steps`.
 
-API: `react_triage()` in [`logic.py`](../src/logic.py). La pipeline classica `triage_message()` resta per benchmark e demo M1–M3.
+### API `react_triage`
 
-## Comandi
+```python
+from logic import react_triage
+
+result = react_triage(
+    user_input="Sono Marco Rossi. Budget 15.000€, voglio un manager.",
+    manuale=manuale_it,
+    max_steps=8,  # default su branch L13; L14 abbassa a 4
+)
+```
+
+**Coesistenza con L9–L12:**
+
+| API | Uso |
+|-----|-----|
+| `triage_message()` | Pipeline classica: benchmark L12, demo M1–M3, l10, l11 |
+| `react_triage()` | Demo L13/L14, laboratorio ReAct multi-step |
+
+### Due motori agentici
+
+```mermaid
+flowchart TB
+    subgraph classic [triage_message — L9-L12]
+        TM[build_chat_messages] --> Loop1[_run_agent_loop]
+        Loop1 --> FB[_apply_all_fallbacks]
+        FB --> SC1[_finalize_with_self_correction]
+    end
+    subgraph react [react_triage — L13+]
+        RM[_build_react_messages] --> Loop2[for step in max_steps]
+        Loop2 --> Tools[tool_calls → Observation]
+        Loop2 --> JSON[JSON finale → validazione]
+    end
+```
+
+## Demo e comandi
 
 ```bash
-# Inizializza DB e demo ReAct + SQLite
+git checkout lesson-13-react-sqlite
+
+# Inizializza DB + demo ReAct (Marco Rossi, budget 15k)
 PYTHONPATH=src python3 src/main.py --scenario l13
 
-# Test
-pytest tests/test_logger_sqlite.py tests/test_logic.py -q
+# Demo M2 aggiornata (seed SQLite isolato)
+PYTHONPATH=src python3 src/main.py --scenario m2
+
+# Test mirati
+pytest tests/test_logger_sqlite.py tests/test_logic.py -k react -q
+pytest tests/ -q   # ~66 su questo branch
 ```
+
+**Cosa osservare in console (L13):**
+
+- `🎬 [ReAct Engine]` — avvio loop
+- `🔄 [STEP n/m]` — iterazione corrente
+- `🛠️ [ACTION]` / `📥 [OBSERVATION]` — ciclo ReAct
+- `💾 [Database SQLite]` — record indicizzato salvato
 
 ## File modificati
 
@@ -50,11 +130,21 @@ pytest tests/test_logger_sqlite.py tests/test_logic.py -q
 |------|--------|
 | [`paths.py`](../src/paths.py) | `TRIAGE_DB_PATH`, `DEMO_M2_DB_PATH` |
 | [`tools/logger.py`](../src/tools/logger.py) | `init_db`, `log_triage_to_sqlite`, `search_long_term_history_sql` |
-| [`tools/history_tools.py`](../src/tools/history_tools.py) | Delega a SQLite |
-| [`tools/registry.py`](../src/tools/registry.py) | Tool map aggiornata |
+| [`tools/history_tools.py`](../src/tools/history_tools.py) | Delega a SQLite (`log_path` deprecato) |
+| [`tools/registry.py`](../src/tools/registry.py) | Tool map → `search_long_term_history_sql` |
 | [`logic.py`](../src/logic.py) | `react_triage()` |
-| [`main.py`](../src/main.py) | Dual-write, `seed_marco_sqlite`, demo `l13` |
+| [`main.py`](../src/main.py) | Dual-write, `seed_marco_sqlite`, demo `--scenario l13` |
 
-## Prossimo passo
+## Checklist docente
 
-Lezione 14 — vedi [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md).
+- [ ] Studente spiega differenza O(N) vs O(log N) per LTM
+- [ ] Dual-write JSONL + SQLite compreso (KPI vs storico cliente)
+- [ ] Demo L13 mostra almeno un ciclo Action → Observation
+- [ ] Demo M2 usa `data/demo_m2_triage.db` (DB isolato, non mescolato col principale)
+- [ ] `triage_message` resta il percorso del benchmark L12
+
+## Collegamenti
+
+- [Lezione 14 — Planning loop](LEZIONE_14_PLANNING_LOOPS.md) — `max_steps=4`, STM, self-correction in-loop
+- [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) — errori ReAct e fallback
+- [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md) — KPI su JSONL invariati

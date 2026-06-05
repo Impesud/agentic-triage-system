@@ -90,7 +90,7 @@ gitGraph
 | File | Contenuto |
 |------|-----------|
 | [README.md](../README.md) | Architettura, setup, demo, struttura repo (allineato al branch corrente) |
-| [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) | Manuale errori, moduli 0–5, collegamento L11/L12 |
+| [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) | Manuale errori, moduli 0–5, collegamento L11–L14 |
 | [LEZIONE_10B_CHROMADB.md](LEZIONE_10B_CHROMADB.md) | Laboratorio ChromaDB |
 | [LEZIONE_11_RESILIENZA.md](LEZIONE_11_RESILIENZA.md) | Hard vs soft error, self-correction, fallback |
 | [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md) | Benchmark, analytics, triage_v2 |
@@ -108,9 +108,23 @@ gitGraph
 | Report benchmark | `tests/test_benchmark.py`, `src/benchmark.py` |
 | KPI log | `tests/test_log_kpi.py`, eventi `triage_json_retry` / `emergency_fallback` |
 
+## Per docenti — review Settimana 9
+
+| Criterio | Dove verificare |
+|----------|-----------------|
+| SQLite init + indice `idx_cliente` | `tests/test_logger_sqlite.py`, `tools/logger.init_db` |
+| LTM O(log N) vs JSONL audit | Dual-write in `main._log_ticket_processed` |
+| Loop ReAct base | `react_triage`, `test_react_triage_with_tool_then_json` |
+| `max_steps = 4` hard stop | `DEFAULT_REACT_MAX_STEPS`, `test_react_max_steps_fallback` |
+| STM ReAct (`session_id`) | `_SHORT_TERM_STORE`, `test_short_term_store_preserves_session` |
+| Self-correction in-loop | `test_react_self_correction_in_loop` |
+| Benchmark L12 invariato | `pytest tests/test_benchmark.py`, usa `triage_message` |
+
 Push suggerito dopo ogni lezione:
 
 ```bash
 git push -u origin lesson-11-resilienza-self-correction
 git push -u origin lesson-12-benchmark-log-analytics
+git push -u origin lesson-13-react-sqlite
+git push -u origin lesson-14-planning-loops
 ```

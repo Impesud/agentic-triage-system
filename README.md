@@ -47,7 +47,7 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 | [`tools/registry.py`](src/tools/registry.py) | `TOOL_MAP` e schema OpenAI |
 | [`prompts/triage_v1.py`](src/prompts/triage_v1.py) | System prompt, few-shot, `build_chat_messages(history=…)` |
 | [`analytics/log_kpi.py`](src/analytics/log_kpi.py) | KPI da `activity.jsonl` (Lezione 12) |
-| [`paths.py`](src/paths.py) | Percorsi repo (`LOG_FILE_PATH`, `DEMO_M2_LOG_PATH`, …) |
+| [`paths.py`](src/paths.py) | Percorsi repo (`TRIAGE_DB_PATH`, `LOG_FILE_PATH`, `DEMO_M2_DB_PATH`, …) |
 
 ```mermaid
 flowchart TB
@@ -83,6 +83,28 @@ flowchart TB
     Loop --> NM
     FB --> LTM
     FB --> NM
+```
+
+### Motore ReAct (Lezioni 13–14)
+
+```mermaid
+flowchart TB
+    subgraph react_py [react_triage]
+        RT[react_triage] --> STM{session_id?}
+        STM -->|sì| Store[_SHORT_TERM_STORE]
+        STM -->|no| Ephemeral[conversazione ephemeral]
+        Store --> Loop[for step in max_steps]
+        Ephemeral --> Loop
+        Loop --> LLM[_call_llm_with_tools]
+        LLM --> Tools{tool_calls?}
+        Tools -->|sì| LTM[search_long_term_history → SQLite]
+        LTM --> Loop
+        Tools -->|no| Valid{JSON Pydantic OK?}
+        Valid -->|sì| Out[TriageResult]
+        Valid -->|no L14| SC[self-correction in-loop]
+        SC --> Loop
+        Loop -->|max_steps esauriti| FB[react_max_steps_fallback]
+    end
 ```
 
 ### API principali (`main.py`)
@@ -282,6 +304,8 @@ PYTHONPATH=src python3 -m analytics.log_kpi
 | **M1** | Server vago → «È il server-X in datacenter Roma.» |
 | **M2** | Marco, cluster **db-primary** offline, quinto incidente |
 | **M3** | Casella aziendale bloccata |
+| **L13** | Marco Rossi, budget 15k, ReAct + SQLite |
+| **L14** | Marco Rossi turno 2, STM + LTM su `session_01` |
 
 ## Struttura progetto
 
@@ -300,6 +324,7 @@ agentic-triage-system/
 │   ├── manuale_it.txt
 │   ├── policy.txt
 │   ├── triage_system.db         # LTM SQLite (runtime, gitignored)
+│   ├── demo_m2_triage.db        # seed demo M2 isolato (gitignored)
 │   ├── chroma/                  # indice ChromaDB (runtime, gitignored)
 │   └── tickets.jsonl
 ├── logs/
