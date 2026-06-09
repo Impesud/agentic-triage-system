@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import time
 
-from logic import triage_message
+from logic import ClarificationNeeded, triage_message
 from paths import MANUALE_IT_PATH
 
 BENCHMARK_DATASET: tuple[str, ...] = (
@@ -20,6 +20,10 @@ BENCHMARK_DATASET: tuple[str, ...] = (
     "Potete mettermi in contatto con un responsabile? Abbiamo un budget aziendale di 12.000 euro.",
 )
 
+# Casi didattici opzionali (sostituire temporaneamente in BENCHMARK_DATASET per osservare il comportamento):
+# - Testo libero / prompt injection → ClarificationNeeded (no retry; in main.py ticket resta OPEN)
+# - JSON incompleto ma che inizia con "{" → self-correction max 3 (vedi pytest -k self_correction)
+
 
 def _load_manuale() -> str:
     return MANUALE_IT_PATH.read_text(encoding="utf-8")
@@ -29,10 +33,12 @@ def _is_emergency_fallback(azione_eseguita: str | None) -> bool:
     return bool(azione_eseguita and "Fallback" in azione_eseguita)
 
 
-def run_triage_benchmark(*, manuale: str | None = None) -> tuple[int, int, float]:
+def run_triage_benchmark(
+    *, manuale: str | None = None
+) -> tuple[int, int, int, float]:
     """
     Esegue il benchmark e stampa il report.
-    Ritorna (successi_validati, interventi_fallback, tempo_totale_sec).
+    Ritorna (successi_validati, interventi_fallback, chiarimenti_richiesti, tempo_totale_sec).
     """
     print("==================================================")
     print("   IMPESUD AGENTIC SYSTEM - SUITE DI BENCHMARK   ")
@@ -47,6 +53,7 @@ def run_triage_benchmark(*, manuale: str | None = None) -> tuple[int, int, float
 
     successi_validati = 0
     interventi_fallback = 0
+    chiarimenti_richiesti = 0
     tempo_inizio = time.time()
     total = len(BENCHMARK_DATASET)
 
@@ -65,6 +72,13 @@ def run_triage_benchmark(*, manuale: str | None = None) -> tuple[int, int, float
                 f"   📊 Risultato -> Cat: {risultato.categoria} | "
                 f"Priorità: {risultato.priorita} | Azione: {azione}\n"
             )
+        except ClarificationNeeded as exc:
+            chiarimenti_richiesti += 1
+            preview = exc.message[:120] + ("..." if len(exc.message) > 120 else "")
+            print(
+                f"   💬 [CHIARIMENTO] Risposta non-JSON (M1) — "
+                f"in main.py il ticket resterebbe OPEN: {preview}\n"
+            )
         except Exception as exc:
             print(f"   ❌ Errore critico non intercettato: {exc}\n")
             interventi_fallback += 1
@@ -74,10 +88,11 @@ def run_triage_benchmark(*, manuale: str | None = None) -> tuple[int, int, float
     print("=== REPORT DI BENCHMARK AGENTE ===")
     print("==================================")
     print(f"Successi immediati o riparati: {successi_validati}/{total}")
+    print(f"Chiarimenti richiesti (non-JSON, M1): {chiarimenti_richiesti}/{total}")
     print(f"Interventi di Fallback di emergenza: {interventi_fallback}/{total}")
     print(f"⏱️ Tempo totale di esecuzione: {tempo_totale:.2f} secondi.")
     print("==================================")
-    return successi_validati, interventi_fallback, tempo_totale
+    return successi_validati, interventi_fallback, chiarimenti_richiesti, tempo_totale
 
 
 if __name__ == "__main__":

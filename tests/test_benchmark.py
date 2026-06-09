@@ -1,6 +1,7 @@
 from io import StringIO
 from unittest.mock import MagicMock, patch
 
+from logic import ClarificationNeeded
 from benchmark import BENCHMARK_DATASET, run_triage_benchmark
 
 
@@ -38,13 +39,15 @@ def test_run_triage_benchmark_report_format(mock_triage):
 
     captured = StringIO()
     with patch.object(sys, "stdout", captured):
-        successi, fallback, _elapsed = run_triage_benchmark(manuale="Manuale test")
+        successi, fallback, chiarimenti, _elapsed = run_triage_benchmark(manuale="Manuale test")
 
     out = captured.getvalue()
     assert successi == len(BENCHMARK_DATASET)
     assert fallback == 0
+    assert chiarimenti == 0
     assert "=== REPORT DI BENCHMARK AGENTE ===" in out
     assert f"Successi immediati o riparati: {len(BENCHMARK_DATASET)}/{len(BENCHMARK_DATASET)}" in out
+    assert "Chiarimenti richiesti (non-JSON, M1): 0/" in out
     assert "Interventi di Fallback di emergenza: 0/" in out
     assert mock_triage.call_count == len(BENCHMARK_DATASET)
 
@@ -70,10 +73,32 @@ def test_run_triage_benchmark_counts_emergency_fallback(mock_triage):
 
     captured = StringIO()
     with patch.object(sys, "stdout", captured):
-        successi, fallback, _ = run_triage_benchmark(manuale="")
+        successi, fallback, chiarimenti, _ = run_triage_benchmark(manuale="")
 
     assert successi == 0
     assert fallback == len(BENCHMARK_DATASET)
+    assert chiarimenti == 0
+
+
+@patch("benchmark.triage_message")
+def test_run_triage_benchmark_counts_clarification_needed(mock_triage):
+    mock_triage.side_effect = ClarificationNeeded(
+        "Per favore descrivi il problema tecnico o commerciale."
+    )
+
+    import sys
+
+    captured = StringIO()
+    with patch.object(sys, "stdout", captured):
+        successi, fallback, chiarimenti, _ = run_triage_benchmark(manuale="")
+
+    out = captured.getvalue()
+    assert successi == 0
+    assert fallback == 0
+    assert chiarimenti == len(BENCHMARK_DATASET)
+    assert "[CHIARIMENTO]" in out
+    assert "Errore critico non intercettato" not in out
+    assert f"Chiarimenti richiesti (non-JSON, M1): {len(BENCHMARK_DATASET)}/" in out
 
 
 @patch("logic.get_client")

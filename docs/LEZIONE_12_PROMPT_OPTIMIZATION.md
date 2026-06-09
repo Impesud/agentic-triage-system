@@ -40,9 +40,28 @@ PYTHONPATH=src python3 src/benchmark.py
 Confronta due run (prima/dopo ottimizzazione prompt):
 
 - `Successi immediati o riparati` — triage valido senza emergency fallback
+- `Chiarimenti richiesti (non-JSON, M1)` — `ClarificationNeeded`: risposta testuale, non JSON (nessun retry)
 - `Interventi di Fallback di emergenza` — `azione_eseguita` con Fallback
 
 **Costo API:** 5 chiamate complete all’LLM. In laboratorio usare `pytest tests/test_benchmark.py -q`.
+
+### FAQ — Retry JSON vs ClarificationNeeded
+
+| Categoria | Esempio | Retry x3? |
+|-----------|---------|-----------|
+| **Soft error (L11)** | `{"categoria":"IT"}` senza campi obbligatori | **Sì** — `_finalize_with_self_correction` |
+| **ClarificationNeeded (L9/M1)** | Testo libero, messaggio vago, rifiuto off-topic | **No** — in `main.py` ticket resta `OPEN` |
+| **Hard error** | API timeout, API key assente | **No** — boundary in `main.py` |
+
+I 3 retry **non** coprono ogni forma di «JSON non valido»: partono solo se la risposta **inizia con `{`** ma fallisce `parse_llm_output`. Se il modello risponde in prosa (es. prompt injection *«non rispondere in JSON»*), `logic.py` solleva `ClarificationNeeded` **prima** del loop di self-correction.
+
+Per osservare i retry in laboratorio senza costo API:
+
+```bash
+pytest tests/test_logic.py -q -k "self_correction or emergency"
+```
+
+Per provare `ClarificationNeeded` nel benchmark, sostituire temporaneamente un ticket in `BENCHMARK_DATASET` con testo libero o prompt injection (vedi commenti in `src/benchmark.py`).
 
 ## 3. Workflow prompt v1 → v2
 
