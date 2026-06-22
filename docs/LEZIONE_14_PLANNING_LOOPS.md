@@ -123,8 +123,29 @@ pytest tests/ -q   # ~69 su questo branch
 
 [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) — SQLite LTM e loop ReAct base.
 
+## Progetto 2 — Dataset SOC (dopo L14)
+
+La lezione 14 prepara il motore ReAct; il **progetto finale** applica le stesse competenze a dieci scenari di sicurezza (`dataset_test`).
+
+| Documento | Contenuto |
+|-----------|-----------|
+| [MANUALE_PROGETTINO_DATASET_TEST.md](MANUALE_PROGETTINO_DATASET_TEST.md) | Procedure operative per lo studente (branch `lesson-14-planning-loops`) |
+| [PROGETTO_2_SCENARI.md](PROGETTO_2_SCENARI.md) | Soluzione di riferimento (branch `progetto-2`) |
+
+```bash
+git checkout progetto-2
+PYTHONPATH=src python3 scripts/init_triage_db.py
+PYTHONPATH=src python3 scripts/seed_progettino.py
+PYTHONPATH=src python3 src/main.py --scenario progetto2
+pytest tests/test_dataset_test.py tests/test_security_progetto.py -q
+```
+
+Estensioni principali rispetto a L14: `react_triage_progettino`, tool `isolate_account` / `verify_sender_identity`, fallback SOC in-loop, seed dedicato.
+
 ## Collegamenti
 
 - [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) — tipi errore ReAct
+- [MANUALE_PROGETTINO_DATASET_TEST.md](MANUALE_PROGETTINO_DATASET_TEST.md) — progetto finale SOC
+- [PROGETTO_2_SCENARI.md](PROGETTO_2_SCENARI.md) — implementazione scenari 1–10
 - [LEZIONE_11_RESILIENZA.md](LEZIONE_11_RESILIENZA.md) — self-correction classica
 - [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md) — KPI JSONL

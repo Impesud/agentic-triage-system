@@ -29,7 +29,7 @@ L’abbonamento a Cursor **non è necessario** per questo argomento. Conta molto
 
 ## Stato attuale del progetto
 
-Il codice ha una gestione errori di **livello 1–3**: fail-fast con `ValueError`, boundary in `main.py`, parser con `raise ... from e`, loop in `logic.py` (`_run_agent_loop` + `_finalize_with_self_correction` — Lezione 11), memoria, RAG + ChromaDB (Lezione 10/10B), self-correction (Lezione 11), benchmark/log KPI (Lezione 12), **ReAct multi-step + SQLite LTM** (Lezioni 13–14), suite di **69 test** su branch `lesson-14-planning-loops`. Manca ancora una **gerarchia di eccezioni di dominio** opzionale (`errors.py`, moduli 2–4).
+Il codice ha una gestione errori di **livello 1–3**: fail-fast con `ValueError`, boundary in `main.py`, parser con `raise ... from e`, loop in `logic.py` (`_run_agent_loop` + `_finalize_with_self_correction` — Lezione 11), memoria, RAG + ChromaDB (Lezione 10/10B), self-correction (Lezione 11), benchmark/log KPI (Lezione 12), **ReAct multi-step + SQLite LTM** (Lezioni 13–14), **Progetto 2 SOC** su branch `progetto-2` (`react_triage_progettino`, gestione injection), suite di **~88 test** su `progetto-2` (**69** su `lesson-14-planning-loops`). Manca ancora una **gerarchia di eccezioni di dominio** opzionale (`errors.py`, moduli 2–4).
 
 **Indice corso e branch:** [docs/CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md).
 
@@ -44,6 +44,8 @@ Il triage LLM vive in un unico loop (vedi [README — Architettura](README.md#ar
 5. `_finalize_with_self_correction` — `_request_final_json` + `parse_llm_output` con retry (max 3) e emergency fallback  
 
 **Percorso parallelo (L13–L14):** `react_triage()` — loop ReAct con `max_steps` (4 su L14), self-correction in-loop su JSON invalido, fallback `react_max_steps_fallback`. Non sostituisce `triage_message` usato da benchmark e demo M1–M3.
+
+**Percorso Progetto 2 (`progetto-2`):** `react_triage_progettino()` — `react_triage` con `progetto_mode=True`, 6 step, `_apply_progetto_fallbacks` (policy + LTM + sicurezza), intercetta `ClarificationNeeded` per prompt injection (scenario 3).
 
 Se la prima risposta non è JSON e non ci sono tool, `logic` solleva `ClarificationNeeded` (non è un errore fatale: `main` stampa `[CHIARIMENTO]` e il ticket resta `OPEN`).
 
@@ -540,7 +542,7 @@ Fixture in `tests/conftest.py`: `triaged_ticket`, isolamento `TICKETS_PATH` su f
 
 ## Messaggio riassuntivo
 
-> Il progetto ha boundary in `main.py`, self-correction su soft error (L11), emergency fallback validato Pydantic, memoria, RAG, benchmark/log KPI (L12), ReAct + SQLite (L13–L14) e 69 test. Non serve rifare tutto né un refactor unico con Cursor.
+> Il progetto ha boundary in `main.py`, self-correction su soft error (L11), emergency fallback validato Pydantic, memoria, RAG, benchmark/log KPI (L12), ReAct + SQLite (L13–L14), Progetto 2 SOC su `progetto-2` (~88 test) e 69 test su L14. Non serve rifare tutto né un refactor unico con Cursor.
 >
 > Percorso opzionale residuo: gerarchia `errors.py` (Moduli 2–4) per messaggi boundary più granulari — **dopo** L11–L14.
 >
@@ -556,10 +558,12 @@ Fixture in `tests/conftest.py`: `triaged_ticket`, isolamento `TICKETS_PATH` su f
 - [docs/LEZIONE_12_PROMPT_OPTIMIZATION.md](docs/LEZIONE_12_PROMPT_OPTIMIZATION.md) — benchmark e prompt
 - [docs/LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md) — ReAct e SQLite LTM
 - [docs/LEZIONE_14_PLANNING_LOOPS.md](docs/LEZIONE_14_PLANNING_LOOPS.md) — max_steps, STM, self-correction in-loop
+- [docs/MANUALE_PROGETTINO_DATASET_TEST.md](docs/MANUALE_PROGETTINO_DATASET_TEST.md) — progetto finale SOC (procedure studente)
+- [docs/PROGETTO_2_SCENARI.md](docs/PROGETTO_2_SCENARI.md) — soluzione di riferimento Progetto 2
 - [`scripts/init_triage_db.py`](scripts/init_triage_db.py) — bootstrap SQLite post-clone
 - [`data/schema/triage_system.sql`](data/schema/triage_system.sql) — DDL LTM
 - `src/main.py` — orchestrazione e boundary
-- `src/logic.py` — nucleo loop agentico (`triage_message`, `react_triage`, tool, fallback)
+- `src/logic.py` — nucleo loop agentico (`triage_message`, `react_triage`, `react_triage_progettino`, tool, fallback)
 - `src/tools/logger.py` — audit JSONL + SQLite LTM (`init_db`, `log_triage_to_sqlite`)
 - `src/client.py` — connessione OpenAI
 - `src/paths.py` — percorsi assoluti (log, dati, `TRIAGE_DB_PATH`, manuale, policy, `.env`)
@@ -569,4 +573,4 @@ Fixture in `tests/conftest.py`: `triaged_ticket`, isolamento `TICKETS_PATH` su f
 - `src/tools/history_tools.py` — `search_long_term_history` (delega a SQLite)
 - `src/memory/` — `SessionManager`, extractors
 - `tests/conftest.py` — fixture condivise
-- `tests/test_*.py` — suite essenziale (69 test su L14); estendere dopo ogni migrazione errori
+- `tests/test_*.py` — suite essenziale (~88 test su `progetto-2`, 69 su L14); estendere dopo ogni migrazione errori

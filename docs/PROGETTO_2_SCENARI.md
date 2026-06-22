@@ -2,7 +2,7 @@
 
 **Branch:** `progetto-2` (sequenza da `lesson-14-planning-loops`)
 
-Questo documento spiega **come il codice risolve** ciascuno dei 10 scenari del [MANUALE_PROGETTINO_DATASET_TEST.md](MANUALE_PROGETTINO_DATASET_TEST.md).
+Questo documento spiega **come il codice risolve** ciascuno dei 10 scenari del [MANUALE_PROGETTINO_DATASET_TEST.md](MANUALE_PROGETTINO_DATASET_TEST.md). Indice corso: [CORSO_LEZIONI.md](CORSO_LEZIONI.md) · architettura: [README.md](../README.md#progetto-2--dataset-soc-10-scenari).
 
 ## Avvio rapido
 

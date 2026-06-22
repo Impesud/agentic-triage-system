@@ -2,9 +2,12 @@
 
 **Progetto finale** — complementa [CORSO_LEZIONI.md](CORSO_LEZIONI.md) e le lezioni 9–14.
 
-**Branch di riferimento:** `lesson-14-planning-loops`
+| Ruolo | Branch | Note |
+|-------|--------|------|
+| **Esercizio studente** | `lesson-14-planning-loops` | Partenza dal repo L14; implementare le estensioni descritte in questo manuale |
+| **Soluzione di riferimento** | `progetto-2` | Implementazione completa + [PROGETTO_2_SCENARI.md](PROGETTO_2_SCENARI.md) |
 
-**Motore obbligatorio:** `react_triage` (ReAct multi-step, max 4 step, self-correction in-loop)
+**Motore obbligatorio:** `react_triage` (ReAct multi-step, self-correction in-loop). Sul branch `progetto-2` usare `react_triage_progettino` (6 step, fallback SOC integrati).
 
 ---
 
@@ -46,7 +49,7 @@ I dieci messaggi da processare sono elencati integralmente nei capitoli dedicati
 
 1. Leggere i **prerequisiti** (sezione 2) e preparare ambiente, seed e policy SOC.
 2. Studiare le **procedure trasversali** (sezione 4) prima di affrontare i singoli scenari.
-3. Prestare attenzione alle **note tecniche** in sezione 3.6 (limiti del repo base con `react_triage`).
+3. Prestare attenzione alle **note tecniche** in sezione 3.6 (limiti del repo base su `lesson-14-planning-loops`; risolti su `progetto-2`).
 4. Affrontare gli scenari **nell'ordine 1 → 10** oppure iniziare da 3, 7 e 10 se si vuole testare prima la resilienza.
 5. Per ogni scenario: eseguire la procedura, verificare i criteri di successo, confrontare con gli errori comuni.
 6. Completare la **checklist di consegna** (sezione 6) e preparare il report per il docente.
@@ -74,7 +77,7 @@ Campi obbligatori del JSON finale:
 
 Prima di eseguire i dieci scenari, lo studente deve:
 
-1. Essere sul branch `lesson-14-planning-loops`.
+1. Essere sul branch `lesson-14-planning-loops` (oppure su un fork personale derivato da L14).
 2. Avere configurata la chiave API OpenAI nel file `.env` (mai tramite `export` in shell).
 3. Aver eseguito l'inizializzazione del DB base con `scripts/init_triage_db.py`.
 4. Aver esteso lo schema SQLite come descritto al paragrafo 4.3 (tabelle `access_events` e `authorized_identities`).
@@ -105,6 +108,17 @@ Per ogni scenario si consiglia di invocare `react_triage` con un `session_id` un
 **Suggerimento operativo:** usare un `session_id` diverso per ciascuno dei dieci messaggi (es. `progettino-scenario-01`, …, `progettino-scenario-10`), così la Short-Term Memory ReAct non mescola contesti tra scenari distinti.
 
 Al termine di tutti e dieci i messaggi, produrre un report con tool invocati, categoria, priorità ed eventuali fallback attivati.
+
+**Verifica rapida (solo branch `progetto-2`, soluzione docente):**
+
+```bash
+git checkout progetto-2
+PYTHONPATH=src python3 scripts/init_triage_db.py
+PYTHONPATH=src python3 scripts/seed_progettino.py
+PYTHONPATH=src python3 src/main.py --scenario progetto2
+```
+
+Vedi [PROGETTO_2_SCENARI.md](PROGETTO_2_SCENARI.md) per il dettaglio implementativo di ogni scenario.
 
 ---
 
@@ -163,6 +177,8 @@ Dopo il triage, la categoria viene mappata su un team tramite [`src/tools/router
 ### 3.6 Note tecniche importanti (limiti del repo base)
 
 Queste differenze tra motori e moduli sono frequenti fonte di errore nelle consegne. Leggerle con attenzione prima di implementare.
+
+> **Soluzione di riferimento:** sul branch [`progetto-2`](.) tutti i punti A–D sotto sono già implementati (`react_triage_progettino`, `_apply_progetto_fallbacks`, extractors estesi, gestione `ClarificationNeeded` allo scenario 3). Consultare [PROGETTO_2_SCENARI.md](PROGETTO_2_SCENARI.md) per il mapping codice ↔ scenario.
 
 #### A) `react_triage` non applica i fallback deterministici di default
 
@@ -767,6 +783,7 @@ I testi integrali sono nella sezione 5.
 | [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md) | Prompt injection |
 | [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) | ReAct e SQLite |
 | [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md) | max_steps e STM |
+| [PROGETTO_2_SCENARI.md](PROGETTO_2_SCENARI.md) | Soluzione di riferimento scenari 1–10 (branch `progetto-2`) |
 | [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) | Manuale errori |
 
 ### File del repo rilevanti
@@ -774,6 +791,9 @@ I testi integrali sono nella sezione 5.
 | File | Ruolo |
 |------|-------|
 | [`src/logic.py`](../src/logic.py) | `react_triage`, fallback, self-correction |
+| [`src/dataset_test.py`](../src/dataset_test.py) | 10 scenari `ProgettoScenario` (branch `progetto-2`) |
+| [`src/tools/security_tools.py`](../src/tools/security_tools.py) | `isolate_account`, `verify_sender_identity` (da implementare / presente su `progetto-2`) |
+| [`scripts/seed_progettino.py`](../scripts/seed_progettino.py) | Seed Luca Verdi, Matteo Neri, CEO (branch `progetto-2`) |
 | [`src/tools/registry.py`](../src/tools/registry.py) | Definizione e mappa tool |
 | [`src/schemas/ticket.py`](../src/schemas/ticket.py) | Modello `TriageResult` |
 | [`src/parsing/parser.py`](../src/parsing/parser.py) | Estrazione e validazione JSON |

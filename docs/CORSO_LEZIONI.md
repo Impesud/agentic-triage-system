@@ -13,6 +13,7 @@ Ogni branch contiene il codice **cumulativo** fino alla lezione indicata; le lez
 | [`lesson-12-benchmark-log-analytics`](.) | **Lezione 12** — Benchmark e analytics | `git checkout lesson-12-benchmark-log-analytics` | ~62 |
 | [`lesson-13-react-sqlite`](.) | **Lezione 13** — ReAct + SQLite LTM | `git checkout lesson-13-react-sqlite` | ~66 |
 | [`lesson-14-planning-loops`](.) | **Lezione 14** — Planning e controllo loop | `git checkout lesson-14-planning-loops` | ~69 |
+| [`progetto-2`](.) | **Progetto 2** — 10 scenari SOC `dataset_test` | `git checkout progetto-2` | ~88 |
 
 ```mermaid
 gitGraph
@@ -32,11 +33,16 @@ gitGraph
   branch lesson-14-planning-loops
   checkout lesson-14-planning-loops
   commit id: "L14-planning"
+  branch progetto-2
+  checkout progetto-2
+  commit id: "P2-SOC"
 ```
 
 **Settimana 8 (lezioni 11–12):** resilienza, error recovery, benchmarking — vedi [LEZIONE_11_RESILIENZA.md](LEZIONE_11_RESILIENZA.md) e [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md).
 
 **Settimana 9 (lezioni 13–14):** ReAct, SQLite, planning multi-step — vedi [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) e [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md).
+
+**Progetto finale (Progetto 2):** 10 scenari SOC su `react_triage_progettino` — vedi [MANUALE_PROGETTINO_DATASET_TEST.md](MANUALE_PROGETTINO_DATASET_TEST.md) (procedure studente) e [PROGETTO_2_SCENARI.md](PROGETTO_2_SCENARI.md) (soluzione di riferimento).
 
 ---
 
@@ -54,7 +60,7 @@ gitGraph
 | **13** | ReAct multi-step, SQLite LTM | `react_triage`, `init_db`, `scripts/init_triage_db.py` | [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) |
 | **14** | max_steps, STM ReAct, self-correction in-loop | `_SHORT_TERM_STORE`, `session_id` | [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md) |
 | **Progettino** | Dataset test SOC (10 scenari) | `react_triage`, tool sicurezza, policy SOC | [MANUALE_PROGETTINO_DATASET_TEST.md](MANUALE_PROGETTINO_DATASET_TEST.md) |
-| **Progetto 2** | Implementazione completa 10 scenari | `progetto-2` branch | [PROGETTO_2_SCENARI.md](PROGETTO_2_SCENARI.md) |
+| **Progetto 2** | Implementazione completa 10 scenari | `dataset_test.py`, `security_tools`, `seed_progettino` | [PROGETTO_2_SCENARI.md](PROGETTO_2_SCENARI.md) |
 
 ---
 
@@ -71,6 +77,7 @@ gitGraph
 | 13 — ReAct + SQLite | `PYTHONPATH=src python3 src/main.py --scenario l13` |
 | 14 — Planning multi-step | `PYTHONPATH=src python3 src/main.py --scenario l14` |
 | Progetto 2 — dataset SOC | `PYTHONPATH=src python3 scripts/seed_progettino.py` poi `--scenario progetto2` |
+| Progetto 2 — test scenari | `PYTHONPATH=src pytest tests/test_dataset_test.py tests/test_security_progetto.py -q` |
 | 13/14 — init DB (post-clone) | `PYTHONPATH=src python3 scripts/init_triage_db.py` |
 | Test (qualsiasi branch) | `pytest tests/ -q` |
 
@@ -86,6 +93,7 @@ gitGraph
 | Knowledge / RAG | Lezione 10 + 10B | `lesson-10-rag-semantica` |
 | **Settimana 8** | Resilienza, error recovery, benchmarking | `lesson-11-*` → `lesson-12-*` |
 | **Settimana 9** | ReAct, SQLite, planning multi-step | `lesson-13-*` → `lesson-14-*` |
+| **Progetto finale** | 10 scenari SOC `dataset_test` | `progetto-2` |
 
 ---
 
@@ -101,6 +109,7 @@ gitGraph
 | [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) | ReAct, SQLite indicizzato, dual-write |
 | [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md) | max_steps, STM, self-correction in-loop |
 | [MANUALE_PROGETTINO_DATASET_TEST.md](MANUALE_PROGETTINO_DATASET_TEST.md) | Progetto finale: 10 scenari SOC, procedure operative |
+| [PROGETTO_2_SCENARI.md](PROGETTO_2_SCENARI.md) | Progetto 2: svolgimento codice scenari 1–10 |
 
 ---
 
@@ -125,6 +134,18 @@ gitGraph
 | Self-correction in-loop | `test_react_self_correction_in_loop` |
 | Benchmark L12 invariato | `pytest tests/test_benchmark.py`, usa `triage_message` |
 
+## Per docenti — review Progetto 2
+
+| Criterio | Dove verificare |
+|----------|-----------------|
+| 10 scenari in `dataset_test.py` | `DATASET_TEST`, `get_scenario()` |
+| Tool `isolate_account` / `verify_sender_identity` | `tools/security_tools.py`, `tests/test_security_progetto.py` |
+| Fallback SOC in ReAct | `_apply_progetto_fallbacks`, `react_triage_progettino` |
+| Seed Luca / Matteo / CEO | `scripts/seed_progettino.py` |
+| Policy SOC §4 in RAG | `data/policy.txt`, demo `--scenario l10` |
+| Prompt injection (scenario 3) | `test_progettino_clarification_injection_returns_security` |
+| Report demo live | `python3 src/main.py --scenario progetto2` |
+
 Push suggerito dopo ogni lezione:
 
 ```bash
@@ -132,4 +153,5 @@ git push -u origin lesson-11-resilienza-self-correction
 git push -u origin lesson-12-benchmark-log-analytics
 git push -u origin lesson-13-react-sqlite
 git push -u origin lesson-14-planning-loops
+git push -u origin progetto-2
 ```
