@@ -21,9 +21,27 @@ pip install -e ".[test]"
 
 PYTHONPATH=src python3 scripts/init_triage_db.py
 PYTHONPATH=src python3 scripts/seed_progettino.py
-PYTHONPATH=src python3 src/main.py              # tutti e 10 gli scenari
+PYTHONPATH=src python3 src/main.py              # tutti e 10 gli scenari (+ report HTML)
 PYTHONPATH=src python3 src/main.py --scenario 4   # singolo scenario
+PYTHONPATH=src python3 src/main.py --no-html       # senza report HTML
 ```
+
+Al termine della run, il report viene salvato in `logs/reports/<timestamp>/report.html` (e `report.json`).
+
+**Aprire il report (WSL / Windows):**
+
+```bash
+# consigliato su WSL — usa il browser Windows
+python3 scripts/open_report.py
+
+# oppure percorso specifico
+python3 scripts/open_report.py logs/reports/2026-06-22_163901/report.html
+```
+
+Su WSL `xdg-open` spesso **non funziona** (nessun browser Linux collegato). Alternative manuali:
+
+- Incolla in Esplora file Windows: `\\wsl.localhost\Ubuntu-24.04\home\<user>\agentic-triage-system\logs\reports\<timestamp>\report.html`
+- Apri `report.html` direttamente in Cursor (anteprima o “Open with Live Server” se installato)
 
 **API key:** `OPENAI_API_KEY=sk-...` nel file `.env` (non `export` in shell).
 
@@ -31,7 +49,8 @@ PYTHONPATH=src python3 src/main.py --scenario 4   # singolo scenario
 
 | Modulo | Ruolo |
 |--------|--------|
-| [`main.py`](src/main.py) | CLI e demo sui 10 scenari |
+| [`main.py`](src/main.py) | CLI, demo scenari, report HTML in `logs/reports/` |
+| [`reporting/html_report.py`](src/reporting/html_report.py) | Generazione report HTML/JSON |
 | [`logic.py`](src/logic.py) | `react_triage`, `react_triage_progettino`, fallback SOC |
 | [`dataset_test.py`](src/dataset_test.py) | 10 messaggi + metadati (`ProgettoScenario`) |
 | [`tools/security_tools.py`](src/tools/security_tools.py) | `isolate_account`, `verify_sender_identity` |
@@ -60,7 +79,7 @@ flowchart TB
 | `isolate_account` | Phishing, anomalie login, tablet smarrito |
 | `verify_sender_identity` | Richieste privilegiate da presunto CEO |
 
-**Entry point:** `react_triage_progettino()` — 6 step max, fallback integrati, gestione injection (scenario 3).
+**Entry point:** `react_triage_progettino()` — 6 step ReAct (8 per payload scenari 7/10), fallback integrati, arricchimento automatico di `azione_eseguita` dai tool eseguiti, gestione injection **solo** quando `_is_prompt_injection_attempt()` rileva scenario 3.
 
 ### Output LLM
 
@@ -71,9 +90,23 @@ flowchart TB
   "priorita": "LOW | MEDIUM | HIGH | CRITICAL",
   "riassunto_breve": "max 15 parole",
   "messaggio_originale": "ultimo input utente",
-  "azione_eseguita": "tool eseguiti"
+  "azione_eseguita": "search_policy, isolate_account"
 }
 ```
+
+Se l'LLM omette `azione_eseguita`, `_enrich_progetto_result()` la compila dalla cronologia ReAct (utile per il report HTML e i confronti atteso/ottenuto).
+
+### Resilienza (post-fix)
+
+| Meccanismo | Quando |
+|------------|--------|
+| `_is_prompt_injection_attempt` | Template injection solo scenario 3 (`DO NOT GENERATE JSON`, ecc.) |
+| Retry in-loop su testo piano | Scenari legittimi (2, 5, 9): messaggio di correzione, niente `ClarificationNeeded` |
+| `_requires_policy_search` | Fallback `search_policy` se omesso su phishing, esfiltrazione, tablet, payload, ecc. |
+| `_normalize_injection_result` | Scenario 3: JSON IT/LOW o complice → template SECURITY |
+| `_progetto_payload_structured_result` | Scenari 7/10: TriageResult valido in codice + `search_policy` |
+| `_progetto_max_steps_fallback` | Altri scenari a esaurimento step → SECURITY con tool documentati |
+| `_enrich_progetto_result` | JSON valido ma `azione_eseguita` vuoto → elenco tool dalla conversazione |
 
 ## I 10 scenari
 
@@ -116,11 +149,15 @@ agentic-triage-system/
 │   ├── schema/triage_system.sql
 │   ├── policy.txt
 │   └── manuale_it.txt
+├── logs/
+│   └── reports/                 # report HTML (gitignored con logs/)
 ├── scripts/
 │   ├── init_triage_db.py
-│   └── seed_progettino.py
+│   ├── seed_progettino.py
+│   └── open_report.py          # apre report.html (WSL → browser Windows)
 ├── src/
 │   ├── main.py, logic.py, dataset_test.py
+│   ├── reporting/               # html_report.py — report post-run
 │   ├── memory/, rag/, prompts/, tools/, …
 └── tests/
 ```
@@ -131,11 +168,12 @@ agentic-triage-system/
 pytest tests/ -q
 ```
 
-**58 test** — mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
+**76 test** — mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
 
 | File | Verifica |
 |------|----------|
-| `test_dataset_test.py` | 10 scenari, euristiche SOC, injection |
+| `test_dataset_test.py` | Scenari SOC, injection gate, policy fallback, payload strutturato, arricchimento `azione_eseguita` |
+| `test_html_report.py` | Report HTML/JSON in logs/reports |
 | `test_security_progetto.py` | `access_events`, CEO verify |
 | `test_logic.py` | ReAct, max_steps, STM, self-correction |
 | `test_policy_semantic.py` | RAG + ChromaDB |

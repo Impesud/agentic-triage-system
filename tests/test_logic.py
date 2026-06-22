@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 
 from logic import (
     _build_context_text,
+    _collect_tools_called,
     _detects_angry_sentiment,
     _emergency_triage_result,
     _extract_max_budget_eur,
@@ -74,6 +75,39 @@ def test_emergency_triage_result_is_valid_pydantic():
     assert result.priorita == "CRITICAL"
     assert result.azione_eseguita == "Emergency Fallback attivato"
     assert "FALLBACK" in result.riassunto_breve
+
+
+def test_collect_tools_called_mixed_message_types():
+    assistant = MagicMock()
+    assistant.tool_calls = [_tool_call("search_policy", {"query": "phishing"})]
+    conversation = [
+        {"role": "system", "content": "sys"},
+        assistant,
+        {
+            "role": "tool",
+            "tool_call_id": "c1",
+            "name": "search_policy",
+            "content": "policy chunk",
+        },
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "fallback-iso-1",
+                    "type": "function",
+                    "function": {"name": "isolate_account", "arguments": "{}"},
+                }
+            ],
+        },
+        {
+            "role": "tool",
+            "tool_call_id": "fallback-iso-1",
+            "name": "isolate_account",
+            "content": "ok",
+        },
+    ]
+    assert _collect_tools_called(conversation) == {"search_policy", "isolate_account"}
 
 
 @patch("logic.get_client")

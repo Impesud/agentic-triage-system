@@ -9,13 +9,19 @@ from dataset_test import DATASET_TEST, get_scenario
 from logic import (
     ClarificationNeeded,
     _detects_ransomware_or_critical_panic,
+    _enrich_progetto_result,
     _is_prompt_injection_attempt,
+    _needs_extra_react_steps,
+    _normalize_injection_result,
+    _progetto_injection_result,
+    _progetto_payload_structured_result,
     _requires_account_isolation,
     _requires_ceo_verification,
+    _requires_policy_search,
     react_triage_progettino,
 )
-from memory.extractors import extract_cliente_nome
 from schemas.ticket import TriageResult
+from memory.extractors import extract_cliente_nome
 
 
 def _completion(content=None, tool_calls=None):
@@ -79,6 +85,21 @@ class TestSecurityHeuristics:
     def test_ceo_verification(self):
         assert _requires_ceo_verification(get_scenario(9).message)
 
+    def test_needs_extra_steps_scenario_7(self):
+        assert _needs_extra_react_steps(get_scenario(7).message)
+
+    def test_needs_extra_steps_scenario_10(self):
+        assert _needs_extra_react_steps(get_scenario(10).message)
+
+    def test_scenario_2_not_injection(self):
+        assert not _is_prompt_injection_attempt(get_scenario(2).message)
+
+    def test_scenario_1_requires_policy_search(self):
+        assert _requires_policy_search(get_scenario(1).message)
+
+    def test_scenario_7_requires_policy_search(self):
+        assert _requires_policy_search(get_scenario(7).message)
+
 
 @patch("logic.get_client")
 def test_progettino_clarification_injection_returns_security(mock_get_client, tmp_path):
@@ -112,6 +133,126 @@ def test_progettino_react_with_tools_then_json(mock_get_client):
     ]
     result = react_triage_progettino("credenziali phishing test", manuale="")
     assert result.categoria == "SECURITY"
+
+
+@patch("logic.get_client")
+def test_progettino_fills_azione_eseguita_from_tools(mock_get_client):
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    tc = _tool_call("search_policy", {"query": "esfiltrazione"})
+    final = json.dumps(
+        {
+            "analisi_problema": "1. P. 2. C. 3. SECURITY. 4. HIGH.",
+            "categoria": "SECURITY",
+            "priorita": "HIGH",
+            "riassunto_breve": "test senza azione",
+            "messaggio_originale": "x",
+        }
+    )
+    mock_client.chat.completions.create.side_effect = [
+        _completion(tool_calls=[tc]),
+        _completion(content=final),
+    ]
+    result = react_triage_progettino("credenziali phishing", manuale="")
+    assert "search_policy" in (result.azione_eseguita or "")
+
+
+@patch("logic.get_client")
+def test_non_injection_clarification_retries_json(mock_get_client):
+    """Scenario 2: testo piano non deve diventare template injection."""
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    scenario = get_scenario(2)
+    mock_client.chat.completions.create.side_effect = [
+        _completion(content="Servono altri dettagli sul cliente."),
+        _completion(content=_valid_json()),
+    ]
+    result = react_triage_progettino(
+        scenario.message, manuale="", session_id="test-scenario-02-retry"
+    )
+    assert result.categoria == "SECURITY"
+    assert "injection" not in (result.riassunto_breve or "").lower()
+
+
+@patch("logic.get_client")
+def test_scenario5_plain_text_not_injection_template(mock_get_client):
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    scenario = get_scenario(5)
+    mock_client.chat.completions.create.side_effect = [
+        _completion(content="Confermate il nome del partner commerciale?"),
+        _completion(
+            content=json.dumps(
+                {
+                    "analisi_problema": "1. P. 2. VIP. 3. SECURITY. 4. HIGH.",
+                    "categoria": "SECURITY",
+                    "priorita": "HIGH",
+                    "riassunto_breve": "Richiesta partner VIP",
+                    "messaggio_originale": scenario.message,
+                    "azione_eseguita": "notify_manager",
+                }
+            )
+        ),
+    ]
+    result = react_triage_progettino(
+        scenario.message, manuale="", session_id="test-scenario-05-retry"
+    )
+    assert "injection" not in (result.riassunto_breve or "").lower()
+
+
+def test_enrich_progetto_result_fills_missing_azione():
+    result = TriageResult(
+        analisi_problema="1. P. 2. C. 3. SECURITY. 4. HIGH.",
+        categoria="SECURITY",
+        priorita="HIGH",
+        riassunto_breve="test enrich",
+        messaggio_originale="x",
+        azione_eseguita=None,
+    )
+    conversation = [
+        {"role": "tool", "name": "isolate_account", "content": "ok"},
+        {"role": "tool", "name": "search_policy", "content": "chunk"},
+    ]
+    enriched = _enrich_progetto_result(result, conversation)
+    assert enriched.azione_eseguita == "isolate_account, search_policy"
+
+
+def test_payload_structured_result_includes_policy():
+    scenario = get_scenario(7)
+    result = _progetto_payload_structured_result(scenario.message, [])
+    assert result.categoria == "SECURITY"
+    assert result.priorita == "MEDIUM"
+    assert scenario.message == result.messaggio_originale
+    assert "search_policy" in (result.azione_eseguita or "")
+
+
+def test_normalize_injection_overrides_weak_json():
+    scenario = get_scenario(3)
+    weak = TriageResult(
+        analisi_problema="1. P. 2. C. 3. IT. 4. LOW.",
+        categoria="IT",
+        priorita="LOW",
+        riassunto_breve="Messaggio non interpretabile",
+        messaggio_originale=scenario.message,
+    )
+    fixed = _normalize_injection_result(scenario.message, weak)
+    assert fixed.categoria == "SECURITY"
+    assert fixed.priorita == "HIGH"
+    assert "injection" in fixed.riassunto_breve.lower()
+
+
+def test_normalize_injection_keeps_security_json():
+    scenario = get_scenario(3)
+    good = TriageResult(
+        analisi_problema="1. P. injection. 2. C. rifiuto. 3. SECURITY. 4. HIGH.",
+        categoria="SECURITY",
+        priorita="HIGH",
+        riassunto_breve="Attacco injection rifiutato",
+        messaggio_originale=scenario.message,
+    )
+    kept = _normalize_injection_result(scenario.message, good)
+    assert kept.categoria == "SECURITY"
+    assert kept.riassunto_breve == "Attacco injection rifiutato"
 
 
 @patch("tools.security_tools.isolate_account_sql")

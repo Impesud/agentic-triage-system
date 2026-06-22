@@ -1,7 +1,7 @@
 [project]
 name = "primo-agente"
 version = "0.1.0"
-description = "Agentic SOC triage — 10 scenari dataset_test, ReAct, RAG, SQLite LTM"
+description = "Agentic SOC triage — 10 scenari dataset_test, ReAct, RAG, SQLite LTM, report HTML"
 dependencies = [
     "chromadb>=0.5",
     "openai",

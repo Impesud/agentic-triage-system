@@ -1,6 +1,8 @@
 from unittest.mock import MagicMock, patch
 
+import chromadb
 import paths
+from rag.chroma_store import reset_policy_store, set_chroma_client
 from tools.history_tools import search_long_term_history
 from tools.office_tools import notify_manager, search_policy
 from tools.registry import TOOL_MAP
@@ -27,14 +29,17 @@ def _mock_embeddings_create(*_args, input: list[str], **_kwargs):
     return response
 
 
+def _reset_chroma_for_policy_test() -> None:
+    reset_policy_store()
+    set_chroma_client(chromadb.EphemeralClient())
+
+
 def test_search_policy_reads_file():
     mock_client = MagicMock()
     mock_client.embeddings.create.side_effect = _mock_embeddings_create
 
-    from rag.policy_semantic import clear_policy_index_cache
-
+    _reset_chroma_for_policy_test()
     with patch("rag.policy_semantic.get_client", return_value=mock_client):
-        clear_policy_index_cache()
         result = search_policy("sconto")
 
     assert (
@@ -50,10 +55,8 @@ def test_search_policy_sentiment_escalation():
     mock_client = MagicMock()
     mock_client.embeddings.create.side_effect = _mock_embeddings_create
 
+    _reset_chroma_for_policy_test()
     with patch("rag.policy_semantic.get_client", return_value=mock_client):
-        from rag.policy_semantic import clear_policy_index_cache
-
-        clear_policy_index_cache()
         result = search_policy("sentiment ARRABBIATO escalation")
 
     assert (

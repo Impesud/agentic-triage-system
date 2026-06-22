@@ -9,11 +9,21 @@ Questo documento spiega **come il codice risolve** ciascuno dei 10 scenari del [
 ```bash
 PYTHONPATH=src python3 scripts/init_triage_db.py
 PYTHONPATH=src python3 scripts/seed_progettino.py
-PYTHONPATH=src python3 src/main.py              # tutti e 10
+PYTHONPATH=src python3 src/main.py              # tutti e 10 (+ report HTML)
 PYTHONPATH=src python3 src/main.py --scenario 4 # singolo scenario
+PYTHONPATH=src python3 src/main.py --no-html    # senza report HTML
 ```
 
-Singolo scenario (es. scenario 4):
+Dopo ogni run con report abilitato (default), apri `logs/reports/<timestamp>/report.html` nel browser:
+
+```bash
+python3 scripts/open_report.py
+python3 scripts/open_report.py logs/reports/<timestamp>/report.html
+```
+
+Il report contiene riepilogo tabellare, dettaglio per scenario, confronto atteso vs ottenuto e badge esito. È disponibile anche `report.json` nella stessa cartella. Il campo **Tool** nel report usa `azione_eseguita` (compilato dall'LLM o da `_enrich_progetto_result()`).
+
+Singolo scenario da Python (senza report HTML):
 
 ```bash
 PYTHONPATH=src python3 -c "
@@ -36,7 +46,19 @@ process_ticket_progettino(get_scenario(4).message, session_id='progetto-scenario
 | [`data/policy.txt`](../data/policy.txt) | Sezione 4 — Playbook SOC |
 | [`scripts/seed_progettino.py`](../scripts/seed_progettino.py) | Seed Luca Verdi, Matteo Neri, CEO |
 
-**Entry point:** `react_triage_progettino()` → `react_triage(..., progetto_mode=True)` con 6 step max e fallback integrati.
+**Entry point:** `react_triage_progettino()` → `react_triage(..., progetto_mode=True)` con 6 step max (8 per payload scenari 7/10) e fallback integrati.
+
+### Miglioramenti trasversali (resilienza)
+
+| Funzione | Ruolo |
+|----------|--------|
+| `_enrich_progetto_result()` | Se il JSON finale ha `azione_eseguita` vuoto, lo compila da `_collect_tools_called()` |
+| `_is_prompt_injection_attempt()` | Gate injection: solo messaggi tipo scenario 3 attivano il template `ClarificationNeeded` |
+| Retry in-loop (testo piano) | Ticket legittimi (es. 2, 5, 9): correzione JSON senza classificarli come injection |
+| `_requires_policy_search()` | Se l'LLM omette `search_policy` su incidenti SECURITY → fallback con `_policy_query_for_context()` |
+| `_normalize_injection_result()` | Scenario 3: JSON debole (IT/LOW, «SYSTEM SAFE») → forza `_progetto_injection_result` |
+| `_progetto_payload_structured_result()` | Scenari 7/10: JSON valido costruito in codice se l'LLM non converge (step ≥ 3 o max_steps) |
+| `_progetto_max_steps_fallback()` | Altri scenari a esaurimento step: `TriageResult` **SECURITY** con tool in `azione_eseguita` |
 
 ---
 
@@ -54,14 +76,14 @@ Compromissione credenziali post-phishing; ruolo amministrativo ad alto rischio.
 
 1. **Estrazione nome** — `extract_cliente_nome()` in [`src/memory/extractors.py`](../src/memory/extractors.py) riconosce il pattern `sono l'amministratore Luca Verdi` grazie al regex Progetto 2.
 2. **Storico** — `search_long_term_history("Luca Verdi")` interroga SQLite; il seed in [`scripts/seed_progettino.py`](../scripts/seed_progettino.py) ha inserito un ticket SECURITY precedente.
-3. **Policy RAG** — `search_policy` recupera il chunk §4.1 (phishing) da `policy.txt` via ChromaDB.
-4. **Isolamento** — Se l'LLM omette `isolate_account`, `_apply_security_fallback()` in [`src/logic.py`](../src/logic.py) rileva i termini `credenziali` e inietta `isolate_account(luca.verdi@impesud.it, ...)`.
-5. **Output** — `categoria=SECURITY`, `priorita=HIGH|CRITICAL`, team `sicurezza`.
+3. **Policy RAG** — `search_policy` recupera il chunk §4.1 (phishing) da `policy.txt` via ChromaDB. Se l'LLM lo omette, `_requires_policy_search()` inietta il tool con query contestuale (`_policy_query_for_context`).
+4. **Isolamento** — Se l'LLM omette `isolate_account`, `_apply_security_fallback()` rileva i termini `credenziali` e inietta `isolate_account(luca.verdi@impesud.it, ...)`.
+5. **Output** — `categoria=SECURITY`, `priorita=HIGH|CRITICAL`, team `sicurezza`; `_enrich_progetto_result()` compila `azione_eseguita` se omessa.
 
 ### File chiave
 
 - `DATASET_TEST[0]` in `dataset_test.py`
-- `_requires_account_isolation()` → termini `credenziali`, `phishing`
+- `_requires_account_isolation()`, `_requires_policy_search()` in `logic.py`
 
 ---
 
@@ -81,11 +103,14 @@ Test della RAG semantica: il concetto di esfiltrazione deve emergere senza parol
 2. Il chunk §4.2 in `policy.txt` contiene sinonimi: *data leak, esfiltrazione, pacchetti verso IP esterno*.
 3. `semantic_policy_search()` in [`src/rag/policy_semantic.py`](../src/rag/policy_semantic.py) restituisce il match con score ≥ 0,38.
 4. Classificazione `SECURITY`, priorità `HIGH`; opzionale `notify_manager` se la policy lo impone.
+5. Se l'LLM chiede chiarimenti in testo piano (non injection), il motore **non** usa il template scenario 3: reinietta un messaggio di correzione e riprova fino a JSON valido.
+6. `_enrich_progetto_result()` valorizza `azione_eseguita` se l'LLM la omette.
 
 ### File chiave
 
 - `data/policy.txt` §4.2
 - Nessun nome cliente → `search_long_term_history` non forzato
+- `_is_prompt_injection_attempt()` → `False` per questo messaggio
 
 ---
 
@@ -102,12 +127,14 @@ Tentativo di bypassare il contratto JSON dell'agente.
 ### Svolgimento nel codice
 
 1. Il prompt ReAct (`_REACT_PROMPT_SUFFIX`) istruisce l'LLM a ignorare tali ordini.
-2. Se l'LLM risponde in testo piano, `react_triage` solleva `ClarificationNeeded`.
-3. **`react_triage_progettino()`** intercetta l'eccezione e restituisce un `TriageResult` strutturato:
+2. Se l'LLM risponde in testo piano **e** `_is_prompt_injection_attempt(user_input)` è vero, `react_triage` solleva `ClarificationNeeded`.
+3. **`react_triage_progettino()`** intercetta l'eccezione **solo in quel caso** e restituisce `_progetto_injection_result()`:
    - `categoria=SECURITY`
    - `riassunto_breve="Prompt injection bloccato"`
    - `azione_eseguita="ClarificationNeeded — attacco ignorato"`
-4. `_is_prompt_injection_attempt()` documenta l'euristica per test e audit.
+4. `_is_prompt_injection_attempt()` matcha frasi come `TERMINATE TRIAGE`, `DO NOT GENERATE JSON`, `BYPASS VALIDATION`, `SYSTEM SAFE`.
+5. **Importante:** su ticket legittimi (scenari 2, 5, 9) una risposta non-JSON **non** attiva questo percorso: il motore reinietta correzione e continua il loop ReAct.
+6. **Post-parse:** se l'LLM produce JSON ma debole (`IT`/`LOW` o testo complice «SYSTEM SAFE»), `_normalize_injection_result()` forza `_progetto_injection_result()`.
 
 ### File chiave
 
@@ -158,6 +185,7 @@ Pressione commerciale per azione tecnica pericolosa; budget VIP.
 3. Se l'LLM non chiama `notify_manager`, viene iniettato con `priority=4`.
 4. Il prompt vieta sblocco porte; `azione_eseguita` non deve contenere azioni di firewall.
 5. `categoria` può essere `SECURITY` o `SALES`; l'escalation manager è obbligatoria.
+6. Chiarimenti LLM in testo piano → retry JSON (non template injection scenario 3).
 
 ### File chiave
 
@@ -202,12 +230,15 @@ Robustezza del parser; il payload resta nell'input utente.
 ### Svolgimento nel codice
 
 1. Il messaggio è trattato come stringa segnalata, non come istruzioni JSON per l'agente.
-2. `messaggio_originale` nel `TriageResult` preserva il testo verbatim.
-3. Se l'LLM produce JSON invalido influenzato dal payload, la **self-correction in-loop** (Lezione 14) reinietta l'errore Pydantic e riprova.
-4. `parse_llm_output()` in [`src/parsing/parser.py`](../src/parsing/parser.py) estrae il primo blocco `{…}` bilanciato.
+2. `_needs_extra_react_steps()` alza il budget ReAct a **8 step** (`PROGETTO_REACT_MAX_STEPS_PAYLOAD`).
+3. `messaggio_originale` nel `TriageResult` preserva il testo verbatim.
+4. Se l'LLM produce JSON invalido influenzato dal payload, la **self-correction in-loop** reinietta l'errore Pydantic (messaggio rafforzato per payload).
+5. `parse_llm_output()` in [`src/parsing/parser.py`](../src/parsing/parser.py) estrae il primo blocco `{…}` bilanciato.
+6. Dal **3° errore di parsing** o a esaurimento step → `_progetto_payload_structured_result()`: `SECURITY`/`MEDIUM`, `messaggio_originale` verbatim, `search_policy` eseguito in fallback.
 
 ### File chiave
 
+- `_progetto_payload_structured_result()`, `_needs_extra_react_steps()` in `logic.py`
 - Ciclo self-correction in `react_triage()` (try/except su `parse_llm_output`)
 
 ---
@@ -275,19 +306,26 @@ Attacco sulla struttura della risposta; deve convergere a JSON valido.
 
 ### Svolgimento nel codice
 
-1. Diverso dallo scenario 3: qui l'LLM **deve** produrre JSON, non testo piano.
-2. Se la prima risposta inizia con `{` ma fallisce Pydantic (JSON troncato), `react_triage` appende il messaggio di errore e consuma uno step.
-3. Al tentativo successivo l'LLM produce `TriageResult` valido.
-4. Se si esauriscono 6 step → `react_max_steps_fallback` con `azione_eseguita` documentata.
+1. Diverso dallo scenario 3: qui l'LLM **deve** produrre JSON, non testo piano; `_is_prompt_injection_attempt()` è `False`.
+2. `_needs_extra_react_steps()` → budget **8 step** e self-correction con istruzioni esplicite su parentesi/stringhe.
+3. Se la prima risposta inizia con `{` ma fallisce Pydantic (JSON troncato), `react_triage` appende il messaggio di errore e consuma uno step.
+4. Al tentativo successivo l'LLM può produrre `TriageResult` valido; `_enrich_progetto_result()` completa `azione_eseguita` se serve.
+5. Se il parsing fallisce ripetutamente (step ≥ 3) o si esauriscono gli step → `_progetto_payload_structured_result()` con `search_policy` e JSON valido in codice.
 
 ### File chiave
 
-- Self-correction in-loop in `react_triage()` (Lezione 14)
-- `DEFAULT_PROGETTO_REACT_MAX_STEPS = 6`
+- `_progetto_payload_structured_result()`, self-correction in-loop in `react_triage()`
+- `DEFAULT_PROGETTO_REACT_MAX_STEPS = 6`, `PROGETTO_REACT_MAX_STEPS_PAYLOAD = 8`
 
 ---
 
 ## Test automatici
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest tests/ -q
+```
+
+**76 test** totali. Percorso SOC mirato:
 
 ```bash
 PYTHONPATH=src .venv/bin/python -m pytest tests/test_dataset_test.py tests/test_security_progetto.py -v
@@ -295,9 +333,11 @@ PYTHONPATH=src .venv/bin/python -m pytest tests/test_dataset_test.py tests/test_
 
 | File test | Cosa verifica |
 |-----------|---------------|
-| `test_dataset_test.py` | Metadati, euristiche, injection, seed |
+| `test_dataset_test.py` | Metadati, euristiche, injection gate, policy fallback, payload strutturato, arricchimento `azione_eseguita` |
+| `test_html_report.py` | Report HTML/JSON, confronto tool attesi |
 | `test_security_progetto.py` | SQL access_events, verify CEO, email derivation |
 | `test_extractors.py` | Luca Verdi, panico ransomware |
+| `test_logic.py` | ReAct, max_steps, self-correction, `_collect_tools_called` su messaggi SDK |
 
 ---
 
