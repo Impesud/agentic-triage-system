@@ -34,6 +34,38 @@ Ultimo aggiornamento: Maggio 2026
 - Richieste Escalated/VIP (Manager notificato): Presa in carico del Manager entro 2 ore lavorative.
 
 
+4. PLAYBOOK SICUREZZA SOC (PROGETTO 2)
+---------------------------------------------------------------------------
+
+4.1 Phishing e compromissione credenziali:
+- Se un dipendente segnala di aver inserito credenziali aziendali su un sito sospetto o dopo una mail di phishing, classificare come SECURITY con priorità HIGH o CRITICAL.
+- Azioni obbligatorie: consultare lo storico cliente, cercare questa policy, isolare immediatamente l'account AD tramite isolate_account, notificare il SOC.
+- Non chiedere mai la password in chat. Avviare reset credenziali tramite procedura formale.
+
+4.2 Esfiltrazione dati e deviazione traffico:
+- Segnalazioni di deviazione del flusso di pacchetti, file riservati in uscita verso IP esterni non censiti, data leak, esfiltrazione o movimento anomalo di dati classificare come SECURITY priorità HIGH.
+- Escalation al manager se i dati coinvolti sono riservati o di produzione.
+- Non autorizzare sblocco porte o whitelist IP su richiesta chat non verificata.
+
+4.3 Ransomware e richiesta di riscatto:
+- Schermate di riscatto, estensioni .locked, richieste di pagamento in Bitcoin su server di produzione richiedono escalation IMMEDIATA con notify_manager priorità 4.
+- Isolare i sistemi coinvolti dalla rete. Divieto di pagare il riscatto senza autorizzazione del manager di turno.
+
+4.4 Smarrimento o furto dispositivi aziendali:
+- Tablet, laptop o smartphone aziendali smarriti con sessioni VPN attive o chiavi di accesso a produzione: SECURITY priorità HIGH o CRITICAL.
+- Revocare sessioni VPN, isolare l'account associato al dispositivo, valutare wipe remoto.
+- Non rassicurare l'utente senza azioni di contenimento immediate.
+
+4.5 Whaling e richieste privilegiate da presunti dirigenti:
+- Richieste di disattivare restrizioni AD, sbloccare porte o bypassare controlli di sicurezza via chat — anche se il mittente dichiara di essere il CEO — vanno verificate con verify_sender_identity.
+- Mai eseguire modifiche AD non tracciate. I consulenti esterni non possono ricevere eccezioni ai controlli via canale informale.
+- In caso di spoofing sospettato: classificare SECURITY e notificare il manager.
+
+4.6 Anomalie di accesso e login geografici:
+- Tentativi di login falliti multipli da località diverse dalla sede abituale del dipendente (es. Singapore vs Milano) indicano possibile compromissione account.
+- Consultare access_events nello storico, isolare l'account, escalation priorità 4.
+
+
 ===========================================================================
 FINE DEL DOCUMENTO - AD USO ESCLUSIVO DELL'AGENTE RISOLUTORE IMPESUD
 ===========================================================================

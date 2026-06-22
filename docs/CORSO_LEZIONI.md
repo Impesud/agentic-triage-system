@@ -53,6 +53,8 @@ gitGraph
 | **12** | Benchmark, KPI log, prompt v2 | `benchmark.py`, `analytics/log_kpi.py` | [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md) |
 | **13** | ReAct multi-step, SQLite LTM | `react_triage`, `init_db`, `scripts/init_triage_db.py` | [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) |
 | **14** | max_steps, STM ReAct, self-correction in-loop | `_SHORT_TERM_STORE`, `session_id` | [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md) |
+| **Progettino** | Dataset test SOC (10 scenari) | `react_triage`, tool sicurezza, policy SOC | [MANUALE_PROGETTINO_DATASET_TEST.md](MANUALE_PROGETTINO_DATASET_TEST.md) |
+| **Progetto 2** | Implementazione completa 10 scenari | `progetto-2` branch | [PROGETTO_2_SCENARI.md](PROGETTO_2_SCENARI.md) |
 
 ---
 
@@ -68,6 +70,7 @@ gitGraph
 | 12 — KPI log | `PYTHONPATH=src python3 -m analytics.log_kpi` |
 | 13 — ReAct + SQLite | `PYTHONPATH=src python3 src/main.py --scenario l13` |
 | 14 — Planning multi-step | `PYTHONPATH=src python3 src/main.py --scenario l14` |
+| Progetto 2 — dataset SOC | `PYTHONPATH=src python3 scripts/seed_progettino.py` poi `--scenario progetto2` |
 | 13/14 — init DB (post-clone) | `PYTHONPATH=src python3 scripts/init_triage_db.py` |
 | Test (qualsiasi branch) | `pytest tests/ -q` |
 
@@ -97,6 +100,7 @@ gitGraph
 | [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md) | Benchmark, analytics, triage_v2 |
 | [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) | ReAct, SQLite indicizzato, dual-write |
 | [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md) | max_steps, STM, self-correction in-loop |
+| [MANUALE_PROGETTINO_DATASET_TEST.md](MANUALE_PROGETTINO_DATASET_TEST.md) | Progetto finale: 10 scenari SOC, procedure operative |
 
 ---
 

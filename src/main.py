@@ -8,6 +8,7 @@ Esecuzione demo:
   PYTHONPATH=src python src/main.py --scenario l11   # Self-correction (Lezione 11)
   PYTHONPATH=src python src/main.py --scenario l13   # ReAct + SQLite (Lezione 13)
   PYTHONPATH=src python src/main.py --scenario l14   # Planning multi-step (Lezione 14)
+  PYTHONPATH=src python src/main.py --scenario progetto2   # Progetto 2 — 10 scenari SOC
 """
 
 from __future__ import annotations
@@ -20,7 +21,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import paths
-from logic import ClarificationNeeded, react_triage, triage_message
+from dataset_test import DATASET_TEST
+from logic import ClarificationNeeded, react_triage, react_triage_progettino, triage_message
 from memory.extractors import detect_sentiment_label, extract_cliente_nome
 from memory.session_manager import SessionManager
 from paths import DEMO_M2_DB_PATH, DEMO_M2_LOG_PATH, LOG_FILE_PATH, MANUALE_IT_PATH, POLICY_PATH, TRIAGE_DB_PATH
@@ -495,6 +497,65 @@ def _persist_react_result(user_input: str, result) -> None:
     )
 
 
+def process_ticket_progettino(user_input: str, session_id: str | None = None):
+    """
+    Wrapper Progetto 2: react_triage con fallback SOC e gestione prompt injection.
+
+    Usa react_triage_progettino (max 6 step, _apply_progetto_fallbacks).
+    """
+    manuale = load_it_manual()
+    result = react_triage_progettino(user_input, manuale, session_id=session_id)
+    _persist_react_result(user_input, result)
+    team = assign_to_team(result.categoria)
+    print(f"\n=== PROGETTO 2 — TRIAGE COMPLETATO (team: {team}) ===")
+    print(result.model_dump_json(indent=2))
+    return result
+
+
+def run_progettino_demo() -> None:
+    """Esegue tutti e 10 gli scenari dataset_test in sequenza con report."""
+    print("\n" + "=" * 72)
+    print("   PROGETTO 2 — DATASET TEST SOC (10 scenari)")
+    print("=" * 72)
+    print("Prerequisito: PYTHONPATH=src python3 scripts/seed_progettino.py\n")
+
+    init_db()
+    manuale = load_it_manual()
+    results: list[dict] = []
+
+    for scenario in DATASET_TEST:
+        print("\n" + "-" * 72)
+        print(f">>> Scenario {scenario.number}/10: {scenario.title}")
+        print(f"    Capacità: {scenario.capability}")
+        print("-" * 72)
+        result = react_triage_progettino(
+            scenario.message,
+            manuale,
+            session_id=scenario.session_id,
+        )
+        team = assign_to_team(result.categoria)
+        _persist_react_result(scenario.message, result)
+        entry = {
+            "scenario": scenario.number,
+            "title": scenario.title,
+            "categoria": result.categoria,
+            "priorita": result.priorita,
+            "team": team,
+            "azione_eseguita": result.azione_eseguita,
+        }
+        results.append(entry)
+        print(f"\n📊 Esito: {result.categoria} / {result.priorita} → team {team}")
+
+    print("\n" + "=" * 72)
+    print("REPORT PROGETTO 2")
+    print("=" * 72)
+    for entry in results:
+        print(
+            f"  [{entry['scenario']:02d}] {entry['title'][:40]:40} | "
+            f"{entry['categoria']:8} | {entry['priorita']:8} | {entry['team']}"
+        )
+
+
 def process_ticket_react(user_input: str, session_id: str | None = None):
     """Wrapper demo ReAct: triage multi-step con optional Short-Term Memory."""
     manuale = load_it_manual()
@@ -564,7 +625,7 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--scenario",
-        choices=["m1", "m2", "m3", "l10", "l11", "l13", "l14", "all"],
+        choices=["m1", "m2", "m3", "l10", "l11", "l13", "l14", "progetto2", "all"],
         default="all",
         help="Esegue un solo scenario o tutti (default: all = M3→M1→M2)",
     )
@@ -591,3 +652,5 @@ if __name__ == "__main__":
         run_l13_react_demo()
     elif args.scenario == "l14":
         run_l14_planning_demo()
+    elif args.scenario == "progetto2":
+        run_progettino_demo()

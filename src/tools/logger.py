@@ -68,7 +68,162 @@ def init_db(db_path: str | None = None) -> None:
         cursor.execute(
             "CREATE INDEX IF NOT EXISTS idx_cliente ON tickets(cliente_nome)"
         )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS access_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id TEXT NOT NULL,
+                cliente_nome TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                location TEXT,
+                attempts INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_access_cliente ON access_events(cliente_nome)"
+        )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS authorized_identities (
+                account_id TEXT PRIMARY KEY,
+                display_name TEXT NOT NULL,
+                role TEXT NOT NULL,
+                can_request_ad_changes INTEGER DEFAULT 0,
+                verified_channel TEXT
+            )
+            """
+        )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS isolated_accounts (
+                account_id TEXT PRIMARY KEY,
+                reason TEXT NOT NULL,
+                isolated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
         conn.commit()
+
+
+def account_to_email(full_name: str) -> str:
+    """Converte «Nome Cognome» in account_id aziendale standard."""
+    parts = full_name.strip().lower().split()
+    if len(parts) >= 2:
+        local = f"{parts[0]}.{parts[-1]}"
+    elif parts:
+        local = parts[0]
+    else:
+        local = "unknown"
+    return f"{local}@impesud.it"
+
+
+def _load_access_events(
+    cliente_nome: str,
+    hours: int,
+    db_path: str | None = None,
+) -> list[dict[str, Any]]:
+    from pathlib import Path
+
+    path = db_path or str(paths.TRIAGE_DB_PATH)
+    if not Path(path).exists():
+        return []
+
+    cutoff = datetime.now(UTC) - timedelta(hours=hours)
+    cutoff_str = cutoff.strftime("%Y-%m-%d %H:%M:%S")
+
+    try:
+        with sqlite3.connect(path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT account_id, event_type, location, attempts, created_at
+                FROM access_events
+                WHERE lower(cliente_nome) = lower(?)
+                  AND datetime(created_at) >= datetime(?)
+                ORDER BY created_at DESC
+                """,
+                (cliente_nome, cutoff_str),
+            )
+            return [dict(row) for row in cursor.fetchall()]
+    except sqlite3.OperationalError:
+        return []
+
+
+def isolate_account_sql(account_id: str, reason: str, db_path: str | None = None) -> str:
+    """Registra l'isolamento di un account AD nel database SQLite."""
+    path = db_path or str(paths.TRIAGE_DB_PATH)
+    init_db(path)
+    with sqlite3.connect(path) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT OR REPLACE INTO isolated_accounts (account_id, reason, isolated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            """,
+            (account_id, reason),
+        )
+        conn.commit()
+    return (
+        f"Account {account_id} isolato con successo. "
+        f"Motivo: {reason}. Revocare sessioni attive e avviare procedura SOC."
+    )
+
+
+def verify_sender_identity_sql(
+    claimed_name: str,
+    claimed_role: str,
+    db_path: str | None = None,
+) -> str:
+    """
+    Verifica identità dichiarata contro authorized_identities (scenario 9 whaling).
+
+    Returns:
+        Esito testuale VERIFIED o SPOOFING_SUSPECTED per l'osservazione ReAct.
+    """
+    path = db_path or str(paths.TRIAGE_DB_PATH)
+    init_db(path)
+    role_upper = claimed_role.strip().upper()
+    name_lower = claimed_name.strip().lower()
+
+    with sqlite3.connect(path) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT account_id, display_name, role, can_request_ad_changes, verified_channel
+            FROM authorized_identities
+            WHERE upper(role) = ?
+            """,
+            (role_upper,),
+        )
+        rows = [dict(row) for row in cursor.fetchall()]
+
+    if not rows:
+        return (
+            f"SPOOFING_SUSPECTED: nessuna identità autorizzata con ruolo '{claimed_role}' "
+            f"nel registro. Non eseguire richieste privilegiate AD via chat."
+        )
+
+    for row in rows:
+        display = (row.get("display_name") or "").lower()
+        if role_upper == "CEO" and "ceo" in name_lower:
+            channel = row.get("verified_channel") or "canale formale"
+            can_ad = row.get("can_request_ad_changes", 0)
+            return (
+                f"VERIFIED parziale: ruolo CEO presente in registro ({row['account_id']}), "
+                f"canale verificato: {channel}. "
+                f"can_request_ad_changes={can_ad}. "
+                "POLICY: disattivazione restrizioni AD per consulenti esterni VIETATA via chat. "
+                "Rifiutare la richiesta e aprire ticket formale SOC."
+            )
+
+    return (
+        f"SPOOFING_SUSPECTED: dichiarazione '{claimed_name}' / ruolo '{claimed_role}' "
+        "non corrisponde a identità verificate nel registro."
+    )
 
 
 def log_triage_to_sqlite(ticket_data: dict[str, Any], db_path: str | None = None) -> None:
@@ -155,9 +310,20 @@ def search_long_term_history_sql(
         return f"Nessun record storico trovato per {cliente_nome}."
 
     records = _load_sqlite_records(cliente_nome, hours, path)
-    if not records:
+    access_events = _load_access_events(cliente_nome, hours, path)
+
+    if not records and not access_events:
         return (
             f"Nessun ticket processato per '{cliente_nome}' nelle ultime {hours} ore."
+        )
+
+    if not records and access_events:
+        total_attempts = sum(e.get("attempts") or 0 for e in access_events)
+        locations = {e.get("location") for e in access_events if e.get("location")}
+        return (
+            f"Storico Cliente '{cliente_nome}' (ultime {hours}h): nessun ticket, "
+            f"ma {len(access_events)} eventi accesso anomali ({total_attempts} tentativi), "
+            f"località: {locations}. Dettaglio: {access_events[:5]}"
         )
 
     by_category: dict[str, int] = {}
@@ -170,6 +336,7 @@ def search_long_term_history_sql(
 
     angry_technical = count_angry_technical_tickets(records)
     recent = records[:3]
+    access_events = _load_access_events(cliente_nome, hours, path)
     lines = [
         f"Storico Cliente Rilevato in DB: '{cliente_nome}' (ultime {hours}h): {len(records)} ticket.",
         f"Per categoria: {by_category}.",
@@ -177,6 +344,14 @@ def search_long_term_history_sql(
         f"Ticket IT con sentiment ARRABBIATO: {angry_technical}.",
         f"Ultimi {len(recent)} record: {recent}",
     ]
+    if access_events:
+        total_attempts = sum(e.get("attempts") or 0 for e in access_events)
+        locations = {e.get("location") for e in access_events if e.get("location")}
+        lines.append(
+            f"Eventi accesso anomali: {len(access_events)} record, "
+            f"{total_attempts} tentativi totali, località: {locations}. "
+            f"Dettaglio: {access_events[:5]}"
+        )
     if angry_technical >= _REPEAT_ESCALATION_THRESHOLD:
         lines.append(
             "ATTENZIONE: cliente ad alto rischio — escalation manager consigliata (priority 4)."

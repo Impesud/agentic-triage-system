@@ -24,6 +24,8 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 | 12 Benchmark | [docs/LEZIONE_12_PROMPT_OPTIMIZATION.md](docs/LEZIONE_12_PROMPT_OPTIMIZATION.md) |
 | 13 ReAct + SQLite | [docs/LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md) |
 | 14 Planning loop | [docs/LEZIONE_14_PLANNING_LOOPS.md](docs/LEZIONE_14_PLANNING_LOOPS.md) |
+| Progettino SOC | [docs/MANUALE_PROGETTINO_DATASET_TEST.md](docs/MANUALE_PROGETTINO_DATASET_TEST.md) |
+| Progetto 2 (implementazione) | [docs/PROGETTO_2_SCENARI.md](docs/PROGETTO_2_SCENARI.md) |
 
 [GESTIONE_ERRORI.md](GESTIONE_ERRORI.md)
 
@@ -113,8 +115,7 @@ flowchart TB
 |----------|-----|
 | `process_ticket(messaggio)` | Nuovo ticket (`OPEN` → triage → routing) |
 | `continue_ticket(ticket_id, messaggio)` | Turno successivo (short-term memory) |
-| `seed_marco_sqlite(n, db_path, reset=…)` | Seed demo M2 su SQLite (LTM indicizzata) |
-| `seed_marco_angry_history(…)` | Legacy JSONL (pre-L13); preferire `seed_marco_sqlite` |
+| `seed_marco_angry_history(n, log_path, reset=…)` | Seed demo M2 (storico Marco) |
 | `run_demo()` / `run_*_demo()` | Scenari didattici M3 → M1 → M2 |
 | `run_l10_rag_demo()` | Demo Lezione 10: RAG semantica |
 | `run_l11_resilience_demo()` | Demo Lezione 11: self-correction |

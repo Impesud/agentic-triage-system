@@ -20,3 +20,15 @@ def test_detect_sentiment_angry():
 def test_detect_sentiment_neutral():
     calm = "Buongiorno, vorrei informazioni sul corso."
     assert detect_sentiment_label(calm) == "NEUTRO"
+
+
+def test_extract_cliente_progetto_luca_verdi():
+    text = (
+        "Sono l'amministratore Luca Verdi. Ho ricevuto una mail urgente dal reparto HR."
+    )
+    assert extract_cliente_nome(text) == "Luca Verdi"
+
+
+def test_detect_sentiment_panico_progetto():
+    text = "SOC ACCORRETE! panico totale!!"
+    assert detect_sentiment_label(text) == "ARRABBIATO"
