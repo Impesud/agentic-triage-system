@@ -1,13 +1,10 @@
-# Manuale Progettino — Dataset Test SOC
+# Manuale — Dataset Test SOC (10 scenari)
 
-**Progetto finale** — complementa [CORSO_LEZIONI.md](CORSO_LEZIONI.md) e le lezioni 9–14.
+**Branch:** `progetto-2` — repository dedicato esclusivamente al triage SOC su `dataset_test`.
 
-| Ruolo | Branch | Note |
-|-------|--------|------|
-| **Esercizio studente** | `lesson-14-planning-loops` | Partenza dal repo L14; implementare le estensioni descritte in questo manuale |
-| **Soluzione di riferimento** | `progetto-2` | Implementazione completa + [PROGETTO_2_SCENARI.md](PROGETTO_2_SCENARI.md) |
+Documentazione correlata: [README.md](../README.md) · implementazione: [PROGETTO_2_SCENARI.md](PROGETTO_2_SCENARI.md) · errori: [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md)
 
-**Motore obbligatorio:** `react_triage` (ReAct multi-step, self-correction in-loop). Sul branch `progetto-2` usare `react_triage_progettino` (6 step, fallback SOC integrati).
+**Motore:** `react_triage_progettino` (ReAct, 6 step max, fallback SOC integrati, self-correction in-loop).
 
 ---
 
@@ -26,20 +23,19 @@
 
 ## 1. Introduzione
 
-### 1.1 Obiettivo del progettino
+### 1.1 Obiettivo
 
-Il progettino verifica la capacità dello studente di integrare tutte le competenze acquisite nelle **lezioni 9–14** del corso Agentic Customer Care Triage System:
+Il sistema gestisce **dieci messaggi di test** (`dataset_test`) che simulano incidenti di sicurezza reali: phishing, esfiltrazione offuscata, prompt injection, anomalie di accesso, social engineering commerciale, ransomware, payload malformati, furto di dispositivo, whaling del CEO e iniezione sintattica JSON.
 
-| Lezione | Competenza verificata |
-|---------|----------------------|
-| 9 | Memoria short-term e long-term |
-| 10 / 10B | RAG semantica su policy con ChromaDB |
-| 11 | Self-correction ed emergency fallback |
-| 12 | Resilienza al prompt injection |
-| 13 | ReAct multi-step e SQLite LTM |
-| 14 | Planning loop, controllo `max_steps`, STM ReAct |
+Competenze integrate nel motore ReAct:
 
-Lo studente deve far gestire all'agente **dieci messaggi di test** (`dataset_test`) che simulano incidenti di sicurezza reali: phishing, esfiltrazione offuscata, prompt injection, anomalie di accesso, social engineering commerciale, ransomware, payload malformati, furto di dispositivo, whaling del CEO e iniezione sintattica JSON.
+| Area | Implementazione |
+|------|-----------------|
+| Memoria LTM | SQLite `search_long_term_history` + `access_events` |
+| RAG | `search_policy` su `policy.txt` §4 (ChromaDB) |
+| Resilienza | Self-correction in-loop, `ClarificationNeeded` (scenario 3) |
+| Tool SOC | `isolate_account`, `verify_sender_identity` |
+| Fallback | `_apply_progetto_fallbacks` (policy, LTM, sicurezza) |
 
 ### 1.2 Il dataset_test
 
@@ -49,7 +45,7 @@ I dieci messaggi da processare sono elencati integralmente nei capitoli dedicati
 
 1. Leggere i **prerequisiti** (sezione 2) e preparare ambiente, seed e policy SOC.
 2. Studiare le **procedure trasversali** (sezione 4) prima di affrontare i singoli scenari.
-3. Prestare attenzione alle **note tecniche** in sezione 3.6 (limiti del repo base su `lesson-14-planning-loops`; risolti su `progetto-2`).
+3. Consultare le **note tecniche** in sezione 3.6 sul comportamento del motore.
 4. Affrontare gli scenari **nell'ordine 1 → 10** oppure iniziare da 3, 7 e 10 se si vuole testare prima la resilienza.
 5. Per ogni scenario: eseguire la procedura, verificare i criteri di successo, confrontare con gli errori comuni.
 6. Completare la **checklist di consegna** (sezione 6) e preparare il report per il docente.
@@ -75,50 +71,41 @@ Campi obbligatori del JSON finale:
 
 ### 2.1 Ambiente
 
-Prima di eseguire i dieci scenari, lo studente deve:
+Prima di eseguire i dieci scenari:
 
-1. Essere sul branch `lesson-14-planning-loops` (oppure su un fork personale derivato da L14).
+1. Essere sul branch `progetto-2`.
 2. Avere configurata la chiave API OpenAI nel file `.env` (mai tramite `export` in shell).
-3. Aver eseguito l'inizializzazione del DB base con `scripts/init_triage_db.py`.
-4. Aver esteso lo schema SQLite come descritto al paragrafo 4.3 (tabelle `access_events` e `authorized_identities`).
-5. Aver popolato i dati di seed per Luca Verdi, Matteo Neri e il registro identità CEO (paragrafo 4.6).
-6. Aver esteso `data/policy.txt` con la sezione Playbook Sicurezza e reindicizzato ChromaDB (vedi [LEZIONE_10B_CHROMADB.md](LEZIONE_10B_CHROMADB.md)).
-7. Aver registrato i nuovi tool di sicurezza nel registry dell'agente e integrato i fallback in `react_triage` (sezione 3.6.A).
-8. Aver verificato che i test di regressione delle lezioni precedenti passino prima di aggiungere i test del progettino.
+3. Aver eseguito `scripts/init_triage_db.py` e `scripts/seed_progettino.py`.
+4. Aver verificato che `pytest tests/ -q` sia verde.
 
-### 2.2 Estensioni obbligatorie al repo base
+### 2.2 Componenti del sistema
 
-Il repository delle lezioni 9–14 **non include** tutto ciò che serve al progettino. Lo studente deve implementare:
+Tutti gli elementi sotto sono già presenti su `progetto-2`:
 
-| Estensione | Scenari che la richiedono |
-|------------|---------------------------|
+| Componente | Scenari |
+|------------|---------|
 | Tool `isolate_account` | 1, 4, 8 |
 | Tool `verify_sender_identity` | 9 |
-| Tabelle SQL `access_events` e `authorized_identities` | 4, 9 |
-| Sezione Playbook Sicurezza in `policy.txt` | 1, 2, 6, 8, 9 |
-| Fallback deterministici (VIP, sentiment, isolamento, verifica CEO) | 1, 4, 5, 6, 8, 9 |
-| Estensione `extract_cliente_nome` per titoli (amministratore, ingegnere) | 1, 4 |
-| Integrazione fallback in `react_triage` | 5, 6 (e tutti gli scenari che dipendono da policy automatica) |
-| Seed dati progettino | 1, 4, 9 |
+| Tabelle SQL `access_events`, `authorized_identities` | 4, 9 |
+| Playbook Sicurezza in `policy.txt` §4 | 1, 2, 6, 8, 9 |
+| Fallback deterministici in `_apply_progetto_fallbacks` | 1, 4, 5, 6, 8, 9 |
+| `extract_cliente_nome` (amministratore, ingegnere) | 1, 4 |
+| Seed Luca Verdi, Matteo Neri, CEO | 1, 4, 9 |
 
 ### 2.3 Esecuzione demo
 
-Per ogni scenario si consiglia di invocare `react_triage` con un `session_id` univoco oppure di usare il wrapper `process_ticket_react` in [`src/main.py`](../src/main.py).
-
-**Suggerimento operativo:** usare un `session_id` diverso per ciascuno dei dieci messaggi (es. `progettino-scenario-01`, …, `progettino-scenario-10`), così la Short-Term Memory ReAct non mescola contesti tra scenari distinti.
-
-Al termine di tutti e dieci i messaggi, produrre un report con tool invocati, categoria, priorità ed eventuali fallback attivati.
-
-**Verifica rapida (solo branch `progetto-2`, soluzione docente):**
+Usare `process_ticket_progettino` in [`src/main.py`](../src/main.py) oppure la CLI:
 
 ```bash
-git checkout progetto-2
 PYTHONPATH=src python3 scripts/init_triage_db.py
 PYTHONPATH=src python3 scripts/seed_progettino.py
-PYTHONPATH=src python3 src/main.py --scenario progetto2
+PYTHONPATH=src python3 src/main.py              # tutti e 10
+PYTHONPATH=src python3 src/main.py --scenario 4 # singolo scenario
 ```
 
-Vedi [PROGETTO_2_SCENARI.md](PROGETTO_2_SCENARI.md) per il dettaglio implementativo di ogni scenario.
+Ogni scenario usa un `session_id` dedicato in `dataset_test.py` (es. `progetto-scenario-04`) per non mescolare la Short-Term Memory ReAct.
+
+Vedi [PROGETTO_2_SCENARI.md](PROGETTO_2_SCENARI.md) per il mapping codice ↔ scenario.
 
 ---
 
@@ -128,8 +115,8 @@ Vedi [PROGETTO_2_SCENARI.md](PROGETTO_2_SCENARI.md) per il dettaglio implementat
 
 ```mermaid
 flowchart TB
-    UserMsg[Messaggio dataset_test] --> ReAct[react_triage]
-    ReAct --> Step1{Step 1-4}
+    UserMsg[Messaggio dataset_test] --> ReAct[react_triage_progettino]
+    ReAct --> Step1{Step 1-6}
     Step1 --> Think[Analisi CoT]
     Think --> Tools[Invocazione tool]
     Tools --> Obs[Observation]
@@ -144,76 +131,48 @@ flowchart TB
 
 In ogni ciclo ReAct l'agente alterna **ragionamento** (Thought), **azioni** (tool calls) e **osservazioni** (risultato dei tool). Quando non ci sono più tool da invocare, l'agente produce il JSON finale. Se il JSON è malformato, entra in gioco la self-correction in-loop (Lezione 14), che consuma uno degli step disponibili.
 
-### 3.2 Tool già presenti nel repo
+### 3.2 Tool disponibili
 
 | Tool | Ruolo | Riferimento |
 |------|-------|-------------|
-| `search_long_term_history` | Storico ticket del cliente su SQLite | [`src/tools/logger.py`](../src/tools/logger.py) |
-| `search_policy` | RAG semantica sulla policy aziendale | [`src/rag/policy_semantic.py`](../src/rag/policy_semantic.py) |
-| `notify_manager` | Escalation al manager di turno (priorità 1–4) | [`src/tools/office_tools.py`](../src/tools/office_tools.py) |
+| `search_long_term_history` | Storico ticket + `access_events` | [`src/tools/logger.py`](../src/tools/logger.py) |
+| `search_policy` | RAG semantica + playbook SOC | [`src/rag/policy_semantic.py`](../src/rag/policy_semantic.py) |
+| `notify_manager` | Escalation manager (priorità 1–4) | [`src/tools/office_tools.py`](../src/tools/office_tools.py) |
+| `isolate_account` | Blocco account AD compromesso | [`src/tools/security_tools.py`](../src/tools/security_tools.py) |
+| `verify_sender_identity` | Verifica ruolo CEO / whaling | [`src/tools/security_tools.py`](../src/tools/security_tools.py) |
 
-### 3.3 Tool da implementare
-
-| Tool | Ruolo |
-|------|-------|
-| `isolate_account` | Blocco dell'account Active Directory compromesso o a rischio |
-| `verify_sender_identity` | Verifica della dichiarazione di ruolo (CEO, manager) contro un registro autorizzato |
-
-Entrambi vanno registrati in [`src/tools/registry.py`](../src/tools/registry.py) con descrizione chiara per l'LLM e mappati in `TOOL_MAP`.
+Tutti registrati in [`src/tools/registry.py`](../src/tools/registry.py) (`TOOL_MAP`, 5 tool).
 
 ### 3.4 Meccanismi di resilienza
 
 | Meccanismo | Quando si attiva | Riferimento |
 |------------|------------------|-------------|
-| **Fallback deterministico** | L'LLM omette un tool obbligatorio (budget VIP, sentiment ARRABBIATO, storico critico, isolamento) | [`src/logic.py`](../src/logic.py) — `_apply_all_fallbacks` (vedi nota 3.6) |
-| **Self-correction in-loop ReAct** | La risposta inizia con `{` ma fallisce la validazione Pydantic | Lezione 14 — dentro `react_triage` |
-| **ClarificationNeeded** | La risposta non è JSON (testo piano) | Lezione 12 — vedi nota 3.6 per differenza tra motori |
-| **Fallback max_steps** | Esauriti i 4 step ReAct senza JSON valido | Lezione 14 — `react_max_steps_fallback` |
+| **Fallback deterministico** | L'LLM omette un tool obbligatorio | [`_apply_progetto_fallbacks`](../src/logic.py) |
+| **Self-correction in-loop ReAct** | JSON invalido con `{` iniziale | Dentro `react_triage` |
+| **ClarificationNeeded** | Risposta non-JSON (scenario 3) | Intercettato da `react_triage_progettino` → SECURITY |
+| **Fallback max_steps** | Esauriti i 6 step senza JSON valido | `react_max_steps_fallback` |
 
 ### 3.5 Routing
 
 Dopo il triage, la categoria viene mappata su un team tramite [`src/tools/router.py`](../src/tools/router.py). Per tutti gli scenari SECURITY del dataset_test il team atteso è **sicurezza**. Lo scenario 5 può legittimamente produrre categoria SALES con team **commerciale**, purché l'escalation manager sia comunque attiva.
 
-### 3.6 Note tecniche importanti (limiti del repo base)
+### 3.6 Note tecniche sul motore
 
-Queste differenze tra motori e moduli sono frequenti fonte di errore nelle consegne. Leggerle con attenzione prima di implementare.
+#### A) Fallback nel ciclo ReAct
 
-> **Soluzione di riferimento:** sul branch [`progetto-2`](.) tutti i punti A–D sotto sono già implementati (`react_triage_progettino`, `_apply_progetto_fallbacks`, extractors estesi, gestione `ClarificationNeeded` allo scenario 3). Consultare [PROGETTO_2_SCENARI.md](PROGETTO_2_SCENARI.md) per il mapping codice ↔ scenario.
+`_apply_progetto_fallbacks` unisce policy (VIP > 10.000 €, sentiment ARRABBIATO), long-term (storico critico) e sicurezza (`isolate_account`, `verify_sender_identity`) dopo ogni step con tool.
 
-#### A) `react_triage` non applica i fallback deterministici di default
+#### B) Limite dei 6 step ReAct
 
-Nel repo delle lezioni 9–14, la funzione `_apply_all_fallbacks` (VIP budget > 10.000 €, sentiment ARRABBIATO, storico Marco, ecc.) è integrata nel percorso **`triage_message`**, non in **`react_triage`**.
+Ogni tool e ogni self-correction consumano uno step. Il prompt ReAct incoraggia più tool nello stesso step quando possibile; `progetto_mode` usa `max_steps=6`.
 
-Poiché il progettino richiede `react_triage`, lo studente deve **integrare esplicitamente** i fallback nel ciclo ReAct (dopo ogni step con tool, o prima del JSON finale), oppure replicare le stesse regole in un wrapper dedicato al progettino.
+#### C) Estrazione nome cliente
 
-**Conseguenza pratica:** negli scenari 5 e 6, `notify_manager` priorità 4 **non** viene iniettato automaticamente solo perché il messaggio contiene 45.000 € o «SOC ACCORRETE», finché lo studente non collega i fallback al motore ReAct.
+`extract_cliente_nome` riconosce titoli come amministratore/ingegnere. Per il CEO (scenario 9) usare `verify_sender_identity`, non lo storico LTM.
 
-#### B) Limite dei 4 step ReAct
+#### D) Scenario 3 — prompt injection
 
-Ogni invocazione di tool consuma uno step; la self-correction in-loop consuma anch'essa uno step. Scenari con catena lunga (storico + policy + isolate + notify) rischiano `react_max_steps_fallback` se ogni tool è in uno step separato.
-
-**Strategia consigliata:** istruire il prompt ReAct affinché, quando possibile, l'LLM invochi **più tool nello stesso step** (es. `search_long_term_history` e `search_policy` insieme), oppure aumentare `max_steps` solo nel percorso progettino documentando la scelta nel report.
-
-#### C) Estrazione automatica del nome cliente
-
-Il fallback long-term in `logic.py` usa `extract_cliente_nome` da [`src/memory/extractors.py`](../src/memory/extractors.py). Con i messaggi attuali:
-
-| Messaggio | Estrazione automatica | Cosa fare |
-|-----------|----------------------|-----------|
-| «Sono **l'amministratore Luca Verdi**…» | **Non affidabile** (il pattern cattura solo «l») | Estendere i regex oppure fare affidamento sull'LLM che passi «Luca Verdi» al tool |
-| «Sono **l'ingegnere Matteo Neri**…» | **Non affidabile** | Stesso approccio: estendere extractor o chiamata LLM esplicita |
-| «Sono il **CEO** dell'azienda…» | **Non estrae** un nome cliente | Usare `verify_sender_identity`, non `search_long_term_history` |
-
-#### D) `ClarificationNeeded` con `react_triage`
-
-In `react_triage`, una risposta non-JSON solleva `ClarificationNeeded` (come in `triage_message`). Il wrapper `process_ticket_react` in [`src/main.py`](../src/main.py) **non** intercetta questa eccezione: a differenza di `process_ticket` (demo M1), il ticket **non** resta automaticamente in stato OPEN.
-
-Per lo scenario 3, lo studente può:
-
-- gestire `ClarificationNeeded` in un try/except attorno a `react_triage` (percorso didattico consigliato), oppure
-- rafforzare il prompt ReAct affinché risponda sempre in JSON classificando l'attacco come SECURITY.
-
-Entrambi i percorsi restano validi se documentati nel report.
+`react_triage_progettino` intercetta `ClarificationNeeded` e restituisce un `TriageResult` SECURITY che documenta il rifiuto dell'attacco.
 
 ---
 
@@ -242,7 +201,7 @@ Lo studente aggiunge a [`data/policy.txt`](../data/policy.txt) paragrafi separat
 - **Smarrimento o furto dispositivi aziendali** — revoca sessioni VPN, wipe remoto, isolamento credenziali.
 - **Whaling e richieste privilegiate** — mai disattivare controlli AD su richiesta chat; verificare identità su database; rifiutare eccezioni non tracciate.
 
-Dopo ogni modifica alla policy: **reindicizzare ChromaDB**. La soglia semantica attuale è **0,38** (documentata in [LEZIONE_10B_CHROMADB.md](LEZIONE_10B_CHROMADB.md)).
+Dopo ogni modifica alla policy: **reindicizzare ChromaDB** (indice in `data/chroma/`). La soglia semantica attuale è **0,38** (vedi `src/rag/policy_semantic.py`).
 
 ### 4.3 Estensione database SQLite
 
@@ -265,7 +224,7 @@ Lo studente implementa regole analoghe a quelle già presenti per budget VIP e s
 | Condizione nel messaggio | Tool da forzare se omesso dall'LLM |
 |--------------------------|-------------------------------------|
 | Credenziali compromesse, phishing, tablet smarrito, sessioni attive a rischio | `isolate_account` |
-| Budget dichiarato superiore a 10.000 € | `notify_manager` priorità 4 (logica già in `logic.py`; va collegata a `react_triage` — sezione 3.6.A) |
+| Budget dichiarato superiore a 10.000 € | `notify_manager` priorità 4 via `_apply_progetto_fallbacks` |
 | Ransomware, panico estremo, maiuscole e urgenza SOC | `notify_manager` priorità 4 + `search_policy` |
 | Dichiarazione di ruolo elevato (CEO) su richiesta privilegiata | `verify_sender_identity` |
 
@@ -484,7 +443,7 @@ Lo studente implementa regole analoghe a quelle già presenti per budget VIP e s
 |------|--------|-----------|
 | 1 — Thought | Separare le dimensioni | Non autorizzare sblocco porte via chat indipendentemente dalla pressione commerciale |
 | 2 — Policy | `search_policy` | Budget enterprise e procedure di accesso staging |
-| 3 — Fallback VIP | `notify_manager` priorità 4 | **Obbligatorio**: budget > 10.000 €. La regola esiste in `logic.py` ma va **collegata a `react_triage`** (sezione 3.6.A); senza integrazione, l'LLM deve invocare il tool esplicitamente |
+| 3 — Fallback VIP | `notify_manager` priorità 4 | **Obbligatorio**: budget > 10.000 € — iniettato da `_apply_progetto_fallbacks` se l'LLM omette il tool |
 | 4 — Divieti | Non eseguire | Sblocco porte, disabilitazione firewall, whitelist IP non verificata |
 | 5 — Output JSON | TriageResult | `categoria`: SECURITY o SALES (entrambe accettabili se motivate). `priorita`: almeno HIGH. CoT: spiegare perché la minaccia contrattuale non altera la procedura |
 
@@ -777,23 +736,18 @@ I testi integrali sono nella sezione 5.
 
 | File | Contenuto |
 |------|-----------|
-| [CORSO_LEZIONI.md](CORSO_LEZIONI.md) | Indice lezioni e branch |
-| [LEZIONE_10B_CHROMADB.md](LEZIONE_10B_CHROMADB.md) | RAG e ChromaDB |
-| [LEZIONE_11_RESILIENZA.md](LEZIONE_11_RESILIENZA.md) | Self-correction vs chiarimento |
-| [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md) | Prompt injection |
-| [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) | ReAct e SQLite |
-| [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md) | max_steps e STM |
-| [PROGETTO_2_SCENARI.md](PROGETTO_2_SCENARI.md) | Soluzione di riferimento scenari 1–10 (branch `progetto-2`) |
-| [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) | Manuale errori |
+| [README.md](../README.md) | Architettura, setup, test |
+| [PROGETTO_2_SCENARI.md](PROGETTO_2_SCENARI.md) | Mapping codice ↔ scenari 1–10 |
+| [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) | Errori, fallback, resilienza |
 
 ### File del repo rilevanti
 
 | File | Ruolo |
 |------|-------|
 | [`src/logic.py`](../src/logic.py) | `react_triage`, fallback, self-correction |
-| [`src/dataset_test.py`](../src/dataset_test.py) | 10 scenari `ProgettoScenario` (branch `progetto-2`) |
-| [`src/tools/security_tools.py`](../src/tools/security_tools.py) | `isolate_account`, `verify_sender_identity` (da implementare / presente su `progetto-2`) |
-| [`scripts/seed_progettino.py`](../scripts/seed_progettino.py) | Seed Luca Verdi, Matteo Neri, CEO (branch `progetto-2`) |
+| [`src/dataset_test.py`](../src/dataset_test.py) | 10 scenari `ProgettoScenario` |
+| [`src/tools/security_tools.py`](../src/tools/security_tools.py) | `isolate_account`, `verify_sender_identity` |
+| [`scripts/seed_progettino.py`](../scripts/seed_progettino.py) | Seed Luca Verdi, Matteo Neri, CEO |
 | [`src/tools/registry.py`](../src/tools/registry.py) | Definizione e mappa tool |
 | [`src/schemas/ticket.py`](../src/schemas/ticket.py) | Modello `TriageResult` |
 | [`src/parsing/parser.py`](../src/parsing/parser.py) | Estrazione e validazione JSON |

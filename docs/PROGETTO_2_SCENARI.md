@@ -1,16 +1,16 @@
 # Progetto 2 — Svolgimento scenari dataset_test
 
-**Branch:** `progetto-2` (sequenza da `lesson-14-planning-loops`)
+**Branch:** `progetto-2`
 
-Questo documento spiega **come il codice risolve** ciascuno dei 10 scenari del [MANUALE_PROGETTINO_DATASET_TEST.md](MANUALE_PROGETTINO_DATASET_TEST.md). Indice corso: [CORSO_LEZIONI.md](CORSO_LEZIONI.md) · architettura: [README.md](../README.md#progetto-2--dataset-soc-10-scenari).
+Questo documento spiega **come il codice risolve** ciascuno dei 10 scenari del [MANUALE_PROGETTINO_DATASET_TEST.md](MANUALE_PROGETTINO_DATASET_TEST.md). Architettura: [README.md](../README.md).
 
 ## Avvio rapido
 
 ```bash
-git checkout progetto-2
 PYTHONPATH=src python3 scripts/init_triage_db.py
 PYTHONPATH=src python3 scripts/seed_progettino.py
-PYTHONPATH=src python3 src/main.py --scenario progetto2
+PYTHONPATH=src python3 src/main.py              # tutti e 10
+PYTHONPATH=src python3 src/main.py --scenario 4 # singolo scenario
 ```
 
 Singolo scenario (es. scenario 4):
@@ -303,6 +303,6 @@ PYTHONPATH=src .venv/bin/python -m pytest tests/test_dataset_test.py tests/test_
 
 ## Riferimenti
 
-- [MANUALE_PROGETTINO_DATASET_TEST.md](MANUALE_PROGETTINO_DATASET_TEST.md) — procedure operative per lo studente
-- [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md) — base ReAct
-- [CORSO_LEZIONI.md](CORSO_LEZIONI.md) — indice corso
+- [MANUALE_PROGETTINO_DATASET_TEST.md](MANUALE_PROGETTINO_DATASET_TEST.md) — procedure per ogni scenario
+- [README.md](../README.md) — architettura e setup
+- [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) — errori e fallback

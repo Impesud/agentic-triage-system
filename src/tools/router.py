@@ -9,6 +9,11 @@ TEAM_BY_CATEGORY: dict[Category, str] = {
 }
 
 
+def team_for_category(categoria: Category) -> str:
+    """Restituisce il team di routing per una categoria triage."""
+    return TEAM_BY_CATEGORY[categoria]
+
+
 def assign_to_team(ticket: Ticket) -> Ticket:
     """Assegna il ticket al team in base alla categoria."""
     if ticket.categoria is None:

@@ -1,5 +1,0 @@
-{"timestamp": "2026-06-01T10:00:00+00:00", "event_type": "ticket_received", "payload": {"input": "VPN bloccata"}}
-{"timestamp": "2026-06-01T10:00:05+00:00", "event_type": "triage_json_retry", "payload": {"attempt": 1, "error": "campo mancante"}}
-{"timestamp": "2026-06-01T10:00:10+00:00", "event_type": "ticket_processed", "payload": {"ticket": {"categoria": "IT"}, "cliente_nome": null}}
-{"timestamp": "2026-06-01T10:01:00+00:00", "event_type": "emergency_fallback", "payload": {"attempts": 3, "categoria": "GENERAL"}}
-{"timestamp": "2026-06-01T10:02:00+00:00", "event_type": "error", "payload": {"message": "API key assente"}}

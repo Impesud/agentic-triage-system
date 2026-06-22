@@ -44,10 +44,3 @@ def isolated_chroma_store():
     yield
     reset_policy_store()
     set_chroma_client(None)
-
-
-@pytest.fixture(autouse=True)
-def isolated_tickets_file(tmp_path, monkeypatch):
-    tickets_file = tmp_path / "tickets.jsonl"
-    monkeypatch.setattr("storage.store.TICKETS_PATH", tickets_file)
-    yield tickets_file

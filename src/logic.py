@@ -1,15 +1,14 @@
 """
-Nucleo del loop agentico (logic.py) — Lezione 9: memoria; Lezione 10: RAG;
-Lezione 11: self-correction su soft error e emergency fallback;
-Lezione 13: loop ReAct multi-step; Lezione 14: max_steps, STM, self-correction in-loop;
-Progetto 2: fallback SOC in react_triage, tool isolate_account e verify_sender_identity.
+Nucleo ReAct per triage SOC — Progetto 2.
+
+Loop multi-step con fallback policy/LTM/sicurezza, self-correction in-loop,
+Short-Term Memory per session_id e entry point react_triage_progettino.
 """
 
 from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
 from typing import Any
 
 from client import MODEL, get_client
@@ -88,15 +87,6 @@ _ANGRY_LEGAL_TERMS = (
     "azione legale",
     "legali",
 )
-
-
-@dataclass(frozen=True)
-class TriageStats:
-    """Metriche del ciclo di validazione JSON (Lezione 11 / benchmark L12)."""
-
-    attempts: int = 0
-    used_self_correction: bool = False
-    used_emergency_fallback: bool = False
 
 
 class ClarificationNeeded(Exception):
@@ -283,26 +273,6 @@ def _call_llm_with_tools(client: Any, messages: list[dict[str, Any]]) -> Any:
     return response.choices[0].message
 
 
-def _execute_tool_calls(conversation: list[Any], tool_calls: Any) -> set[str]:
-    tools_called: set[str] = set()
-    for tool_call in tool_calls:
-        function_name = tool_call.function.name
-        tools_called.add(function_name)
-        function_args = json.loads(tool_call.function.arguments)
-        if function_name == "search_long_term_history" and "hours" not in function_args:
-            function_args.setdefault("hours", 24)
-        tool_output = TOOL_MAP[function_name](**function_args)
-        conversation.append(
-            {
-                "role": "tool",
-                "tool_call_id": tool_call.id,
-                "name": function_name,
-                "content": tool_output,
-            }
-        )
-    return tools_called
-
-
 def _append_fallback_tools(
     conversation: list[Any],
     tools_called: set[str],
@@ -465,19 +435,6 @@ def _apply_all_fallbacks(
     return ran_policy or ran_ltm
 
 
-def _request_final_json(client: Any, conversation: list[Any]) -> str:
-    response = client.chat.completions.create(
-        model=MODEL,
-        temperature=0,
-        messages=conversation,
-        response_format={"type": "json_object"},
-    )
-    content = response.choices[0].message.content
-    if not content:
-        raise ValueError("Risposta vuota dal modello")
-    return content.strip()
-
-
 def _emergency_triage_result(user_input: str) -> TriageResult:
     """Fallback deterministico dopo esaurimento tentativi di self-correction."""
     return TriageResult(
@@ -492,155 +449,6 @@ def _emergency_triage_result(user_input: str) -> TriageResult:
         messaggio_originale=user_input,
         azione_eseguita="Emergency Fallback attivato",
     )
-
-
-def _self_correction_user_message(error: ValueError) -> str:
-    return (
-        f"Il tuo JSON precedente ha generato un errore di validazione: {error}. "
-        "Correggilo e restituisci unicamente il JSON conforme allo schema richiesto."
-    )
-
-
-def _finalize_with_self_correction(
-    client: Any,
-    conversation: list[Any],
-    user_input: str,
-    initial_raw: str | None,
-    *,
-    max_retries: int = MAX_TRIAGE_JSON_RETRIES,
-) -> tuple[TriageResult, TriageStats]:
-    """
-    Valida l'output JSON con retry in-context (soft error).
-    Dopo max_retries tentativi attiva emergency fallback (hard stop cognitivo).
-    """
-    stats = TriageStats()
-    raw_content: str | None = initial_raw
-
-    for attempt in range(1, max_retries + 1):
-        if raw_content is None:
-            raw_content = _request_final_json(client, conversation)
-
-        stats = TriageStats(
-            attempts=attempt,
-            used_self_correction=stats.used_self_correction,
-            used_emergency_fallback=False,
-        )
-
-        try:
-            return parse_llm_output(raw_content), stats
-        except ValueError as exc:
-            print(
-                f"   ⚠️ Tentativo {attempt}/{max_retries} fallito. "
-                f"Errore di validazione: {exc}",
-                flush=True,
-            )
-            log_event(
-                "triage_json_retry",
-                {
-                    "attempt": attempt,
-                    "max_retries": max_retries,
-                    "error": str(exc)[:500],
-                    "input_preview": user_input[:200],
-                },
-            )
-
-            if attempt == max_retries:
-                print(
-                    "   🚨 Max retries raggiunti. Attivazione Fallback di sicurezza strutturale.",
-                    flush=True,
-                )
-                fallback = _emergency_triage_result(user_input)
-                log_event(
-                    "emergency_fallback",
-                    {
-                        "attempts": attempt,
-                        "input_preview": user_input[:200],
-                        "categoria": fallback.categoria,
-                        "priorita": fallback.priorita,
-                    },
-                )
-                return fallback, TriageStats(
-                    attempts=attempt,
-                    used_self_correction=stats.used_self_correction,
-                    used_emergency_fallback=True,
-                )
-
-            conversation.append({"role": "assistant", "content": raw_content})
-            conversation.append(
-                {"role": "user", "content": _self_correction_user_message(exc)}
-            )
-            raw_content = None
-            stats = TriageStats(
-                attempts=attempt,
-                used_self_correction=True,
-                used_emergency_fallback=False,
-            )
-
-    raise RuntimeError("self-correction loop terminato senza risultato")
-
-
-def _run_agent_loop(
-    messages: list[dict[str, Any]],
-    user_input: str,
-    context_text: str,
-) -> tuple[Any, list[Any], str | None]:
-    """
-    Esegue tool e fallback policy/LTM.
-    Ritorna (client, conversation, initial_raw):
-    - initial_raw valorizzato se la prima risposta è già JSON (senza tool)
-    - None se serve _request_final_json nella fase di finalize
-    """
-    client = get_client()
-    response_message = _call_llm_with_tools(client, messages)
-    tool_calls = response_message.tool_calls
-    tools_called: set[str] = set()
-    conversation: list[Any] = list(messages)
-
-    if tool_calls:
-        print("\n[AGENTE] Attivazione tool in corso...")
-        conversation.append(response_message)
-        tools_called = _execute_tool_calls(conversation, tool_calls)
-        _apply_all_fallbacks(context_text, conversation, tools_called)
-        return client, conversation, None
-
-    fallback_ran = _apply_all_fallbacks(
-        context_text,
-        conversation,
-        tools_called,
-        first_assistant=response_message,
-    )
-    if fallback_ran:
-        return client, conversation, None
-
-    content = response_message.content
-    if not content:
-        raise ValueError("Risposta vuota dal modello")
-    if not _looks_like_json(content):
-        raise ClarificationNeeded(content.strip())
-    return client, conversation, content.strip()
-
-
-def triage_message(
-    user_input: str,
-    manuale: str,
-    history: list[dict[str, str]] | None = None,
-    *,
-    return_stats: bool = False,
-    max_json_retries: int = MAX_TRIAGE_JSON_RETRIES,
-) -> TriageResult | tuple[TriageResult, TriageStats]:
-    context_text = _build_context_text(user_input, history)
-    messages = build_chat_messages(user_input, manuale, history=history)
-    client, conversation, initial_raw = _run_agent_loop(messages, user_input, context_text)
-    result, stats = _finalize_with_self_correction(
-        client,
-        conversation,
-        user_input,
-        initial_raw,
-        max_retries=max_json_retries,
-    )
-    if return_stats:
-        return result, stats
-    return result
 
 
 def _build_react_messages(

@@ -1,185 +1,68 @@
-# Agentic Customer Care Triage System
+# Agentic SOC Triage — Progetto 2
 
-Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSON), tool locali, **memoria short/long-term** (Lezione 9), **RAG semantica su policy con ChromaDB** (Lezione 10/10B), **self-correction e emergency fallback** (Lezione 11), **benchmark e log analytics** (Lezione 12), **loop ReAct e SQLite LTM** (Lezione 13), **planning multi-step con controllo loop** (Lezione 14) e **Progetto 2 — triage SOC su 10 scenari dataset_test**.
+Sistema agentico per il triage di **10 incidenti di sicurezza** (`dataset_test`): loop **ReAct** multi-step, tool locali, **RAG semantica** su policy SOC, **SQLite LTM**, fallback deterministici e resilienza a prompt injection.
 
-**Branch corrente:** `progetto-2` — include le **lezioni 9–14** + implementazione completa del progettino SOC.
+**Branch:** `progetto-2`
 
-## Percorso didattico e branch Git
+## Documentazione
 
-Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md)**.
+| File | Contenuto |
+|------|-----------|
+| [docs/MANUALE_PROGETTINO_DATASET_TEST.md](docs/MANUALE_PROGETTINO_DATASET_TEST.md) | Procedure operative per ogni scenario |
+| [docs/PROGETTO_2_SCENARI.md](docs/PROGETTO_2_SCENARI.md) | Come il codice risolve scenari 1–10 |
+| [GESTIONE_ERRORI.md](GESTIONE_ERRORI.md) | Errori, fallback e resilienza |
 
-| Branch | Fino a lezione | Uso |
-|--------|----------------|-----|
-| `main` | 9 — Memoria | Base M1–M3 senza RAG |
-| `lesson-10-rag-semantica` | 10 — RAG + ChromaDB | + `rag/chroma_store.py`, demo `l10` |
-| `lesson-11-resilienza-self-correction` | 11 — Resilienza | + self-correction, emergency fallback |
-| `lesson-12-benchmark-log-analytics` | 12 — Benchmark | + `benchmark.py`, `analytics/log_kpi.py` |
-| `lesson-13-react-sqlite` | 13 — ReAct + SQLite | + `react_triage`, LTM SQLite indicizzata |
-| `lesson-14-planning-loops` | 14 — Planning loop | + `max_steps=4`, STM ReAct, self-correction in-loop |
-| `progetto-2` | **Progetto 2 — SOC** | + 10 scenari `dataset_test`, tool sicurezza, fallback ReAct integrati |
+## Avvio rapido
 
-| Guida | File |
-|-------|------|
-| 10B ChromaDB | [docs/LEZIONE_10B_CHROMADB.md](docs/LEZIONE_10B_CHROMADB.md) |
-| 11 Resilienza | [docs/LEZIONE_11_RESILIENZA.md](docs/LEZIONE_11_RESILIENZA.md) |
-| 12 Benchmark | [docs/LEZIONE_12_PROMPT_OPTIMIZATION.md](docs/LEZIONE_12_PROMPT_OPTIMIZATION.md) |
-| 13 ReAct + SQLite | [docs/LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md) |
-| 14 Planning loop | [docs/LEZIONE_14_PLANNING_LOOPS.md](docs/LEZIONE_14_PLANNING_LOOPS.md) |
-| Progettino SOC | [docs/MANUALE_PROGETTINO_DATASET_TEST.md](docs/MANUALE_PROGETTINO_DATASET_TEST.md) |
-| Progetto 2 (implementazione) | [docs/PROGETTO_2_SCENARI.md](docs/PROGETTO_2_SCENARI.md) |
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[test]"
 
-[GESTIONE_ERRORI.md](GESTIONE_ERRORI.md)
+PYTHONPATH=src python3 scripts/init_triage_db.py
+PYTHONPATH=src python3 scripts/seed_progettino.py
+PYTHONPATH=src python3 src/main.py              # tutti e 10 gli scenari
+PYTHONPATH=src python3 src/main.py --scenario 4   # singolo scenario
+```
+
+**API key:** `OPENAI_API_KEY=sk-...` nel file `.env` (non `export` in shell).
 
 ## Architettura
 
 | Modulo | Ruolo |
 |--------|--------|
-| [`main.py`](src/main.py) | Orchestrazione, demo M1–M3, L10–L14, **Progetto 2** (`--scenario progetto2`) |
-| [`logic.py`](src/logic.py) | Loop agentico + `react_triage` + `react_triage_progettino` |
-| [`dataset_test.py`](src/dataset_test.py) | 10 scenari SOC con metadati (`ProgettoScenario`) |
-| [`benchmark.py`](src/benchmark.py) | Suite benchmark 5 ticket (Lezione 12) |
-| [`client.py`](src/client.py) | Client OpenAI (`OPENAI_API_KEY` solo nel file `.env`, non dalla shell) |
-
-| Package / file | Ruolo |
-|----------------|--------|
-| [`memory/session_manager.py`](src/memory/session_manager.py) | Short-term: cronologia `user`/`assistant` per `ticket_id` |
-| [`memory/extractors.py`](src/memory/extractors.py) | Estrazione `cliente_nome` e `sentiment` per audit log |
-| [`tools/history_tools.py`](src/tools/history_tools.py) | Long-term: delega a SQLite |
-| [`tools/logger.py`](src/tools/logger.py) | Audit JSONL + SQLite LTM (`init_db`, `log_triage_to_sqlite`) |
-| [`rag/policy_semantic.py`](src/rag/policy_semantic.py), [`rag/chroma_store.py`](src/rag/chroma_store.py) | RAG policy + indice ChromaDB (Lezione 10/10B) |
-| [`tools/office_tools.py`](src/tools/office_tools.py) | `search_policy` (RAG semantica; keyword solo in eccezione), `notify_manager` |
-| [`tools/security_tools.py`](src/tools/security_tools.py) | `isolate_account`, `verify_sender_identity` (Progetto 2) |
-| [`tools/registry.py`](src/tools/registry.py) | `TOOL_MAP` e schema OpenAI (5 tool su `progetto-2`) |
-| [`prompts/triage_v1.py`](src/prompts/triage_v1.py) | System prompt, few-shot, `build_chat_messages(history=…)` |
-| [`analytics/log_kpi.py`](src/analytics/log_kpi.py) | KPI da `activity.jsonl` (Lezione 12) |
-| [`paths.py`](src/paths.py) | Percorsi repo (`TRIAGE_DB_PATH`, `LOG_FILE_PATH`, `DEMO_M2_DB_PATH`, …) |
+| [`main.py`](src/main.py) | CLI e demo sui 10 scenari |
+| [`logic.py`](src/logic.py) | `react_triage`, `react_triage_progettino`, fallback SOC |
+| [`dataset_test.py`](src/dataset_test.py) | 10 messaggi + metadati (`ProgettoScenario`) |
+| [`tools/security_tools.py`](src/tools/security_tools.py) | `isolate_account`, `verify_sender_identity` |
+| [`tools/logger.py`](src/tools/logger.py) | SQLite LTM (`access_events`, `authorized_identities`) |
+| [`rag/policy_semantic.py`](src/rag/policy_semantic.py) | RAG su `data/policy.txt` (playbook §4) |
 
 ```mermaid
 flowchart TB
-    subgraph main_py [main.py]
-        PT[process_ticket]
-        CT[continue_ticket]
-        SM[SessionManager]
-        PT --> SM
-        CT --> SM
-    end
-    subgraph logic_py [logic.py]
-        TM[triage_message]
-        Loop[_run_agent_loop]
-        FB[_apply_all_fallbacks]
-        TM --> Loop
-        Loop --> FB
-        FB --> SC[_finalize_with_self_correction]
-        SC --> JSON[_request_final_json]
-    end
-    subgraph tools_pkg [tools]
-        LTM[search_long_term_history]
-        SP[search_policy]
-        NM[notify_manager]
-    end
-    subgraph rag_pkg [rag]
-        RAG[policy_semantic]
-    end
-    SP --> RAG
-    PT --> TM
-    CT --> TM
-    Loop --> LTM
-    Loop --> SP
-    Loop --> NM
-    FB --> LTM
-    FB --> NM
+    CLI[main.py] --> RTP[react_triage_progettino]
+    RTP --> RT[react_triage progetto_mode]
+    RT --> LLM[LLM + 5 tool]
+    LLM --> FB[_apply_progetto_fallbacks]
+    FB --> Policy[policy VIP / ARRABBIATO]
+    FB --> LTM[search_long_term_history]
+    FB --> Sec[isolate / verify CEO]
+    LLM --> JSON[TriageResult]
 ```
 
-### Motore ReAct (Lezioni 13–14)
-
-```mermaid
-flowchart TB
-    subgraph react_py [react_triage]
-        RT[react_triage] --> STM{session_id?}
-        STM -->|sì| Store[_SHORT_TERM_STORE]
-        STM -->|no| Ephemeral[conversazione ephemeral]
-        Store --> Loop[for step in max_steps]
-        Ephemeral --> Loop
-        Loop --> LLM[_call_llm_with_tools]
-        LLM --> Tools{tool_calls?}
-        Tools -->|sì| LTM[search_long_term_history → SQLite]
-        LTM --> Loop
-        Tools -->|no| Valid{JSON Pydantic OK?}
-        Valid -->|sì| Out[TriageResult]
-        Valid -->|no L14| SC[self-correction in-loop]
-        SC --> Loop
-        Loop -->|max_steps esauriti| FB[react_max_steps_fallback]
-    end
-```
-
-### API principali (`main.py`)
-
-| Funzione | Uso |
-|----------|-----|
-| `process_ticket(messaggio)` | Nuovo ticket (`OPEN` → triage → routing) |
-| `continue_ticket(ticket_id, messaggio)` | Turno successivo (short-term memory) |
-| `seed_marco_angry_history(n, log_path, reset=…)` | Seed demo M2 (storico Marco) |
-| `run_demo()` / `run_*_demo()` | Scenari didattici M3 → M1 → M2 |
-| `run_l10_rag_demo()` | Demo Lezione 10: RAG semantica |
-| `run_l11_resilience_demo()` | Demo Lezione 11: self-correction |
-| `run_l13_react_demo()` | Demo Lezione 13: ReAct + SQLite |
-| `run_l14_planning_demo()` | Demo Lezione 14: STM + max_steps |
-| `process_ticket_react(msg, session_id=…)` | Wrapper demo ReAct multi-turn |
-| `process_ticket_progettino(msg, session_id=…)` | Progetto 2: ReAct + fallback SOC + gestione injection |
-| `run_progettino_demo()` | Esegue tutti e 10 gli scenari `dataset_test` con report |
-
-## Memoria (Lezione 9)
-
-### Short-term (9.1)
-
-Stesso `ticket_id`, più turni. `SessionManager` (in-memory) conserva il thread; `build_chat_messages` inietta la cronologia nel contesto LLM.
-
-| Turno | Comportamento |
-|-------|----------------|
-| 1 | Messaggio vago → LLM può rispondere con testo (`ClarificationNeeded`) → ticket resta `OPEN` |
-| 2+ | `continue_ticket` → triage JSON con tutto il thread |
-
-### Long-term (9.2 + 13)
-
-Dual-write: ogni ticket processato va in `logs/activity.jsonl` (KPI L12) **e** in `data/triage_system.db` (LTM indicizzata). Il tool `search_long_term_history` interroga SQLite con indice `idx_cliente`; se ≥4 ticket **IT + ARRABBIATO** in 24h → fallback `notify_manager` (priority 4).
-
-**Demo M2 — database isolato:**
-
-| Operazione | File |
-|------------|------|
-| Seed storico (`seed_marco_sqlite`) | `data/demo_m2_triage.db` |
-| Lettura storico + soglia escalation | `demo_m2_triage.db` durante `run_ltm_demo()` |
-| Eventi live + LTM principale | `logs/activity.jsonl` + `data/triage_system.db` |
-
-## Pipeline ticket
-
-```mermaid
-flowchart TD
-    In[Messaggio] --> New{nuovo?}
-    New -->|sì| Open[OPEN + session user]
-    New -->|no| Cont[continue_ticket]
-    Open --> Triage[triage_message + history]
-    Cont --> Triage
-    Triage --> Clarify{ClarificationNeeded?}
-    Clarify -->|sì| Stop["CHIARIMENTO — ticket OPEN"]
-    Clarify -->|no| Enrich[enrich_priority]
-    Enrich --> Route[assign_to_team]
-    Route --> Log[ticket_processed]
-```
-
-## Tool e fallback
+### Tool
 
 | Tool | Quando |
 |------|--------|
-| `search_long_term_history` | Cliente identificabile; include `access_events` (Progetto 2) |
-| `search_policy` | **Principale:** RAG semantica (+ playbook SOC §4 su `progetto-2`) |
-| `notify_manager` | VIP >10k€, ARRABBIATO, ransomware, storico cliente critico |
-| `isolate_account` | Phishing, anomalie login, tablet smarrito (Progetto 2) |
-| `verify_sender_identity` | Richieste privilegiate da presunto CEO (Progetto 2) |
+| `search_long_term_history` | Cliente identificabile; include `access_events` |
+| `search_policy` | RAG semantica + playbook SOC §4 |
+| `notify_manager` | VIP >10k€, ARRABBIATO, ransomware, storico critico |
+| `isolate_account` | Phishing, anomalie login, tablet smarrito |
+| `verify_sender_identity` | Richieste privilegiate da presunto CEO |
 
-[`_apply_all_fallbacks`](src/logic.py) unisce fallback policy e long-term. Su `progetto-2`, [`_apply_progetto_fallbacks`](src/logic.py) aggiunge anche i fallback sicurezza nel ciclo ReAct.
+**Entry point:** `react_triage_progettino()` — 6 step max, fallback integrati, gestione injection (scenario 3).
 
-## Output LLM
+### Output LLM
 
 ```json
 {
@@ -187,186 +70,38 @@ flowchart TD
   "categoria": "IT | BILLING | SALES | SECURITY | GENERAL",
   "priorita": "LOW | MEDIUM | HIGH | CRITICAL",
   "riassunto_breve": "max 15 parole",
-  "messaggio_originale": "ultimo input utente del turno corrente",
-  "azione_eseguita": "opzionale; valorizzato in emergency fallback (L11)"
+  "messaggio_originale": "ultimo input utente",
+  "azione_eseguita": "tool eseguiti"
 }
 ```
 
-## RAG semantica (Lezione 10)
+## I 10 scenari
 
-Dalla Lezione 10 la ricerca policy **non usa più il match per parole chiave come strategia predefinita** (quello restava in Lezione 6). L’agente chiama `search_policy`, che delega a `semantic_policy_search` in [`rag/policy_semantic.py`](src/rag/policy_semantic.py) e [`rag/chroma_store.py`](src/rag/chroma_store.py) (Lezione 10B):
+| # | Tema | Tool chiave |
+|---|------|-------------|
+| 1 | Phishing + credenziali | Storico → RAG → isolate |
+| 2 | Esfiltrazione offuscata | RAG semantica |
+| 3 | Prompt injection | Resilienza (nessun tool) |
+| 4 | Anomalie login Singapore | Storico SQL + isolate + notify |
+| 5 | Commerciale infiltrato | notify VIP (45k€) |
+| 6 | Ransomware | notify priorità 4 |
+| 7 | Payload malformato | Resilienza parser |
+| 8 | Tablet smarrito | RAG + isolate |
+| 9 | Whaling CEO | verify_sender_identity |
+| 10 | Iniezione sintattica JSON | Self-correction ReAct |
 
-1. **Paragraph chunking** — split su `\n\n` (paragrafi autocontenuti)
-2. **Embeddings** — OpenAI `text-embedding-3-small` (indicizzazione chunk + query)
-3. **ChromaDB** — indice persistente in `data/chroma/`, metrica cosine, `score = 1 - distance`
-4. **Soglia** — 0.38; sopra soglia → risposta RAG all’LLM
+Dettaglio procedure: [MANUALE_PROGETTINO_DATASET_TEST.md](docs/MANUALE_PROGETTINO_DATASET_TEST.md).
 
-**Percorso principale (atteso):** observation con `[RAG semantica | score=0.xxx]` e testo del chunk.
+## Database SQLite
 
-**Eccezione (rete di sicurezza):** se embedding/API/Chroma fallisce o score &lt; 0.38, `search_policy` ripiega su `_search_policy_keyword` (Lezione 6). Dettaglio: [LEZIONE_10B — §7](docs/LEZIONE_10B_CHROMADB.md#7-collegamento-concettuale-con-search_policy).
-
-```mermaid
-flowchart LR
-    Q[query utente] --> RAG[semantic_policy_search]
-    Policy[data/policy.txt] --> Chunk[chunk_policy]
-    Chunk --> EmbC[embedding chunk]
-    EmbC --> Chroma[(data/chroma/)]
-    RAG --> EmbQ[embedding query]
-    EmbQ --> Chroma
-    Chroma -->|score >= 0.38| Obs["[RAG semantica] → LLM"]
-    Chroma -->|eccezione| KW["keyword Lezione 6"]
-```
-
-### Demo L10
-
-La demo chiama **direttamente** `semantic_policy_search`. Query **senza parole in comune** con la policy (es. «annullare contratto e riavere i soldi» → paragrafo «recesso / 14 giorni»).
+Il file `data/triage_system.db` **non è in Git** — creato da `init_db()` o `scripts/init_triage_db.py`.
 
 ```bash
-PYTHONPATH=src python3 src/main.py --scenario l10
-```
-
-### Lezione 10B — ChromaDB
-
-[docs/LEZIONE_10B_CHROMADB.md](docs/LEZIONE_10B_CHROMADB.md) — `pip install -e .` (include `chromadb`), `data/chroma/`, script `scripts/esercizio_chroma_policy.py`, indice in `chroma_store.py` + `policy_semantic.py`.
-
-## Resilienza e Self-Correction (Lezione 11)
-
-[`_finalize_with_self_correction`](src/logic.py) — `MAX_TRIAGE_JSON_RETRIES = 3`.
-
-| Tipo errore | Comportamento |
-|-------------|---------------|
-| Hard error | `main.py` → `[ERRORE]` |
-| Soft error | Retry in-context con messaggio Pydantic |
-| Emergency fallback | `GENERAL` / `CRITICAL`, `azione_eseguita` |
-
-Eventi log: `triage_json_retry`, `emergency_fallback`. Guida: [LEZIONE_11_RESILIENZA.md](docs/LEZIONE_11_RESILIENZA.md).
-
-```bash
-PYTHONPATH=src python3 src/main.py --scenario l11
-```
-
-## Benchmark e Log Analytics (Lezione 12)
-
-| Componente | Ruolo |
-|------------|--------|
-| [`benchmark.py`](src/benchmark.py) | 5 ticket stress → report KPI |
-| [`analytics/log_kpi.py`](src/analytics/log_kpi.py) | Analisi `activity.jsonl` |
-
-Guida: [LEZIONE_12_PROMPT_OPTIMIZATION.md](docs/LEZIONE_12_PROMPT_OPTIMIZATION.md). Stub prompt: [`triage_v2.py`](src/prompts/triage_v2.py).
-
-```bash
-PYTHONPATH=src python3 src/benchmark.py
-PYTHONPATH=src python3 -m analytics.log_kpi
-```
-
-## ReAct e SQLite (Lezione 13)
-
-[`react_triage`](src/logic.py) implementa il ciclo **Thought → Action → Observation** con `max_steps=4` (Lezione 14). Con `session_id` riusa `_SHORT_TERM_STORE` per thread multi-turno ReAct. La pipeline classica `triage_message` resta per benchmark e demo M1–M3.
-
-Guide: [LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md), [LEZIONE_14_PLANNING_LOOPS.md](docs/LEZIONE_14_PLANNING_LOOPS.md).
-
-## Progetto 2 — Dataset SOC (10 scenari)
-
-Implementazione di riferimento del [progettino](docs/MANUALE_PROGETTINO_DATASET_TEST.md): phishing, esfiltrazione RAG, prompt injection, anomalie login, social engineering, ransomware, payload malformati, furto dispositivo, whaling CEO, iniezione JSON.
-
-| Documento | Contenuto |
-|-----------|-----------|
-| [MANUALE_PROGETTINO_DATASET_TEST.md](docs/MANUALE_PROGETTINO_DATASET_TEST.md) | Procedure operative per lo studente |
-| [PROGETTO_2_SCENARI.md](docs/PROGETTO_2_SCENARI.md) | Come il codice risolve ogni scenario 1–10 |
-
-| Meccanismo | Dettaglio |
-|------------|-----------|
-| `react_triage_progettino()` | Entry point con `progetto_mode=True`, 6 step max |
-| `_apply_progetto_fallbacks()` | Policy + LTM + sicurezza nel ciclo ReAct |
-| `scripts/seed_progettino.py` | Seed Luca Verdi, Matteo Neri (Singapore), CEO |
-| `data/policy.txt` §4 | Playbook SOC (phishing, ransomware, whaling, …) |
-
-```bash
-git checkout progetto-2
 PYTHONPATH=src python3 scripts/init_triage_db.py
-PYTHONPATH=src python3 scripts/seed_progettino.py
-PYTHONPATH=src python3 src/main.py --scenario progetto2
+PYTHONPATH=src python3 scripts/seed_progettino.py   # Luca Verdi, Matteo Neri, CEO
 ```
 
-```bash
-PYTHONPATH=src python3 src/main.py --scenario l13
-PYTHONPATH=src python3 src/main.py --scenario l14
-```
-
-## Planning Multi-Step (Lezione 14)
-
-| Meccanismo | Dettaglio |
-|------------|-----------|
-| `max_steps = 4` | Hard stop deterministico sul loop ReAct |
-| `_SHORT_TERM_STORE` | Memoria conversazione per `session_id` stringa |
-| Self-correction in-loop | Errore Pydantic reiniettato nel ciclo prima del fallback |
-| Evento log | `react_max_steps_fallback` in `activity.jsonl` |
-
-## Database SQLite (Lezioni 13–14)
-
-Il file [`data/triage_system.db`](data/triage_system.db) **non è in Git** (come `data/chroma/` e `logs/`): viene creato a runtime da `init_db()`.
-
-| Artefatto | In Git? | Ruolo |
-|-----------|---------|--------|
-| `data/schema/triage_system.sql` | Sì | DDL di riferimento |
-| `data/triage_system.db` | No (gitignored) | LTM runtime indicizzata |
-| `data/demo_m2_triage.db` | No (gitignored) | Seed isolato demo M2 |
-
-**Dopo checkout su `lesson-13-*` o `lesson-14-*`:**
-
-```bash
-# Opzione A — script dedicato (senza chiamate LLM)
-PYTHONPATH=src python3 scripts/init_triage_db.py
-
-# Opzione B — qualsiasi avvio di main.py crea il DB all'inizio
-PYTHONPATH=src python3 src/main.py --scenario m3
-
-ls -la data/triage_system.db
-```
-
-Guida completa: [LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md).
-
-## Demo ed esecuzione
-
-Ordine `run_demo()`: **M3 → M1 → M2**.
-
-| ID | Focus |
-|----|--------|
-| **M3** | Pipeline base senza memoria multi-turno |
-| **M1** | Short-term: chiarimento → triage con server-X |
-| **M2** | Long-term: storico Marco, escalation |
-
-```bash
-source .venv/bin/activate
-pip install -e ".[test]"
-
-# Branch L13/L14: bootstrap SQLite (opzionale — anche main.py lo fa all'avvio)
-PYTHONPATH=src python3 scripts/init_triage_db.py
-
-PYTHONPATH=src python3 src/main.py              # M3 → M1 → M2
-PYTHONPATH=src python3 src/main.py --scenario m3
-PYTHONPATH=src python3 src/main.py --scenario m1
-PYTHONPATH=src python3 src/main.py --scenario m2
-PYTHONPATH=src python3 src/main.py --scenario l10
-PYTHONPATH=src python3 src/main.py --scenario l11
-PYTHONPATH=src python3 src/main.py --scenario l13
-PYTHONPATH=src python3 src/main.py --scenario l14
-PYTHONPATH=src python3 scripts/seed_progettino.py   # Progetto 2: seed SOC
-PYTHONPATH=src python3 src/main.py --scenario progetto2
-PYTHONPATH=src python3 src/benchmark.py
-PYTHONPATH=src python3 -m analytics.log_kpi
-```
-
-**API key:** `OPENAI_API_KEY=sk-...` in `.env` (non `export` in shell).
-
-| Scenario | Messaggi |
-|----------|----------|
-| **M1** | Server vago → «È il server-X in datacenter Roma.» |
-| **M2** | Marco, cluster **db-primary** offline, quinto incidente |
-| **M3** | Casella aziendale bloccata |
-| **L13** | Marco Rossi, budget 15k, ReAct + SQLite |
-| **L14** | Marco Rossi turno 2, STM + LTM su `session_01` |
-| **Progetto 2** | 10 messaggi `dataset_test` (phishing → iniezione JSON) |
+DDL di riferimento: [`data/schema/triage_system.sql`](data/schema/triage_system.sql).
 
 ## Struttura progetto
 
@@ -375,58 +110,35 @@ agentic-triage-system/
 ├── README.md
 ├── GESTIONE_ERRORI.md
 ├── docs/
-│   ├── CORSO_LEZIONI.md
-│   ├── LEZIONE_10B_CHROMADB.md
-│   ├── LEZIONE_11_RESILIENZA.md
-│   ├── LEZIONE_12_PROMPT_OPTIMIZATION.md
-│   ├── LEZIONE_13_REACT_SQLITE.md
-│   ├── LEZIONE_14_PLANNING_LOOPS.md
 │   ├── MANUALE_PROGETTINO_DATASET_TEST.md
 │   └── PROGETTO_2_SCENARI.md
 ├── data/
-│   ├── schema/triage_system.sql # DDL SQLite (+ access_events, Progetto 2)
-│   ├── manuale_it.txt
+│   ├── schema/triage_system.sql
 │   ├── policy.txt
-│   ├── triage_system.db         # LTM SQLite (runtime, gitignored)
-│   ├── demo_m2_triage.db        # seed demo M2 isolato (gitignored)
-│   ├── chroma/                  # indice ChromaDB (runtime, gitignored)
-│   └── tickets.jsonl
-├── logs/
+│   └── manuale_it.txt
 ├── scripts/
-│   ├── init_triage_db.py        # bootstrap SQLite post-clone
-│   ├── seed_progettino.py       # seed Progetto 2 (Luca, Matteo, CEO)
-│   └── esercizio_chroma_policy.py
+│   ├── init_triage_db.py
+│   └── seed_progettino.py
 ├── src/
-│   ├── main.py, logic.py, benchmark.py, dataset_test.py
-│   ├── memory/, rag/, analytics/, prompts/, tools/, …
+│   ├── main.py, logic.py, dataset_test.py
+│   ├── memory/, rag/, prompts/, tools/, …
 └── tests/
 ```
 
-## Setup e test
+## Test
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[test]"
-
-# Branch L13/L14: crea il database SQLite locale
-PYTHONPATH=src python3 scripts/init_triage_db.py
-
 pytest tests/ -q
 ```
 
-**88 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
+**58 test** — mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
 
 | File | Verifica |
 |------|----------|
-| `test_logic.py` | Loop, self-correction, ReAct, max_steps, STM |
-| `test_dataset_test.py` | Scenari Progetto 2, euristiche SOC, injection |
-| `test_security_progetto.py` | `access_events`, `verify_sender_identity`, email AD |
-| `test_logger_sqlite.py` | SQLite init, insert, query indicizzata |
-| `test_policy_semantic.py` | RAG + Chroma, sinonimi, soglia |
-| `test_benchmark.py` | Report benchmark (mock) |
-| `test_log_kpi.py` | KPI su fixture JSONL |
-
-Errori: [`GESTIONE_ERRORI.md`](GESTIONE_ERRORI.md).
+| `test_dataset_test.py` | 10 scenari, euristiche SOC, injection |
+| `test_security_progetto.py` | `access_events`, CEO verify |
+| `test_logic.py` | ReAct, max_steps, STM, self-correction |
+| `test_policy_semantic.py` | RAG + ChromaDB |
+| `test_logger_sqlite.py` | SQLite LTM |
 
 Modello: `gpt-4.1-mini`, `temperature=0`.
