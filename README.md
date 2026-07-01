@@ -36,7 +36,7 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 | Modulo | Ruolo |
 |--------|--------|
 | [`main.py`](src/main.py) | Orchestrazione, `SessionManager`, demo M1–M3, L10–L16 |
-| [`orchestration/`](src/orchestration/) | Modelli multi-agente, topologie, `SharedHandoffContext` (Lezione 15) |
+| [`orchestration/`](src/orchestration/) | L15: modelli, topologie, Blackboard; L16: CrewAI, AutoGen, tool adapter |
 | [`logic.py`](src/logic.py) | Loop agentico + `react_triage` + `multi_agent_triage` (L16) |
 | [`benchmark.py`](src/benchmark.py) | Suite benchmark 5 ticket (Lezione 12) |
 | [`client.py`](src/client.py) | Client OpenAI (`OPENAI_API_KEY` solo nel file `.env`, non dalla shell) |
@@ -51,6 +51,7 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 | [`tools/office_tools.py`](src/tools/office_tools.py) | `search_policy` (RAG semantica; keyword solo in eccezione), `notify_manager` |
 | [`tools/registry.py`](src/tools/registry.py) | `TOOL_MAP` e schema OpenAI |
 | [`prompts/triage_v1.py`](src/prompts/triage_v1.py) | System prompt, few-shot, `build_chat_messages(history=…)` |
+| [`prompts/agents/`](src/prompts/agents/) | System prompt TriageAnalyst / SecurityResolver (Lezione 16) |
 | [`analytics/log_kpi.py`](src/analytics/log_kpi.py) | KPI da `activity.jsonl` (Lezione 12) |
 | [`paths.py`](src/paths.py) | Percorsi repo (`TRIAGE_DB_PATH`, `LOG_FILE_PATH`, `DEMO_M2_DB_PATH`, …) |
 
@@ -349,9 +350,9 @@ Ordine `run_demo()`: **M3 → M1 → M2**.
 
 ```bash
 source .venv/bin/activate
-pip install -e ".[test]"
+pip install -e ".[test,multiagent]"   # [multiagent] per demo L16a/L16b
 
-# Branch L13–L15: bootstrap SQLite (opzionale — anche main.py lo fa all'avvio)
+# Branch L13–L16: bootstrap SQLite (opzionale — anche main.py lo fa all'avvio)
 PYTHONPATH=src python3 scripts/init_triage_db.py
 
 PYTHONPATH=src python3 src/main.py              # M3 → M1 → M2
@@ -420,9 +421,9 @@ agentic-triage-system/
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e ".[test]"
+pip install -e ".[test,multiagent]"   # [multiagent] richiesto per demo L16a/L16b
 
-# Branch L13–L15: crea il database SQLite locale
+# Branch L13–L16: crea il database SQLite locale
 PYTHONPATH=src python3 scripts/init_triage_db.py
 
 pytest tests/ -q

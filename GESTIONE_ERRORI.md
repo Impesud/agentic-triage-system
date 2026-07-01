@@ -146,7 +146,7 @@ La Lezione 15 **non introduce nuovi errori runtime**: il package `orchestration/
 | Aspetto | Comportamento |
 |---------|---------------|
 | Demo `l15` | Nessuna API key richiesta; stampa topologie e Blackboard serializzato |
-| Hand-off incompleto | Concetto didattico per L16; oggi `simulate_analyst_handoff` usa solo extractor locali |
+| Hand-off Analyst → Resolver | `SharedHandoffContext` in `build_resolver_task_description` / prompt Resolver |
 | Retrocompatibilità | `triage_message` e `react_triage` invariati; nessun nuovo evento JSONL |
 
 **Lezione 14 — ReAct:** se il loop esaurisce `max_steps` senza JSON valido, `react_triage` restituisce un `TriageResult` di fallback (non `None`) e logga `react_max_steps_fallback`. La self-correction **in-loop** (JSON invalido senza tool) consuma uno step e reinietta l'errore Pydantic — distinta dalla self-correction L11 post-loop.

@@ -105,7 +105,7 @@ La demo **non richiede OPENAI_API_KEY**: stampa le topologie, la squadra e simul
 
 ```bash
 pytest tests/test_orchestration.py -q
-pytest tests/ -q   # ~76 su branch L15
+pytest tests/ -q   # ~76 su branch L15; ~83 su branch L16 (include test_multi_agent)
 ```
 
 ## File chiave
@@ -121,7 +121,7 @@ pytest tests/ -q   # ~76 su branch L15
 - [ ] Studente spiega perché un agente monolitico non scala su flussi SOC articolati
 - [ ] Studente confronta le 3 topologie con un esempio Impesud ciascuna
 - [ ] Demo L15: hand-off mostra `cliente_nome=Marco` e sentiment sul ticket demo
-- [ ] Studente descrive come il Resolver (L16) userà il Blackboard
+- [ ] Studente descrive come il Resolver consuma il Blackboard in L16 (`l16a`/`l16b`)
 - [ ] Benchmark L12 e demo L13/L14 ancora verdi
 
 ## Prerequisito

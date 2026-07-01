@@ -99,7 +99,7 @@ gitGraph
 | Knowledge / RAG | Lezione 10 + 10B | `lesson-10-rag-semantica` |
 | **Settimana 8** | Resilienza, error recovery, benchmarking | `lesson-11-*` → `lesson-12-*` |
 | **Settimana 9** | ReAct, SQLite, planning multi-step | `lesson-13-*` → `lesson-14-*` |
-| **Settimana 12** | Multi-agent, topologie, Blackboard | `lesson-15-*` |
+| **Settimana 12** | Multi-agent, topologie, CrewAI/AutoGen | `lesson-15-*` → `lesson-16-*` |
 
 ---
 
@@ -108,7 +108,7 @@ gitGraph
 | File | Contenuto |
 |------|-----------|
 | [README.md](../README.md) | Architettura, setup, demo, struttura repo (allineato al branch corrente) |
-| [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) | Manuale errori, moduli 0–5, collegamento L11–L15 |
+| [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) | Manuale errori, moduli 0–5, collegamento L11–L16 |
 | [LEZIONE_10B_CHROMADB.md](LEZIONE_10B_CHROMADB.md) | Laboratorio ChromaDB |
 | [LEZIONE_11_RESILIENZA.md](LEZIONE_11_RESILIENZA.md) | Hard vs soft error, self-correction, fallback |
 | [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md) | Benchmark, analytics, triage_v2 |
@@ -159,7 +159,7 @@ git push -u origin lesson-16-crew-autogen-orchestration
 | Tool partizionati Analyst/Resolver | `IMPESUD_AGENT_TEAM`, `test_analyst_resolver_tool_partition` |
 | Hand-off Blackboard | `simulate_analyst_handoff`, `test_simulate_handoff_marco_rossi` |
 | Demo senza LLM | `main.py --scenario l15` |
-| Retrocompatibilità L12–L15 | `pytest tests/ -q` |
+| Retrocompatibilità L12–L16 | `pytest tests/ -q` |
 
 ## Per docenti — review Settimana 12 (L16)
 

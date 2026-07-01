@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Inizializza data/triage_system.db (Lezione 13). Eseguire dopo checkout su branch L13/L14/L15."""
+"""Inizializza data/triage_system.db (Lezione 13). Eseguire dopo checkout su branch L13–L16."""
 
 from __future__ import annotations
 

@@ -469,6 +469,8 @@ Per errori nel flusso ticket (non solo RAG), resta valida la guida [GESTIONE_ERR
 
 - [README — RAG semantica (Lezione 10)](../README.md#rag-semantica-lezione-10)
 - [CORSO_LEZIONI.md](CORSO_LEZIONI.md) — mappa branch e lezioni
+- [LEZIONE_15_MULTI_AGENT_COORDINATION.md](LEZIONE_15_MULTI_AGENT_COORDINATION.md) — ruoli Analyst/Resolver
+- [LEZIONE_16_CREW_AUTOGEN.md](LEZIONE_16_CREW_AUTOGEN.md) — orchestrazione multi-agent
 - [README — Demo L10](../README.md#demo-l10)
 - [GESTIONE_ERRORI.md — RAG search_policy](../GESTIONE_ERRORI.md)
 - Documentazione ChromaDB: https://docs.trychroma.com/

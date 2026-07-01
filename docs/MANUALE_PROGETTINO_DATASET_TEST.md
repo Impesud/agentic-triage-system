@@ -3,7 +3,7 @@
 **Progetto finale** — complementa [CORSO_LEZIONI.md](CORSO_LEZIONI.md) e le lezioni 9–14.
 
 **Branch di riferimento:** `lesson-14-planning-loops` (progetto SOC completo: `progetto-2`)
-> **Nota (branch `lesson-15-multi-agent-topologies`):** la [Lezione 15](LEZIONE_15_MULTI_AGENT_COORDINATION.md) introduce modelli multi-agente concettuali. Il progettino resta ancorato alle competenze **L9–L14**; l'orchestrazione con framework (L16) è il passo successivo al progetto base.
+> **Nota (branch `lesson-16-crew-autogen-orchestration`):** le [Lezioni 15–16](LEZIONE_15_MULTI_AGENT_COORDINATION.md) introducono modelli multi-agente e orchestrazione CrewAI/AutoGen. Il progettino SOC resta ancorato alle competenze **L9–L14**; la squadra Analyst/Resolver (L16) è il passo successivo opzionale al progetto base (`progetto-2`).
 
 
 **Motore obbligatorio:** `react_triage` (ReAct multi-step, max 4 step, self-correction in-loop)
