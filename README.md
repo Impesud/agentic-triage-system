@@ -1,8 +1,8 @@
 # Agentic Customer Care Triage System
 
-Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSON), tool locali, **memoria short/long-term** (Lezione 9), **RAG semantica su policy con ChromaDB** (Lezione 10/10B), **self-correction e emergency fallback** (Lezione 11), **benchmark e log analytics** (Lezione 12), **loop ReAct e SQLite LTM** (Lezione 13) e **planning multi-step con controllo loop** (Lezione 14).
+Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSON), tool locali, **memoria short/long-term** (Lezione 9), **RAG semantica su policy con ChromaDB** (Lezione 10/10B), **self-correction e emergency fallback** (Lezione 11), **benchmark e log analytics** (Lezione 12), **loop ReAct e SQLite LTM** (Lezione 13) e **planning multi-step con controllo loop** (Lezione 14) e **modelli multi-agente con topologie di comunicazione** (Lezione 15).
 
-**Branch corrente:** `lesson-14-planning-loops` — include le **lezioni 9–14**.
+**Branch corrente:** `lesson-15-multi-agent-topologies` — include le **lezioni 9–15**.
 
 ## Percorso didattico e branch Git
 
@@ -15,7 +15,8 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 | `lesson-11-resilienza-self-correction` | 11 — Resilienza | + self-correction, emergency fallback |
 | `lesson-12-benchmark-log-analytics` | 12 — Benchmark | + `benchmark.py`, `analytics/log_kpi.py` |
 | `lesson-13-react-sqlite` | 13 — ReAct + SQLite | + `react_triage`, LTM SQLite indicizzata |
-| `lesson-14-planning-loops` | **14 — Planning loop** | + `max_steps=4`, STM ReAct, self-correction in-loop (questo branch) |
+| `lesson-14-planning-loops` | 14 — Planning loop | + `max_steps=4`, STM ReAct, self-correction in-loop |
+| `lesson-15-multi-agent-topologies` | **15 — Multi-agent** | + `orchestration/`, topologie, `SharedHandoffContext` (questo branch) |
 
 | Guida | File |
 |-------|------|
@@ -24,6 +25,7 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 | 12 Benchmark | [docs/LEZIONE_12_PROMPT_OPTIMIZATION.md](docs/LEZIONE_12_PROMPT_OPTIMIZATION.md) |
 | 13 ReAct + SQLite | [docs/LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md) |
 | 14 Planning loop | [docs/LEZIONE_14_PLANNING_LOOPS.md](docs/LEZIONE_14_PLANNING_LOOPS.md) |
+| 15 Multi-agent | [docs/LEZIONE_15_MULTI_AGENT_COORDINATION.md](docs/LEZIONE_15_MULTI_AGENT_COORDINATION.md) |
 
 [GESTIONE_ERRORI.md](GESTIONE_ERRORI.md)
 

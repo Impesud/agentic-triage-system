@@ -13,6 +13,7 @@ Ogni branch contiene il codice **cumulativo** fino alla lezione indicata; le lez
 | [`lesson-12-benchmark-log-analytics`](.) | **Lezione 12** — Benchmark e analytics | `git checkout lesson-12-benchmark-log-analytics` | ~62 |
 | [`lesson-13-react-sqlite`](.) | **Lezione 13** — ReAct + SQLite LTM | `git checkout lesson-13-react-sqlite` | ~66 |
 | [`lesson-14-planning-loops`](.) | **Lezione 14** — Planning e controllo loop | `git checkout lesson-14-planning-loops` | ~69 |
+| [`lesson-15-multi-agent-topologies`](.) | **Lezione 15** — Multi-agent e topologie | `git checkout lesson-15-multi-agent-topologies` | ~74 |
 
 ```mermaid
 gitGraph
@@ -32,11 +33,16 @@ gitGraph
   branch lesson-14-planning-loops
   checkout lesson-14-planning-loops
   commit id: "L14-planning"
+  branch lesson-15-multi-agent-topologies
+  checkout lesson-15-multi-agent-topologies
+  commit id: "L15-multi-agent"
 ```
 
 **Settimana 8 (lezioni 11–12):** resilienza, error recovery, benchmarking — vedi [LEZIONE_11_RESILIENZA.md](LEZIONE_11_RESILIENZA.md) e [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md).
 
 **Settimana 9 (lezioni 13–14):** ReAct, SQLite, planning multi-step — vedi [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) e [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md).
+
+**Settimana 12 (lezione 15):** modelli multi-agente, topologie, Blackboard — vedi [LEZIONE_15_MULTI_AGENT_COORDINATION.md](LEZIONE_15_MULTI_AGENT_COORDINATION.md).
 
 ---
 
@@ -53,6 +59,7 @@ gitGraph
 | **12** | Benchmark, KPI log, prompt v2 | `benchmark.py`, `analytics/log_kpi.py` | [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md) |
 | **13** | ReAct multi-step, SQLite LTM | `react_triage`, `init_db`, `scripts/init_triage_db.py` | [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) |
 | **14** | max_steps, STM ReAct, self-correction in-loop | `_SHORT_TERM_STORE`, `session_id` | [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md) |
+| **15** | Multi-agent, topologie, hand-off Blackboard | `orchestration/`, `SharedHandoffContext` | [LEZIONE_15_MULTI_AGENT_COORDINATION.md](LEZIONE_15_MULTI_AGENT_COORDINATION.md) |
 
 ---
 
@@ -68,6 +75,7 @@ gitGraph
 | 12 — KPI log | `PYTHONPATH=src python3 -m analytics.log_kpi` |
 | 13 — ReAct + SQLite | `PYTHONPATH=src python3 src/main.py --scenario l13` |
 | 14 — Planning multi-step | `PYTHONPATH=src python3 src/main.py --scenario l14` |
+| 15 — Multi-agent topologie | `PYTHONPATH=src python3 src/main.py --scenario l15` |
 | 13/14 — init DB (post-clone) | `PYTHONPATH=src python3 scripts/init_triage_db.py` |
 | Test (qualsiasi branch) | `pytest tests/ -q` |
 
@@ -83,6 +91,7 @@ gitGraph
 | Knowledge / RAG | Lezione 10 + 10B | `lesson-10-rag-semantica` |
 | **Settimana 8** | Resilienza, error recovery, benchmarking | `lesson-11-*` → `lesson-12-*` |
 | **Settimana 9** | ReAct, SQLite, planning multi-step | `lesson-13-*` → `lesson-14-*` |
+| **Settimana 12** | Multi-agent, topologie, Blackboard | `lesson-15-*` |
 
 ---
 
@@ -97,6 +106,7 @@ gitGraph
 | [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md) | Benchmark, analytics, triage_v2 |
 | [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) | ReAct, SQLite indicizzato, dual-write |
 | [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md) | max_steps, STM, self-correction in-loop |
+| [LEZIONE_15_MULTI_AGENT_COORDINATION.md](LEZIONE_15_MULTI_AGENT_COORDINATION.md) | Topologie, Role/Goal/Backstory, Blackboard |
 
 ---
 
@@ -128,4 +138,15 @@ git push -u origin lesson-11-resilienza-self-correction
 git push -u origin lesson-12-benchmark-log-analytics
 git push -u origin lesson-13-react-sqlite
 git push -u origin lesson-14-planning-loops
+git push -u origin lesson-15-multi-agent-topologies
 ```
+
+## Per docenti — review Settimana 12 (L15)
+
+| Criterio | Dove verificare |
+|----------|-----------------|
+| 3 topologie documentate | `orchestration/topologies.py`, `TOPOLOGY_CATALOG` |
+| Tool partizionati Analyst/Resolver | `IMPESUD_AGENT_TEAM`, `test_analyst_resolver_tool_partition` |
+| Hand-off Blackboard | `simulate_analyst_handoff`, `test_simulate_handoff_marco_rossi` |
+| Demo senza LLM | `main.py --scenario l15` |
+| Retrocompatibilità L12–L14 | `pytest tests/ -q` |

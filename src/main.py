@@ -8,6 +8,7 @@ Esecuzione demo:
   PYTHONPATH=src python src/main.py --scenario l11   # Self-correction (Lezione 11)
   PYTHONPATH=src python src/main.py --scenario l13   # ReAct + SQLite (Lezione 13)
   PYTHONPATH=src python src/main.py --scenario l14   # Planning multi-step (Lezione 14)
+  PYTHONPATH=src python src/main.py --scenario l15   # Multi-agent topologie (Lezione 15)
 """
 
 from __future__ import annotations
@@ -546,6 +547,47 @@ def run_l14_planning_demo() -> None:
     print(f"\n📊 Verdetto Finale Strutturato salvato in DB:\n{risultato.model_dump_json(indent=2)}")
 
 
+
+def run_l15_topology_demo() -> None:
+    """Demo Lezione 15: topologie multi-agente e hand-off Blackboard (senza LLM)."""
+    from orchestration.models import CommunicationTopology
+    from orchestration.topologies import IMPESUD_AGENT_TEAM, TOPOLOGY_CATALOG, simulate_analyst_handoff
+
+    print("\n" + "=" * 72)
+    print("SCENARIO L15 — Modelli di Coordinazione e Sistemi Distribuiti")
+    print("=" * 72)
+    print(
+        "Obiettivo: confrontare le topologie di comunicazione e simulare "
+        "un hand-off Analyst → Resolver su SharedHandoffContext."
+    )
+    print("-" * 72)
+
+    for info in TOPOLOGY_CATALOG:
+        print(f"\n[{info.topology.value.upper()}]")
+        print(f"  Controllo: {info.control_mechanism}")
+        print(f"  Caso d'uso: {info.ideal_use_case}")
+        print(f"  Impesud: {info.impesud_mapping}")
+
+    print("\n" + "-" * 72)
+    print("SQUADRA IMPESUD (Role / Goal / Tool partizionati)")
+    for agent in IMPESUD_AGENT_TEAM:
+        print(f"\n  {agent.name} — {agent.role}")
+        print(f"    Goal: {agent.goal}")
+        print(f"    Tools: {', '.join(agent.tools)}")
+
+    print("\n" + "-" * 72)
+    print(f"SIMULAZIONE HAND-OFF (topologia sequenziale)\nTicket: {L13_TICKET_1}")
+    handoff = simulate_analyst_handoff(
+        L13_TICKET_1,
+        topology=CommunicationTopology.SEQUENTIAL,
+        storico_summary="Nessun ticket precedente in DB demo",
+    )
+    print(handoff.model_dump_json(indent=2))
+    print(
+        "\n[NOTA DIDATTICA] Il SecurityResolver (L16) consumerà questo Blackboard "
+        "per policy RAG, escalation e JSON finale."
+    )
+
 def run_demo() -> None:
     """Ordine didattico: smoke → short-term → long-term."""
     init_db()
@@ -560,11 +602,11 @@ def run_demo() -> None:
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Demo Lezioni 9–14 — memoria, RAG, resilienza, ReAct/SQLite (OPENAI_API_KEY)",
+        description="Demo Lezioni 9–15 — memoria, RAG, resilienza, ReAct/SQLite, multi-agent (OPENAI_API_KEY)",
     )
     parser.add_argument(
         "--scenario",
-        choices=["m1", "m2", "m3", "l10", "l11", "l13", "l14", "all"],
+        choices=["m1", "m2", "m3", "l10", "l11", "l13", "l14", "l15", "all"],
         default="all",
         help="Esegue un solo scenario o tutti (default: all = M3→M1→M2)",
     )
@@ -591,3 +633,5 @@ if __name__ == "__main__":
         run_l13_react_demo()
     elif args.scenario == "l14":
         run_l14_planning_demo()
+    elif args.scenario == "l15":
+        run_l15_topology_demo()
