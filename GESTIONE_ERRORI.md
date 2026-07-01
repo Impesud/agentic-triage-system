@@ -29,7 +29,7 @@ L’abbonamento a Cursor **non è necessario** per questo argomento. Conta molto
 
 ## Stato attuale del progetto
 
-Il codice ha una gestione errori di **livello 1–3**: fail-fast con `ValueError`, boundary in `main.py`, parser con `raise ... from e`, loop in `logic.py` (`_run_agent_loop` + `_finalize_with_self_correction` — Lezione 11), memoria, RAG + ChromaDB (Lezione 10/10B), self-correction (Lezione 11), benchmark/log KPI (Lezione 12), **ReAct multi-step + SQLite LTM** (Lezioni 13–14), **modelli multi-agente** (Lezione 15), suite di **76 test** su branch `lesson-15-multi-agent-topologies`. Manca ancora una **gerarchia di eccezioni di dominio** opzionale (`errors.py`, moduli 2–4).
+Il codice ha una gestione errori di **livello 1–3**: fail-fast con `ValueError`, boundary in `main.py`, parser con `raise ... from e`, loop in `logic.py` (`_run_agent_loop` + `_finalize_with_self_correction` — Lezione 11), memoria, RAG + ChromaDB (Lezione 10/10B), self-correction (Lezione 11), benchmark/log KPI (Lezione 12), **ReAct multi-step + SQLite LTM** (Lezioni 13–14), **modelli multi-agente** (Lezione 15), **orchestrazione CrewAI/AutoGen** (Lezione 16), suite di **83 test** su branch `lesson-16-crew-autogen-orchestration`. Manca ancora una **gerarchia di eccezioni di dominio** opzionale (`errors.py`, moduli 2–4).
 
 **Indice corso e branch:** [docs/CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md).
 
@@ -118,12 +118,26 @@ flowchart TD
 | 13 | ReAct loop, SQLite LTM, dual-write | [LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md) |
 | 14 | `max_steps`, STM ReAct, self-correction in-loop | [LEZIONE_14_PLANNING_LOOPS.md](docs/LEZIONE_14_PLANNING_LOOPS.md) |
 | 15 | Topologie, hand-off Blackboard (concettuale) | [LEZIONE_15_MULTI_AGENT_COORDINATION.md](docs/LEZIONE_15_MULTI_AGENT_COORDINATION.md) |
+| 16 | CrewAI/AutoGen, fallback `multi_agent_fallback` | [LEZIONE_16_CREW_AUTOGEN.md](docs/LEZIONE_16_CREW_AUTOGEN.md) |
 
 **Lezione 12 — Benchmark e log:** suite in [`src/benchmark.py`](src/benchmark.py), KPI in [`src/analytics/log_kpi.py`](src/analytics/log_kpi.py). Eventi `triage_json_retry`, `emergency_fallback` e (L14) `react_max_steps_fallback` alimentano le metriche.
 
 **Lezione 11:** `_finalize_with_self_correction`, `MAX_TRIAGE_JSON_RETRIES = 3`, `_emergency_triage_result` — non confondere con retry HTTP illimitato.
 
 
+
+
+
+### Lezione 16 — Orchestrazione multi-agent
+
+| Errore / caso | Comportamento |
+|---------------|---------------|
+| Dipendenze `[multiagent]` assenti | `ImportError` con hint `pip install -e ".[multiagent]"` |
+| JSON Resolver invalido | `multi_agent_fallback` + `TriageResult` emergency |
+| CrewAI / AutoGen API failure | Propaga come `ValueError` o errore SDK; boundary `main` cattura su demo |
+| Hand-off incompleto | Seed `SharedHandoffContext` + output Analyst nel task Resolver |
+
+Eventi audit: `crew_triage_complete`, `autogen_triage_complete`, `multi_agent_fallback`.
 
 ### Lezione 15 — Multi-agent (concettuale)
 
@@ -137,7 +151,7 @@ La Lezione 15 **non introduce nuovi errori runtime**: il package `orchestration/
 
 **Lezione 14 — ReAct:** se il loop esaurisce `max_steps` senza JSON valido, `react_triage` restituisce un `TriageResult` di fallback (non `None`) e logga `react_max_steps_fallback`. La self-correction **in-loop** (JSON invalido senza tool) consuma uno step e reinietta l'errore Pydantic — distinta dalla self-correction L11 post-loop.
 
-**M1** → ticket `OPEN` su chiarimento. **M2** → long-term SQLite + escalation Marco (`seed_marco_sqlite`). **L10** → RAG sinonimica (score ≥ 0.38). **L13/L14** → demo ReAct (`react_triage`). **L15** → demo topologie (`run_l15_topology_demo`, senza LLM). Fallback policy/LTM in `_apply_all_fallbacks` (non sono errori).
+**M1** → ticket `OPEN` su chiarimento. **M2** → long-term SQLite + escalation Marco (`seed_marco_sqlite`). **L10** → RAG sinonimica (score ≥ 0.38). **L13/L14** → demo ReAct (`react_triage`). **L15** → demo topologie (`run_l15_topology_demo`, senza LLM). **L16** → `multi_agent_triage` (CrewAI/AutoGen, API live). Fallback policy/LTM in `_apply_all_fallbacks` (non sono errori).
 
 Il fallback **non è un errore**: è una guardia operativa in `_run_agent_loop` dopo la prima risposta LLM; le observation entrano nel contesto della seconda chiamata. Se un tool solleva eccezione, il boundary in `main.py` cattura `ValueError`/`OSError`.
 
@@ -168,7 +182,7 @@ Dettaglio scenari: [README — Demo](README.md#demo-ed-esecuzione), [CORSO_LEZIO
 | `raise ValueError(...)` | `client.py`, `logic.py`, `parser.py`, `enrichment.py`, `router.py`, `schemas/ticket.py` | Messaggi in italiano |
 | `raise ... from e` | `parser.py` — `JSONDecodeError`, `ValidationError` | Catena traceback preservata |
 | Boundary tipizzato | `main.py` — `except (FileNotFoundError, ValueError, OSError)` | Cattura errori da tutta la pipeline |
-| Suite test essenziale | `tests/` — **76 test** (branch `lesson-15`), alcuni `pytest.raises` | Vedi tabella sotto |
+| Suite test essenziale | `tests/` — **83 test** (branch `lesson-16`), alcuni `pytest.raises` | Vedi tabella sotto |
 | Percorsi centralizzati | `paths.py` | Manuale, policy, ticket, log, `.env` |
 | Separazione agente / orchestrazione | `logic.py` (`_run_agent_loop`) vs `main.py` | Errori LLM nascono nel nucleo loop, gestiti in `main` |
 | Nessuna eccezione di dominio | — | Obiettivo dei moduli 2–4 |
@@ -513,7 +527,7 @@ Checklist Modulo 0 — aggiornare dopo ogni migrazione.
 
 ## Test e copertura fallimenti
 
-Suite essenziale: **76 test** su branch `lesson-15-multi-agent-topologies` (`pytest tests/ -q`). Nessuna chiamata API reale (mock su LLM e embeddings). Conteggi per branch: [CORSO_LEZIONI](docs/CORSO_LEZIONI.md).
+Suite essenziale: **83 test** su branch `lesson-16-crew-autogen-orchestration` (`pytest tests/ -q`). Nessuna chiamata API reale (mock su LLM e embeddings). Conteggi per branch: [CORSO_LEZIONI](docs/CORSO_LEZIONI.md).
 
 | File test | Cosa copre |
 |-----------|------------|
@@ -532,6 +546,7 @@ Suite essenziale: **76 test** su branch `lesson-15-multi-agent-topologies` (`pyt
 | `test_benchmark.py` | Report benchmark (L12) |
 | `test_log_kpi.py` | KPI JSONL (L12) |
 | `test_orchestration.py` | Topologie, hand-off Blackboard (L15) |
+| `test_multi_agent.py` | CrewAI/AutoGen mock (L16) |
 
 Fixture in `tests/conftest.py`: `triaged_ticket`, isolamento `TICKETS_PATH` su file temporaneo.
 
@@ -554,9 +569,9 @@ Fixture in `tests/conftest.py`: `triaged_ticket`, isolamento `TICKETS_PATH` su f
 
 ## Messaggio riassuntivo
 
-> Il progetto ha boundary in `main.py`, self-correction su soft error (L11), emergency fallback validato Pydantic, memoria, RAG, benchmark/log KPI (L12), ReAct + SQLite (L13–L14), modelli multi-agente (L15) e 76 test. Non serve rifare tutto né un refactor unico con Cursor.
+> Il progetto ha boundary in `main.py`, self-correction su soft error (L11), emergency fallback validato Pydantic, memoria, RAG, benchmark/log KPI (L12), ReAct + SQLite (L13–L14), modelli multi-agente (L15), orchestrazione L16 e 83 test. Non serve rifare tutto né un refactor unico con Cursor.
 >
-> Percorso opzionale residuo: gerarchia `errors.py` (Moduli 2–4) per messaggi boundary più granulari — **dopo** L11–L15.
+> Percorso opzionale residuo: gerarchia `errors.py` (Moduli 2–4) per messaggi boundary più granulari — **dopo** L11–L16.
 >
 > Prossimo passo didattico opzionale: **Modulo 2** (`ConfigError` in `client.py`) oppure ottimizzazione **triage_v2** guidata da benchmark (L12).
 
@@ -571,6 +586,7 @@ Fixture in `tests/conftest.py`: `triaged_ticket`, isolamento `TICKETS_PATH` su f
 - [docs/LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md) — ReAct e SQLite LTM
 - [docs/LEZIONE_14_PLANNING_LOOPS.md](docs/LEZIONE_14_PLANNING_LOOPS.md) — max_steps, STM, self-correction in-loop
 - [docs/LEZIONE_15_MULTI_AGENT_COORDINATION.md](docs/LEZIONE_15_MULTI_AGENT_COORDINATION.md) — topologie, Role/Goal/Backstory, Blackboard
+- [docs/LEZIONE_16_CREW_AUTOGEN.md](docs/LEZIONE_16_CREW_AUTOGEN.md) — CrewAI, AutoGen, multi_agent_triage
 - [`scripts/init_triage_db.py`](scripts/init_triage_db.py) — bootstrap SQLite post-clone
 - [`data/schema/triage_system.sql`](data/schema/triage_system.sql) — DDL LTM
 - `src/main.py` — orchestrazione e boundary
@@ -584,4 +600,4 @@ Fixture in `tests/conftest.py`: `triaged_ticket`, isolamento `TICKETS_PATH` su f
 - `src/tools/history_tools.py` — `search_long_term_history` (delega a SQLite)
 - `src/memory/` — `SessionManager`, extractors
 - `tests/conftest.py` — fixture condivise
-- `tests/test_*.py` — suite essenziale (76 test su L15); estendere dopo ogni migrazione errori
+- `tests/test_*.py` — suite essenziale (83 test su L16); estendere dopo ogni migrazione errori

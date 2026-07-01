@@ -1,7 +1,7 @@
 [project]
 name = "primo-agente"
 version = "0.1.0"
-description = "Agentic customer-care triage demo (Lezioni 9-15): LLM, memoria, RAG, ReAct, multi-agent"
+description = "Agentic customer-care triage demo (Lezioni 9-16): LLM, memoria, RAG, ReAct, multi-agent, CrewAI/AutoGen"
 dependencies = [
     "chromadb>=0.5",
     "openai",
@@ -16,6 +16,11 @@ test = [
 ]
 dev = [
     "ruff"
+]
+multiagent = [
+    "crewai>=0.80",
+    "autogen-agentchat>=0.4",
+    "autogen-ext[openai]>=0.4",
 ]
 
 [build-system]

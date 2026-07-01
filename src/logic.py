@@ -1,7 +1,8 @@
 """
 Nucleo del loop agentico (logic.py) — Lezione 9: memoria; Lezione 10: RAG;
 Lezione 11: self-correction su soft error e emergency fallback;
-Lezione 13: loop ReAct multi-step; Lezione 14: max_steps, STM, self-correction in-loop.
+Lezione 13: loop ReAct multi-step; Lezione 14: max_steps, STM, self-correction in-loop;
+Lezione 16: orchestrazione multi-agent (CrewAI / AutoGen).
 """
 
 from __future__ import annotations
@@ -9,7 +10,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 from client import MODEL, get_client
 from memory.extractors import detect_sentiment_label, extract_cliente_nome
@@ -627,3 +628,33 @@ def react_triage(
     if session_id:
         _SHORT_TERM_STORE[session_id] = conversation
     return fallback
+
+
+_MULTIAGENT_INSTALL_HINT = 'pip install -e ".[multiagent]"'
+
+
+def multi_agent_triage(
+    user_input: str,
+    manuale: str,
+    *,
+    orchestrator: Literal["crewai", "autogen"] = "crewai",
+) -> TriageResult:
+    """
+    Facade orchestrazione multi-agent (Lezione 16).
+    CrewAI = pipeline sequenziale; AutoGen = GroupChat collaborativo.
+    """
+    try:
+        if orchestrator == "crewai":
+            from orchestration.crew_pipeline import crew_triage
+
+            return crew_triage(user_input, manuale)
+        if orchestrator == "autogen":
+            from orchestration.autogen_team import autogen_triage
+
+            return autogen_triage(user_input, manuale)
+    except ImportError as exc:
+        raise ImportError(
+            f"Dipendenze multi-agent mancanti. Esegui: {_MULTIAGENT_INSTALL_HINT}"
+        ) from exc
+
+    raise ValueError(f"Orchestratore sconosciuto: {orchestrator!r}")

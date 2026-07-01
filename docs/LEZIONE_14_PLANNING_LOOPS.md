@@ -131,4 +131,4 @@ pytest tests/ -q   # ~69 su questo branch
 
 ## Prossimo passo
 
-[LEZIONE_15_MULTI_AGENT_COORDINATION.md](LEZIONE_15_MULTI_AGENT_COORDINATION.md) — modelli multi-agente, topologie e Blackboard.
+[LEZIONE_15_MULTI_AGENT_COORDINATION.md](LEZIONE_15_MULTI_AGENT_COORDINATION.md) — modelli multi-agente, topologie e Blackboard → [L16](LEZIONE_16_CREW_AUTOGEN.md) orchestrazione CrewAI/AutoGen.

@@ -13,7 +13,8 @@ Ogni branch contiene il codice **cumulativo** fino alla lezione indicata; le lez
 | [`lesson-12-benchmark-log-analytics`](.) | **Lezione 12** — Benchmark e analytics | `git checkout lesson-12-benchmark-log-analytics` | ~62 |
 | [`lesson-13-react-sqlite`](.) | **Lezione 13** — ReAct + SQLite LTM | `git checkout lesson-13-react-sqlite` | ~66 |
 | [`lesson-14-planning-loops`](.) | **Lezione 14** — Planning e controllo loop | `git checkout lesson-14-planning-loops` | ~69 |
-| [`lesson-15-multi-agent-topologies`](.) | **Lezione 15** — Multi-agent e topologie | `git checkout lesson-15-multi-agent-topologies` | ~74 |
+| [`lesson-15-multi-agent-topologies`](.) | **Lezione 15** — Multi-agent e topologie | `git checkout lesson-15-multi-agent-topologies` | ~76 |
+| [`lesson-16-crew-autogen-orchestration`](.) | **Lezione 16** — CrewAI & AutoGen | `git checkout lesson-16-crew-autogen-orchestration` | ~83 |
 
 ```mermaid
 gitGraph
@@ -36,13 +37,16 @@ gitGraph
   branch lesson-15-multi-agent-topologies
   checkout lesson-15-multi-agent-topologies
   commit id: "L15-multi-agent"
+  branch lesson-16-crew-autogen-orchestration
+  checkout lesson-16-crew-autogen-orchestration
+  commit id: "L16-crew-autogen"
 ```
 
 **Settimana 8 (lezioni 11–12):** resilienza, error recovery, benchmarking — vedi [LEZIONE_11_RESILIENZA.md](LEZIONE_11_RESILIENZA.md) e [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md).
 
 **Settimana 9 (lezioni 13–14):** ReAct, SQLite, planning multi-step — vedi [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) e [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md).
 
-**Settimana 12 (lezione 15):** modelli multi-agente, topologie, Blackboard — vedi [LEZIONE_15_MULTI_AGENT_COORDINATION.md](LEZIONE_15_MULTI_AGENT_COORDINATION.md).
+**Settimana 12 (lezioni 15–16):** modelli multi-agente e orchestrazione CrewAI/AutoGen — vedi [LEZIONE_15_MULTI_AGENT_COORDINATION.md](LEZIONE_15_MULTI_AGENT_COORDINATION.md) e [LEZIONE_16_CREW_AUTOGEN.md](LEZIONE_16_CREW_AUTOGEN.md).
 
 ---
 
@@ -60,6 +64,7 @@ gitGraph
 | **13** | ReAct multi-step, SQLite LTM | `react_triage`, `init_db`, `scripts/init_triage_db.py` | [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) |
 | **14** | max_steps, STM ReAct, self-correction in-loop | `_SHORT_TERM_STORE`, `session_id` | [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md) |
 | **15** | Multi-agent, topologie, hand-off Blackboard | `orchestration/`, `SharedHandoffContext` | [LEZIONE_15_MULTI_AGENT_COORDINATION.md](LEZIONE_15_MULTI_AGENT_COORDINATION.md) |
+| **16** | CrewAI sequenziale + AutoGen GroupChat | `multi_agent_triage`, `crew_pipeline`, `autogen_team` | [LEZIONE_16_CREW_AUTOGEN.md](LEZIONE_16_CREW_AUTOGEN.md) |
 
 ---
 
@@ -76,6 +81,9 @@ gitGraph
 | 13 — ReAct + SQLite | `PYTHONPATH=src python3 src/main.py --scenario l13` |
 | 14 — Planning multi-step | `PYTHONPATH=src python3 src/main.py --scenario l14` |
 | 15 — Multi-agent topologie | `PYTHONPATH=src python3 src/main.py --scenario l15` |
+| 16a — CrewAI pipeline | `PYTHONPATH=src python3 src/main.py --scenario l16a` |
+| 16b — AutoGen GroupChat | `PYTHONPATH=src python3 src/main.py --scenario l16b` |
+| 16 — dipendenze framework | `pip install -e ".[multiagent]"` |
 | 13/14 — init DB (post-clone) | `PYTHONPATH=src python3 scripts/init_triage_db.py` |
 | Test (qualsiasi branch) | `pytest tests/ -q` |
 
@@ -107,6 +115,7 @@ gitGraph
 | [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) | ReAct, SQLite indicizzato, dual-write |
 | [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md) | max_steps, STM, self-correction in-loop |
 | [LEZIONE_15_MULTI_AGENT_COORDINATION.md](LEZIONE_15_MULTI_AGENT_COORDINATION.md) | Topologie, Role/Goal/Backstory, Blackboard |
+| [LEZIONE_16_CREW_AUTOGEN.md](LEZIONE_16_CREW_AUTOGEN.md) | CrewAI, AutoGen, multi_agent_triage |
 
 ---
 
@@ -139,6 +148,7 @@ git push -u origin lesson-12-benchmark-log-analytics
 git push -u origin lesson-13-react-sqlite
 git push -u origin lesson-14-planning-loops
 git push -u origin lesson-15-multi-agent-topologies
+git push -u origin lesson-16-crew-autogen-orchestration
 ```
 
 ## Per docenti — review Settimana 12 (L15)
@@ -149,4 +159,15 @@ git push -u origin lesson-15-multi-agent-topologies
 | Tool partizionati Analyst/Resolver | `IMPESUD_AGENT_TEAM`, `test_analyst_resolver_tool_partition` |
 | Hand-off Blackboard | `simulate_analyst_handoff`, `test_simulate_handoff_marco_rossi` |
 | Demo senza LLM | `main.py --scenario l15` |
-| Retrocompatibilità L12–L14 | `pytest tests/ -q` |
+| Retrocompatibilità L12–L15 | `pytest tests/ -q` |
+
+## Per docenti — review Settimana 12 (L16)
+
+| Criterio | Dove verificare |
+|----------|-----------------|
+| CrewAI sequenziale | `crew_pipeline.crew_triage`, demo `l16a` |
+| AutoGen GroupChat | `autogen_team.autogen_triage`, demo `l16b` |
+| Hand-off Blackboard | `build_resolver_task_description`, test handoff |
+| JSON finale valido | `finalize_multi_agent_output`, `parse_llm_output` |
+| Dipendenze opzionali | `pip install -e ".[multiagent]"` |
+| Retrocompatibilità | `pytest tests/ -q` (~83), benchmark L12 |

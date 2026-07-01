@@ -2,7 +2,7 @@
 
 **Settimana 12 (parte 1)** — complementa [CORSO_LEZIONI.md](CORSO_LEZIONI.md).
 
-**Branch:** `lesson-15-multi-agent-topologies` (include lezioni 9–15).
+**Branch:** `lesson-15-multi-agent-topologies` (include lezioni 9–15; L16 sul branch successivo).
 
 **Durata:** 2 ore — architettura distribuita e comunicazione concettuale (nessun framework esterno).
 
@@ -105,7 +105,7 @@ La demo **non richiede OPENAI_API_KEY**: stampa le topologie, la squadra e simul
 
 ```bash
 pytest tests/test_orchestration.py -q
-pytest tests/ -q   # ~74 su questo branch
+pytest tests/ -q   # ~76 su branch L15
 ```
 
 ## File chiave
@@ -130,4 +130,4 @@ pytest tests/ -q   # ~74 su questo branch
 
 ## Prossimo passo (Lezione 16)
 
-Orchestrazione pratica con framework (CrewAI sequenziale + AutoGen conversazionale) — branch futuro `lesson-16-crew-autogen-orchestration`.
+Orchestrazione pratica: [LEZIONE_16_CREW_AUTOGEN.md](LEZIONE_16_CREW_AUTOGEN.md) — branch `lesson-16-crew-autogen-orchestration`.

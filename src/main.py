@@ -1,5 +1,5 @@
 """
-Orchestrazione ticket e demo didattiche Lezioni 9–15.
+Orchestrazione ticket e demo didattiche Lezioni 9–16.
 
 Esecuzione demo:
   PYTHONPATH=src python src/main.py              # M3 → M1 → M2
@@ -9,6 +9,8 @@ Esecuzione demo:
   PYTHONPATH=src python src/main.py --scenario l13   # ReAct + SQLite (Lezione 13)
   PYTHONPATH=src python src/main.py --scenario l14   # Planning multi-step (Lezione 14)
   PYTHONPATH=src python src/main.py --scenario l15   # Multi-agent topologie (Lezione 15)
+  PYTHONPATH=src python src/main.py --scenario l16a  # CrewAI sequenziale (Lezione 16)
+  PYTHONPATH=src python src/main.py --scenario l16b  # AutoGen GroupChat (Lezione 16)
 """
 
 from __future__ import annotations
@@ -19,9 +21,10 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Literal
 
 import paths
-from logic import ClarificationNeeded, react_triage, triage_message
+from logic import ClarificationNeeded, multi_agent_triage, react_triage, triage_message
 from memory.extractors import detect_sentiment_label, extract_cliente_nome
 from memory.session_manager import SessionManager
 from paths import DEMO_M2_DB_PATH, DEMO_M2_LOG_PATH, LOG_FILE_PATH, MANUALE_IT_PATH, POLICY_PATH, TRIAGE_DB_PATH
@@ -61,6 +64,8 @@ L14_TICKET_2 = (
     "Salve, sono sempre Marco Rossi. Volevo sapere se applicate uno sconto "
     "per il progetto di cui vi ho parlato prima."
 )
+
+L16_TICKET = L13_TICKET_1
 
 
 @dataclass(frozen=True)
@@ -588,6 +593,37 @@ def run_l15_topology_demo() -> None:
         "per policy RAG, escalation e JSON finale."
     )
 
+
+def _run_l16_demo(orchestrator: Literal["crewai", "autogen"], title: str) -> None:
+    """Demo Lezione 16: orchestrazione multi-agent con CrewAI o AutoGen."""
+    print("\n" + "=" * 72)
+    print(title)
+    print("=" * 72)
+    print(f"Ticket: {L16_TICKET}")
+    print("-" * 72)
+    init_db()
+    manuale = load_it_manual()
+    result = multi_agent_triage(L16_TICKET, manuale, orchestrator=orchestrator)
+    _persist_react_result(L16_TICKET, result)
+    print(f"\n📊 Verdetto Finale Strutturato:\n{result.model_dump_json(indent=2)}")
+
+
+def run_l16a_crew_demo() -> None:
+    """Demo Lezione 16a: CrewAI Process.sequential (topologia pipeline)."""
+    _run_l16_demo(
+        "crewai",
+        "SCENARIO L16a — Orchestrazione CrewAI (Sequenziale)",
+    )
+
+
+def run_l16b_autogen_demo() -> None:
+    """Demo Lezione 16b: AutoGen RoundRobinGroupChat (topologia collaborativa)."""
+    _run_l16_demo(
+        "autogen",
+        "SCENARIO L16b — Orchestrazione AutoGen (Collaborativa)",
+    )
+
+
 def run_demo() -> None:
     """Ordine didattico: smoke → short-term → long-term."""
     init_db()
@@ -602,11 +638,11 @@ def run_demo() -> None:
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Demo Lezioni 9–15 — memoria, RAG, resilienza, ReAct/SQLite, multi-agent (OPENAI_API_KEY)",
+        description="Demo Lezioni 9–16 — memoria, RAG, resilienza, ReAct, multi-agent/CrewAI/AutoGen",
     )
     parser.add_argument(
         "--scenario",
-        choices=["m1", "m2", "m3", "l10", "l11", "l13", "l14", "l15", "all"],
+        choices=["m1", "m2", "m3", "l10", "l11", "l13", "l14", "l15", "l16a", "l16b", "all"],
         default="all",
         help="Esegue un solo scenario o tutti (default: all = M3→M1→M2)",
     )
@@ -635,3 +671,7 @@ if __name__ == "__main__":
         run_l14_planning_demo()
     elif args.scenario == "l15":
         run_l15_topology_demo()
+    elif args.scenario == "l16a":
+        run_l16a_crew_demo()
+    elif args.scenario == "l16b":
+        run_l16b_autogen_demo()
