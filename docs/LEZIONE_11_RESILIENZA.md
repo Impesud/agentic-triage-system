@@ -65,4 +65,5 @@ pytest tests/test_logic.py -q -k "self_correction or emergency"
 - [Lezione 12 — Benchmark](LEZIONE_12_PROMPT_OPTIMIZATION.md) — misura impatto retry/fallback
 - [Lezione 13 — ReAct + SQLite](LEZIONE_13_REACT_SQLITE.md) — secondo percorso agentico (`react_triage`)
 - [Lezione 14 — Planning loop](LEZIONE_14_PLANNING_LOOPS.md) — self-correction **in-loop** ReAct (distinto da L11)
+- [Lezione 15 — Multi-agent](LEZIONE_15_MULTI_AGENT_COORDINATION.md) — separazione ruoli e topologie (preparazione L16)
 - [README — branch e corso](CORSO_LEZIONI.md)

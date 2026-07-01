@@ -25,6 +25,7 @@ KPI disponibili:
 | Conteggio `event_type` | `ticket_received`, `ticket_processed`, `error`, … |
 | Self-correction | `triage_json_retry`, `emergency_fallback` |
 | ReAct (L14) | `react_max_steps_fallback` |
+| Multi-agent (L15) | Nessun nuovo evento JSONL (demo concettuale) |
 | Tool usage (proxy) | stringhe `search_policy`, `notify_manager`, … nei payload |
 
 Se `triage_json_retry` è alto → problema **sintassi JSON** (prompt o self-correction).

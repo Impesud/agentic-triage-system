@@ -1,5 +1,5 @@
 """
-Orchestrazione ticket e demo didattiche Lezione 9/10/11/13.
+Orchestrazione ticket e demo didattiche Lezioni 9–15.
 
 Esecuzione demo:
   PYTHONPATH=src python src/main.py              # M3 → M1 → M2

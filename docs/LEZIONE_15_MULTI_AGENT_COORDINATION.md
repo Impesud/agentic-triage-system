@@ -2,7 +2,7 @@
 
 **Settimana 12 (parte 1)** — complementa [CORSO_LEZIONI.md](CORSO_LEZIONI.md).
 
-**Branch:** `lesson-15-multi-agent-topologies` (include lezioni 9–14).
+**Branch:** `lesson-15-multi-agent-topologies` (include lezioni 9–15).
 
 **Durata:** 2 ore — architettura distribuita e comunicazione concettuale (nessun framework esterno).
 

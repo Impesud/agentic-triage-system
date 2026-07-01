@@ -1,7 +1,7 @@
 [project]
 name = "primo-agente"
 version = "0.1.0"
-description = "Agentic customer-care triage demo (Lezione 9-12): LLM, memoria, RAG, ChromaDB, resilienza, benchmark"
+description = "Agentic customer-care triage demo (Lezioni 9-15): LLM, memoria, RAG, ReAct, multi-agent"
 dependencies = [
     "chromadb>=0.5",
     "openai",

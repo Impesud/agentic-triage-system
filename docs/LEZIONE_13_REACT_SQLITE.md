@@ -39,7 +39,7 @@ CREATE TABLE tickets (
 CREATE INDEX idx_cliente ON tickets(cliente_nome);
 ```
 
-> **Primo avvio:** `data/triage_system.db` **non è in Git** (`.gitignore`). Dopo checkout su branch L13/L14 eseguire `PYTHONPATH=src python3 scripts/init_triage_db.py` oppure qualsiasi `src/main.py` (bootstrap automatico all'avvio). DDL versionato: [`data/schema/triage_system.sql`](../data/schema/triage_system.sql).
+> **Primo avvio:** `data/triage_system.db` **non è in Git** (`.gitignore`). Dopo checkout su branch L13/L14/L15/L15 eseguire `PYTHONPATH=src python3 scripts/init_triage_db.py` oppure qualsiasi `src/main.py` (bootstrap automatico all'avvio). DDL versionato: [`data/schema/triage_system.sql`](../data/schema/triage_system.sql).
 
 ### Dual-write in pipeline
 
@@ -154,5 +154,6 @@ pytest tests/ -q   # ~66 su questo branch
 ## Collegamenti
 
 - [Lezione 14 — Planning loop](LEZIONE_14_PLANNING_LOOPS.md) — `max_steps=4`, STM, self-correction in-loop
+- [Lezione 15 — Multi-agent](LEZIONE_15_MULTI_AGENT_COORDINATION.md) — topologie, ruoli, Blackboard
 - [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) — errori ReAct e fallback
 - [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md) — KPI su JSONL invariati

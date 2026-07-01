@@ -128,3 +128,7 @@ pytest tests/ -q   # ~69 su questo branch
 - [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) — tipi errore ReAct
 - [LEZIONE_11_RESILIENZA.md](LEZIONE_11_RESILIENZA.md) — self-correction classica
 - [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md) — KPI JSONL
+
+## Prossimo passo
+
+[LEZIONE_15_MULTI_AGENT_COORDINATION.md](LEZIONE_15_MULTI_AGENT_COORDINATION.md) — modelli multi-agente, topologie e Blackboard.

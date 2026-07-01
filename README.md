@@ -33,7 +33,8 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 
 | Modulo | Ruolo |
 |--------|--------|
-| [`main.py`](src/main.py) | Orchestrazione, `SessionManager`, demo M1–M3, L10–L14 |
+| [`main.py`](src/main.py) | Orchestrazione, `SessionManager`, demo M1–M3, L10–L15 |
+| [`orchestration/`](src/orchestration/) | Modelli multi-agente, topologie, `SharedHandoffContext` (Lezione 15) |
 | [`logic.py`](src/logic.py) | Loop agentico + `react_triage` (ReAct multi-step) |
 | [`benchmark.py`](src/benchmark.py) | Suite benchmark 5 ticket (Lezione 12) |
 | [`client.py`](src/client.py) | Client OpenAI (`OPENAI_API_KEY` solo nel file `.env`, non dalla shell) |
@@ -122,6 +123,7 @@ flowchart TB
 | `run_l11_resilience_demo()` | Demo Lezione 11: self-correction |
 | `run_l13_react_demo()` | Demo Lezione 13: ReAct + SQLite |
 | `run_l14_planning_demo()` | Demo Lezione 14: STM + max_steps |
+| `run_l15_topology_demo()` | Demo Lezione 15: topologie e hand-off Blackboard (senza LLM) |
 | `process_ticket_react(msg, session_id=…)` | Wrapper demo ReAct multi-turn |
 
 ## Memoria (Lezione 9)
@@ -273,7 +275,24 @@ PYTHONPATH=src python3 src/main.py --scenario l14
 | Self-correction in-loop | Errore Pydantic reiniettato nel ciclo prima del fallback |
 | Evento log | `react_max_steps_fallback` in `activity.jsonl` |
 
-## Database SQLite (Lezioni 13–14)
+## Multi-Agent e Topologie (Lezione 15)
+
+Fino alla Lezione 14 un singolo agente (`react_triage`) gestisce tutti i tool. La Lezione 15 introduce la **scomposizione per ruoli** e le **topologie di comunicazione** senza framework esterni.
+
+| Componente | Ruolo |
+|------------|--------|
+| `AgentSpec` | Role, Goal, Backstory e tool per agente specializzato |
+| `CommunicationTopology` | Gerarchica, Sequenziale, Collaborativa |
+| `SharedHandoffContext` | Blackboard per hand-off Analyst → Resolver |
+| `IMPESUD_AGENT_TEAM` | TriageAnalyst + SecurityResolver (tool partizionati) |
+
+Guida: [LEZIONE_15_MULTI_AGENT_COORDINATION.md](docs/LEZIONE_15_MULTI_AGENT_COORDINATION.md).
+
+```bash
+PYTHONPATH=src python3 src/main.py --scenario l15
+```
+
+## Database SQLite (Lezioni 13–15)
 
 Il file [`data/triage_system.db`](data/triage_system.db) **non è in Git** (come `data/chroma/` e `logs/`): viene creato a runtime da `init_db()`.
 
@@ -283,7 +302,7 @@ Il file [`data/triage_system.db`](data/triage_system.db) **non è in Git** (come
 | `data/triage_system.db` | No (gitignored) | LTM runtime indicizzata |
 | `data/demo_m2_triage.db` | No (gitignored) | Seed isolato demo M2 |
 
-**Dopo checkout su `lesson-13-*` o `lesson-14-*`:**
+**Dopo checkout su `lesson-13-*`, `lesson-14-*` o `lesson-15-*`:**
 
 ```bash
 # Opzione A — script dedicato (senza chiamate LLM)
@@ -311,7 +330,7 @@ Ordine `run_demo()`: **M3 → M1 → M2**.
 source .venv/bin/activate
 pip install -e ".[test]"
 
-# Branch L13/L14: bootstrap SQLite (opzionale — anche main.py lo fa all'avvio)
+# Branch L13–L15: bootstrap SQLite (opzionale — anche main.py lo fa all'avvio)
 PYTHONPATH=src python3 scripts/init_triage_db.py
 
 PYTHONPATH=src python3 src/main.py              # M3 → M1 → M2
@@ -322,6 +341,7 @@ PYTHONPATH=src python3 src/main.py --scenario l10
 PYTHONPATH=src python3 src/main.py --scenario l11
 PYTHONPATH=src python3 src/main.py --scenario l13
 PYTHONPATH=src python3 src/main.py --scenario l14
+PYTHONPATH=src python3 src/main.py --scenario l15
 PYTHONPATH=src python3 src/benchmark.py
 PYTHONPATH=src python3 -m analytics.log_kpi
 ```
@@ -335,6 +355,7 @@ PYTHONPATH=src python3 -m analytics.log_kpi
 | **M3** | Casella aziendale bloccata |
 | **L13** | Marco Rossi, budget 15k, ReAct + SQLite |
 | **L14** | Marco Rossi turno 2, STM + LTM su `session_01` |
+| **L15** | Topologie multi-agente + hand-off Blackboard (senza LLM) |
 
 ## Struttura progetto
 
@@ -348,7 +369,8 @@ agentic-triage-system/
 │   ├── LEZIONE_11_RESILIENZA.md
 │   ├── LEZIONE_12_PROMPT_OPTIMIZATION.md
 │   ├── LEZIONE_13_REACT_SQLITE.md
-│   └── LEZIONE_14_PLANNING_LOOPS.md
+│   ├── LEZIONE_14_PLANNING_LOOPS.md
+│   └── LEZIONE_15_MULTI_AGENT_COORDINATION.md
 ├── data/
 │   ├── schema/triage_system.sql # DDL SQLite (versionato)
 │   ├── manuale_it.txt
@@ -363,7 +385,7 @@ agentic-triage-system/
 │   └── esercizio_chroma_policy.py
 ├── src/
 │   ├── main.py, logic.py, benchmark.py
-│   ├── memory/, rag/, analytics/, prompts/, tools/, …
+│   ├── memory/, orchestration/, rag/, analytics/, prompts/, tools/, …
 └── tests/
 ```
 
@@ -374,17 +396,18 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[test]"
 
-# Branch L13/L14: crea il database SQLite locale
+# Branch L13–L15: crea il database SQLite locale
 PYTHONPATH=src python3 scripts/init_triage_db.py
 
 pytest tests/ -q
 ```
 
-**69 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
+**76 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
 
 | File | Verifica |
 |------|----------|
 | `test_logic.py` | Loop, self-correction, ReAct, max_steps, STM |
+| `test_orchestration.py` | Topologie, AgentSpec, hand-off Blackboard (L15) |
 | `test_logger_sqlite.py` | SQLite init, insert, query indicizzata |
 | `test_policy_semantic.py` | RAG + Chroma, sinonimi, soglia |
 | `test_benchmark.py` | Report benchmark (mock) |
