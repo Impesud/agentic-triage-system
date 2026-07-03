@@ -13,7 +13,9 @@
 ## 11.1 Tipi di fallimento
 
 | Tipo | Esempi | Gestione nel progetto |
-|------|--------|------------------------|
+|---
+**Branch storico demo:** `lesson-11-resilienza-self-correction`. Sul branch `lesson-17-multi-agent-performance`, `main.py` non espone più la demo CLI di questa lezione — fare checkout su `lesson-11-resilienza-self-correction`.
+---|--------|------------------------|
 | **Hard error** | API timeout, API key assente, `manuale_it.txt` mancante, disco pieno | Propagazione → boundary `main.py` → `[ERRORE]`, `return None` |
 | **Soft error** | JSON malformato, campi mancanti, `riassunto_breve` > 15 parole | `_finalize_with_self_correction` in [`logic.py`](../src/logic.py) |
 
@@ -61,6 +63,7 @@ pytest tests/test_logic.py -q -k "self_correction or emergency"
 
 ## Collegamenti
 
+- [Lezione 17 — Performance MAS](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) — pruning, cache, KPI latenza
 - [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) — moduli 2–4 vs L11
 - [Lezione 12 — Benchmark](LEZIONE_12_PROMPT_OPTIMIZATION.md) — misura impatto retry/fallback
 - [Lezione 13 — ReAct + SQLite](LEZIONE_13_REACT_SQLITE.md) — secondo percorso agentico (`react_triage`)

@@ -3,7 +3,7 @@
 **Progetto finale** — complementa [CORSO_LEZIONI.md](CORSO_LEZIONI.md) e le lezioni 9–14.
 
 **Branch di riferimento:** `lesson-14-planning-loops` (progetto SOC completo: `progetto-2`)
-> **Nota (branch `lesson-16-crew-autogen-orchestration`):** le [Lezioni 15–16](LEZIONE_15_MULTI_AGENT_COORDINATION.md) introducono modelli multi-agente e orchestrazione CrewAI/AutoGen. Il progettino SOC resta ancorato alle competenze **L9–L14**; la squadra Analyst/Resolver (L16) è il passo successivo opzionale al progetto base (`progetto-2`).
+> **Nota (branch `lesson-17-multi-agent-performance`):** le [Lezioni 15–17](LEZIONE_15_MULTI_AGENT_COORDINATION.md) coprono multi-agente, orchestrazione CrewAI/AutoGen e ottimizzazione performance. Il progettino SOC resta ancorato alle competenze **L9–L14**; la squadra Analyst/Resolver (L16–L17) è il percorso avanzato opzionale (`progetto-2`).
 
 
 **Motore obbligatorio:** `react_triage` (ReAct multi-step, max 4 step, self-correction in-loop)
@@ -102,7 +102,7 @@ Il repository delle lezioni 9–14 **non include** tutto ciò che serve al proge
 
 ### 2.3 Esecuzione demo
 
-Per ogni scenario si consiglia di invocare `react_triage` con un `session_id` univoco oppure di usare il wrapper `process_ticket_react` in [`src/main.py`](../src/main.py).
+Per ogni scenario si consiglia di invocare `react_triage` con un `session_id` univoco. Su branch `lesson-14-*` era disponibile il wrapper `process_ticket_react` in [`src/main.py`](../src/main.py); sul branch L17 usare `react_triage` direttamente da [`logic.py`](../src/logic.py).
 
 **Suggerimento operativo:** usare un `session_id` diverso per ciascuno dei dieci messaggi (es. `progettino-scenario-01`, …, `progettino-scenario-10`), così la Short-Term Memory ReAct non mescola contesti tra scenari distinti.
 
@@ -192,7 +192,7 @@ Il fallback long-term in `logic.py` usa `extract_cliente_nome` da [`src/memory/e
 
 #### D) `ClarificationNeeded` con `react_triage`
 
-In `react_triage`, una risposta non-JSON solleva `ClarificationNeeded` (come in `triage_message`). Il wrapper `process_ticket_react` in [`src/main.py`](../src/main.py) **non** intercetta questa eccezione: a differenza di `process_ticket` (demo M1), il ticket **non** resta automaticamente in stato OPEN.
+In `react_triage`, una risposta non-JSON solleva `ClarificationNeeded` (come in `triage_message`). Il wrapper `process_ticket_react` (branch `lesson-14-*`) **non** intercetta questa eccezione: a differenza di `process_ticket` (demo M1 su branch storici), il ticket **non** resta automaticamente in stato OPEN.
 
 Per lo scenario 3, lo studente può:
 

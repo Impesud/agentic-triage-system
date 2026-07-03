@@ -5,6 +5,8 @@ from __future__ import annotations
 from enum import Enum
 from typing import Literal
 
+from dataclasses import dataclass
+
 from pydantic import BaseModel, Field
 
 
@@ -40,5 +42,19 @@ class SharedHandoffContext(BaseModel):
     sentiment: Literal["NEUTRO", "ARRABBIATO"] = "NEUTRO"
     storico_summary: str | None = None
     analyst_notes: str | None = None
+    policy_excerpt: str | None = None
+    ltm_digest: str | None = None
     source_agent: str | None = None
     target_agent: str | None = None
+
+
+
+@dataclass(frozen=True)
+class MultiAgentRunMetrics:
+    """Metriche run multi-agent per benchmark L17."""
+
+    tokens_est: int
+    handoff_enriched: bool = False
+    cache_policy_hits: int = 0
+    cache_ltm_hits: int = 0
+    compact_manuale_resolver: bool = False

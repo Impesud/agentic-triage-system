@@ -128,6 +128,7 @@ pytest tests/ -q   # ~76 su branch L15; ~83 su branch L16 (include test_multi_ag
 
 [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md) — `react_triage`, STM, max_steps.
 
-## Prossimo passo (Lezione 16)
+## Prossimo passo
 
-Orchestrazione pratica: [LEZIONE_16_CREW_AUTOGEN.md](LEZIONE_16_CREW_AUTOGEN.md) — branch `lesson-16-crew-autogen-orchestration`.
+1. [LEZIONE_16_CREW_AUTOGEN.md](LEZIONE_16_CREW_AUTOGEN.md) — branch `lesson-16-crew-autogen-orchestration`
+2. [LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) — branch `lesson-17-multi-agent-performance`

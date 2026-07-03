@@ -1,11 +1,15 @@
-"""Pipeline CrewAI sequenziale Analyst → Resolver (Lezione 16)."""
+"""Pipeline CrewAI sequenziale Analyst → Resolver (Lezione 16–17)."""
 
 from __future__ import annotations
 
 from crewai import Agent, Crew, Process, Task
 
 from orchestration.framework_env import ensure_framework_env
-from orchestration.models import CommunicationTopology
+from orchestration.handoff_enrichment import enrich_handoff_from_cache
+from orchestration.message_pruning import estimate_tokens
+from orchestration.models import CommunicationTopology, MultiAgentRunMetrics
+from orchestration.pipeline_cache import PipelineContextCache
+from orchestration.prompt_compression import compact_manuale_for_resolver
 from orchestration.result_parser import finalize_multi_agent_output
 from orchestration.tool_adapters import make_crewai_tools
 from orchestration.topologies import SECURITY_RESOLVER, TRIAGE_ANALYST, simulate_analyst_handoff
@@ -24,32 +28,76 @@ def build_resolver_task_description(user_input: str, handoff_json: str) -> str:
     )
 
 
-def crew_triage(user_input: str, manuale: str) -> TriageResult:
+def estimate_crew_pipeline_tokens(
+    manuale: str,
+    handoff_json: str,
+    output: str,
+    *,
+    compact_manuale_resolver: bool,
+) -> int:
+    """Stima grezza token cumulativi Analyst + Resolver (benchmark L17)."""
+    analyst_part = estimate_tokens(manuale) + estimate_tokens(handoff_json)
+    resolver_manual = (
+        compact_manuale_for_resolver(manuale) if compact_manuale_resolver else manuale
+    )
+    resolver_part = (
+        estimate_tokens(resolver_manual)
+        + estimate_tokens(handoff_json)
+        + estimate_tokens(output)
+    )
+    return analyst_part + resolver_part
+
+
+def _handoff_is_enriched(handoff) -> bool:
+    return bool(handoff.policy_excerpt or handoff.ltm_digest)
+
+
+def _build_resolver_agent(
+    manuale: str,
+    resolver_handoff_json: str,
+    *,
+    cache: PipelineContextCache | None,
+    compact: bool,
+    compact_manuale: bool,
+) -> Agent:
+    return Agent(
+        role=SECURITY_RESOLVER.role,
+        goal=SECURITY_RESOLVER.goal,
+        backstory=build_resolver_system_message(
+            manuale,
+            resolver_handoff_json,
+            compact_manuale=compact_manuale,
+        ),
+        tools=make_crewai_tools(SECURITY_RESOLVER.tools, cache=cache, compact_output=compact),
+        verbose=True,
+        allow_delegation=False,
+    )
+
+
+def crew_triage(
+    user_input: str,
+    manuale: str,
+    *,
+    enable_optimizations: bool = True,
+    return_metrics: bool = False,
+) -> TriageResult | tuple[TriageResult, MultiAgentRunMetrics]:
     """
-    Orchestrazione CrewAI Process.sequential: TriageAnalyst → SecurityResolver.
-    Topologia sequenziale (Lezione 15).
+    Orchestrazione CrewAI in due fasi: Analyst → arricchimento Blackboard → Resolver.
     """
     ensure_framework_env()
+    cache = PipelineContextCache() if enable_optimizations else None
+    compact = enable_optimizations
 
     seed_handoff = simulate_analyst_handoff(
         user_input,
         topology=CommunicationTopology.SEQUENTIAL,
     )
-    handoff_json = seed_handoff.model_dump_json()
 
     analyst = Agent(
         role=TRIAGE_ANALYST.role,
         goal=TRIAGE_ANALYST.goal,
         backstory=build_analyst_system_message(manuale),
-        tools=make_crewai_tools(TRIAGE_ANALYST.tools),
-        verbose=True,
-        allow_delegation=False,
-    )
-    resolver = Agent(
-        role=SECURITY_RESOLVER.role,
-        goal=SECURITY_RESOLVER.goal,
-        backstory=build_resolver_system_message(manuale, handoff_json),
-        tools=make_crewai_tools(SECURITY_RESOLVER.tools),
+        tools=make_crewai_tools(TRIAGE_ANALYST.tools, cache=cache, compact_output=compact),
         verbose=True,
         allow_delegation=False,
     )
@@ -65,29 +113,85 @@ def crew_triage(user_input: str, manuale: str) -> TriageResult:
         ),
         agent=analyst,
     )
+
+    print("\n🎬 [CrewAI] Fase 1 — TriageAnalyst...", flush=True)
+    analyst_crew = Crew(
+        agents=[analyst],
+        tasks=[analyst_task],
+        process=Process.sequential,
+        verbose=True,
+    )
+    analyst_crew.kickoff()
+
+    enriched_handoff = (
+        enrich_handoff_from_cache(seed_handoff, cache) if cache else seed_handoff
+    )
+    resolver_handoff_json = enriched_handoff.model_dump_json()
+    handoff_enriched = _handoff_is_enriched(enriched_handoff)
+    compact_manuale = enable_optimizations and handoff_enriched
+
+    if handoff_enriched:
+        log_event(
+            "handoff_enriched_from_cache",
+            {
+                "has_policy_excerpt": bool(enriched_handoff.policy_excerpt),
+                "has_ltm_digest": bool(enriched_handoff.ltm_digest),
+                "cache_policy_hits": cache.policy_hits if cache else 0,
+                "cache_ltm_hits": cache.ltm_hits if cache else 0,
+                "compact_manuale_resolver": compact_manuale,
+            },
+        )
+
+    resolver = _build_resolver_agent(
+        manuale,
+        resolver_handoff_json,
+        cache=cache,
+        compact=compact,
+        compact_manuale=compact_manuale,
+    )
     resolver_task = Task(
-        description=build_resolver_task_description(user_input, handoff_json),
+        description=build_resolver_task_description(user_input, resolver_handoff_json),
         expected_output="Solo JSON TriageResult valido conforme allo schema Impesud.",
         agent=resolver,
         context=[analyst_task],
     )
 
-    crew = Crew(
-        agents=[analyst, resolver],
-        tasks=[analyst_task, resolver_task],
+    print("🎬 [CrewAI] Fase 2 — SecurityResolver (hand-off arricchito)...", flush=True)
+    resolver_crew = Crew(
+        agents=[resolver],
+        tasks=[resolver_task],
         process=Process.sequential,
         verbose=True,
     )
-
-    print("\n🎬 [CrewAI] Avvio pipeline sequenziale Analyst → Resolver...", flush=True)
-    output = crew.kickoff()
+    output = resolver_crew.kickoff()
     raw = str(output.raw if hasattr(output, "raw") else output)
+
+    tokens_est = estimate_crew_pipeline_tokens(
+        manuale,
+        resolver_handoff_json,
+        raw,
+        compact_manuale_resolver=compact_manuale,
+    )
 
     log_event(
         "crew_triage_complete",
         {
             "input_preview": user_input[:200],
             "output_preview": raw[:400],
+            "enable_optimizations": enable_optimizations,
+            "cache_policy_hits": cache.policy_hits if cache else 0,
+            "cache_ltm_hits": cache.ltm_hits if cache else 0,
+            "handoff_enriched": handoff_enriched,
+            "tokens_est": tokens_est,
         },
     )
-    return finalize_multi_agent_output(raw, user_input)
+    result = finalize_multi_agent_output(raw, user_input)
+    if return_metrics:
+        return result, MultiAgentRunMetrics(
+            tokens_est=tokens_est,
+            handoff_enriched=handoff_enriched,
+            cache_policy_hits=cache.policy_hits if cache else 0,
+            cache_ltm_hits=cache.ltm_hits if cache else 0,
+            compact_manuale_resolver=compact_manuale,
+        )
+    return result

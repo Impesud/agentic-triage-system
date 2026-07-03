@@ -62,11 +62,28 @@ def self_correction_metrics(events: list[dict[str, Any]]) -> dict[str, int]:
     }
 
 
+
+
+def performance_metrics(events: list[dict[str, Any]]) -> dict[str, int]:
+    """Metriche Lezione 17: pruning, cache embedding, latenza pipeline."""
+    types = event_type_counts(events)
+    return {
+        "message_pruning_applied": types.get("message_pruning_applied", 0),
+        "embedding_cache_hit": types.get("embedding_cache_hit", 0),
+        "pipeline_latency_report": types.get("pipeline_latency_report", 0),
+        "crew_triage_complete": types.get("crew_triage_complete", 0),
+        "autogen_triage_complete": types.get("autogen_triage_complete", 0),
+        "multi_agent_fallback": types.get("multi_agent_fallback", 0),
+        "handoff_enriched_from_cache": types.get("handoff_enriched_from_cache", 0),
+    }
+
+
 def format_kpi_report(events: list[dict[str, Any]]) -> str:
     """Report testuale per terminale."""
     types = event_type_counts(events)
     tools = tool_usage_rate(events)
     correction = self_correction_metrics(events)
+    performance = performance_metrics(events)
     lines = [
         "=== KPI DA activity.jsonl ===",
         f"Eventi totali: {len(events)}",
@@ -88,6 +105,15 @@ def format_kpi_report(events: list[dict[str, Any]]) -> str:
             f"  triage_json_retry: {correction['triage_json_retry']}",
             f"  emergency_fallback: {correction['emergency_fallback']}",
             f"  error: {correction['error']}",
+            "",
+            "Performance multi-agent (L17):",
+            f"  message_pruning_applied: {performance['message_pruning_applied']}",
+            f"  embedding_cache_hit: {performance['embedding_cache_hit']}",
+            f"  pipeline_latency_report: {performance['pipeline_latency_report']}",
+            f"  crew_triage_complete: {performance['crew_triage_complete']}",
+            f"  autogen_triage_complete: {performance['autogen_triage_complete']}",
+            f"  multi_agent_fallback: {performance['multi_agent_fallback']}",
+            f"  handoff_enriched_from_cache: {performance['handoff_enriched_from_cache']}",
             "==================================",
         ]
     )

@@ -7,7 +7,7 @@ import pytest
 
 from logic import multi_agent_triage, triage_message
 from orchestration.crew_pipeline import build_resolver_task_description, crew_triage
-from orchestration.models import CommunicationTopology
+from orchestration.models import CommunicationTopology, MultiAgentRunMetrics
 from orchestration.result_parser import finalize_multi_agent_output
 from orchestration.topologies import simulate_analyst_handoff
 from schemas.ticket import TriageResult
@@ -51,14 +51,33 @@ def test_crew_pipeline_mocked(mock_env, mock_crew_cls):
 
     result = crew_triage("ticket demo", "Manuale IT")
     assert result.categoria == "SALES"
-    mock_crew_cls.return_value.kickoff.assert_called_once()
+    assert mock_crew_cls.return_value.kickoff.call_count == 2
+
+
+@patch("orchestration.crew_pipeline.Crew")
+@patch("orchestration.crew_pipeline.ensure_framework_env")
+def test_crew_pipeline_return_metrics(mock_env, mock_crew_cls):
+    mock_env.return_value = "sk-test"
+    kickoff_result = MagicMock()
+    kickoff_result.raw = _VALID_JSON
+    mock_crew_cls.return_value.kickoff.return_value = kickoff_result
+
+    outcome = crew_triage("ticket demo", "Manuale IT", return_metrics=True)
+    assert isinstance(outcome, tuple)
+    result, metrics = outcome
+    assert result.categoria == "SALES"
+    assert isinstance(metrics, MultiAgentRunMetrics)
+    assert metrics.tokens_est >= 0
 
 
 @patch("orchestration.autogen_team.asyncio.run")
 @patch("orchestration.autogen_team.ensure_framework_env")
 def test_autogen_team_mocked(mock_env, mock_asyncio_run):
     mock_env.return_value = "sk-test"
-    mock_asyncio_run.return_value = _VALID_JSON
+    mock_asyncio_run.return_value = (
+        _VALID_JSON,
+        MultiAgentRunMetrics(tokens_est=100),
+    )
 
     from orchestration.autogen_team import autogen_triage
 

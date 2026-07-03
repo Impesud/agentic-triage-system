@@ -410,3 +410,20 @@ def test_short_term_store_preserves_session(mock_get_client):
     assert len(_SHORT_TERM_STORE["session_test"]) > messages_before
     assert mock_client.chat.completions.create.call_count == 2
     _SHORT_TERM_STORE.clear()
+
+
+def test_react_pruning_reduces_conversation_tokens():
+    from orchestration.message_pruning import estimate_conversation_tokens, prune_conversation
+
+    messages = [
+        {"role": "system", "content": "sys"},
+        {"role": "user", "content": "ticket"},
+        {"role": "assistant", "content": "", "tool_calls": [{"id": "1"}]},
+        {"role": "tool", "name": "search_policy", "content": "x" * 800},
+        {"role": "tool", "name": "search_policy", "content": "y" * 100},
+    ]
+    before = estimate_conversation_tokens(messages)
+    pruned, saved = prune_conversation(messages, keep_last_tool_results=1)
+    after = estimate_conversation_tokens(pruned)
+    assert saved > 0
+    assert after < before

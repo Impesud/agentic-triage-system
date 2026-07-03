@@ -29,7 +29,7 @@ L’abbonamento a Cursor **non è necessario** per questo argomento. Conta molto
 
 ## Stato attuale del progetto
 
-Il codice ha una gestione errori di **livello 1–3**: fail-fast con `ValueError`, boundary in `main.py`, parser con `raise ... from e`, loop in `logic.py` (`_run_agent_loop` + `_finalize_with_self_correction` — Lezione 11), memoria, RAG + ChromaDB (Lezione 10/10B), self-correction (Lezione 11), benchmark/log KPI (Lezione 12), **ReAct multi-step + SQLite LTM** (Lezioni 13–14), **modelli multi-agente** (Lezione 15), **orchestrazione CrewAI/AutoGen** (Lezione 16), suite di **83 test** su branch `lesson-16-crew-autogen-orchestration`. Manca ancora una **gerarchia di eccezioni di dominio** opzionale (`errors.py`, moduli 2–4).
+Il codice ha una gestione errori di **livello 1–3**: fail-fast con `ValueError`, boundary in `main.py` (pipeline ticket su branch storici; branch L17: demo L15–L17), parser con `raise ... from e`, loop in `logic.py` (`_run_agent_loop` + `_finalize_with_self_correction` — Lezione 11), memoria, RAG + ChromaDB (Lezione 10/10B), self-correction (Lezione 11), benchmark/log KPI (Lezione 12), **ReAct multi-step + SQLite LTM** (Lezioni 13–14), **modelli multi-agente** (Lezione 15), **orchestrazione CrewAI/AutoGen** (Lezione 16), suite di **~92 test** su branch `lesson-17-multi-agent-performance`. Manca ancora una **gerarchia di eccezioni di dominio** opzionale (`errors.py`, moduli 2–4).
 
 **Indice corso e branch:** [docs/CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md).
 
@@ -119,6 +119,9 @@ flowchart TD
 | 14 | `max_steps`, STM ReAct, self-correction in-loop | [LEZIONE_14_PLANNING_LOOPS.md](docs/LEZIONE_14_PLANNING_LOOPS.md) |
 | 15 | Topologie, hand-off Blackboard (concettuale) | [LEZIONE_15_MULTI_AGENT_COORDINATION.md](docs/LEZIONE_15_MULTI_AGENT_COORDINATION.md) |
 | 16 | CrewAI/AutoGen, fallback `multi_agent_fallback` | [LEZIONE_16_CREW_AUTOGEN.md](docs/LEZIONE_16_CREW_AUTOGEN.md) |
+| 17 | Pruning, cache pipeline, benchmark latenza | [LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](docs/LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) |
+
+**Lezione 17 — Performance:** eventi `message_pruning_applied`, `embedding_cache_hit`, `pipeline_latency_report` in [`log_kpi.py`](src/analytics/log_kpi.py).
 
 **Lezione 12 — Benchmark e log:** suite in [`src/benchmark.py`](src/benchmark.py), KPI in [`src/analytics/log_kpi.py`](src/analytics/log_kpi.py). Eventi `triage_json_retry`, `emergency_fallback` e (L14) `react_max_steps_fallback` alimentano le metriche.
 
@@ -138,6 +141,16 @@ flowchart TD
 | Hand-off incompleto | Seed `SharedHandoffContext` + output Analyst nel task Resolver |
 
 Eventi audit: `crew_triage_complete`, `autogen_triage_complete`, `multi_agent_fallback`.
+
+### Lezione 17 — Performance multi-agente
+
+| Evento | Significato |
+|--------|-------------|
+| `message_pruning_applied` | Observation tool compattate nella history ReAct |
+| `embedding_cache_hit` | Query policy/LTM servita da `PipelineContextCache` |
+| `pipeline_latency_report` | Misura wall-time da `benchmark_multi_agent.py` |
+
+Flag `enable_optimizations` su `react_triage` e `multi_agent_triage` attiva pruning + cache.
 
 ### Lezione 15 — Multi-agent (concettuale)
 
@@ -182,7 +195,7 @@ Dettaglio scenari: [README — Demo](README.md#demo-ed-esecuzione), [CORSO_LEZIO
 | `raise ValueError(...)` | `client.py`, `logic.py`, `parser.py`, `enrichment.py`, `router.py`, `schemas/ticket.py` | Messaggi in italiano |
 | `raise ... from e` | `parser.py` — `JSONDecodeError`, `ValidationError` | Catena traceback preservata |
 | Boundary tipizzato | `main.py` — `except (FileNotFoundError, ValueError, OSError)` | Cattura errori da tutta la pipeline |
-| Suite test essenziale | `tests/` — **83 test** (branch `lesson-16`), alcuni `pytest.raises` | Vedi tabella sotto |
+| Suite test essenziale | `tests/` — **~92 test** (branch `lesson-17`), alcuni `pytest.raises` | Vedi tabella sotto |
 | Percorsi centralizzati | `paths.py` | Manuale, policy, ticket, log, `.env` |
 | Separazione agente / orchestrazione | `logic.py` (`_run_agent_loop`) vs `main.py` | Errori LLM nascono nel nucleo loop, gestiti in `main` |
 | Nessuna eccezione di dominio | — | Obiettivo dei moduli 2–4 |
@@ -231,13 +244,19 @@ Estrazione JSON con **parentesi bilanciate** (non regex greedy): riduce falsi po
 
 ```mermaid
 flowchart LR
-    subgraph today [Boundary oggi — main.py]
+    subgraph today [Boundary storico — main.py branch lesson-9..14]
         direction TB
         T1[user_input] --> T2[process_ticket]
         T2 --> T3[logic.triage_message]
         T3 --> T4{FileNotFoundError\nValueError\nOSError}
         T4 -->|catturato| T5["log_event + print\nreturn None"]
         T4 -->|ok| T6[Ticket con team]
+    end
+    subgraph l17 [Boundary L17 — main.py --scenario]
+        direction TB
+        S1[--scenario l15..l17b] --> S2{api_guard}
+        S2 -->|no API key| S3["[SKIP] messaggio"]
+        S2 -->|ok| S4[demo L15/L16/L17]
     end
     subgraph target [Obiettivo — handler dedicati]
         direction TB
@@ -282,7 +301,7 @@ except json.JSONDecodeError as e:
 
 ### 3. Boundary (confine applicazione)
 
-Un solo punto (`process_ticket` in `main.py`) decide **cosa mostrare all’utente** e **cosa loggare**, invece di spargere `print` in ogni modulo.
+Un solo punto di boundary decide **cosa mostrare all’utente** e **cosa loggare**, invece di spargere `print` in ogni modulo. Su branch storici (`lesson-9` … `lesson-14-*`) il confine è `process_ticket` in `main.py`; sul branch L17 è la CLI `--scenario` con guardrail [`api_guard.py`](src/orchestration/api_guard.py) per scenari LLM.
 
 ### 4. Gerarchia di eccezioni
 
@@ -306,7 +325,7 @@ Vantaggi:
 
 | Scelta | Quando ha senso |
 |--------|------------------|
-| `return None` + messaggio | CLI didattica, `run_demo()`: un errore non deve far crashare tutti gli scenari M1–M3 |
+| `return None` + messaggio | CLI didattica (branch storici): un errore non deve far crashare la demo corrente |
 | Eccezione che risale | Librerie riusabili, API HTTP (status 4xx/5xx), test che verificano il tipo esatto |
 
 In questo corso, **`None` + messaggio differenziato** in `main.py` è sufficiente.
@@ -527,7 +546,7 @@ Checklist Modulo 0 — aggiornare dopo ogni migrazione.
 
 ## Test e copertura fallimenti
 
-Suite essenziale: **83 test** su branch `lesson-16-crew-autogen-orchestration` (`pytest tests/ -q`). Nessuna chiamata API reale (mock su LLM e embeddings). Conteggi per branch: [CORSO_LEZIONI](docs/CORSO_LEZIONI.md).
+Suite essenziale: **~92 test** su branch `lesson-17-multi-agent-performance` (`pytest tests/ -q`). Nessuna chiamata API reale (mock su LLM e embeddings). Conteggi per branch: [CORSO_LEZIONI](docs/CORSO_LEZIONI.md).
 
 | File test | Cosa copre |
 |-----------|------------|
@@ -600,4 +619,4 @@ Fixture in `tests/conftest.py`: `triaged_ticket`, isolamento `TICKETS_PATH` su f
 - `src/tools/history_tools.py` — `search_long_term_history` (delega a SQLite)
 - `src/memory/` — `SessionManager`, extractors
 - `tests/conftest.py` — fixture condivise
-- `tests/test_*.py` — suite essenziale (83 test su L16); estendere dopo ogni migrazione errori
+- `tests/test_*.py` — suite essenziale (~92 test su L17); estendere dopo ogni migrazione errori

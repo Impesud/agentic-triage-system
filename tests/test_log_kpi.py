@@ -43,3 +43,17 @@ def test_format_kpi_report_contains_sections():
 def test_tool_usage_rate_empty_payload():
     events = [{"event_type": "ping", "payload": {}}]
     assert tool_usage_rate(events) == {}
+
+
+def test_performance_metrics_l17():
+    from analytics.log_kpi import performance_metrics
+
+    events = [
+        {"event_type": "message_pruning_applied", "payload": {}},
+        {"event_type": "embedding_cache_hit", "payload": {}},
+        {"event_type": "handoff_enriched_from_cache", "payload": {}},
+    ]
+    metrics = performance_metrics(events)
+    assert metrics["message_pruning_applied"] == 1
+    assert metrics["embedding_cache_hit"] == 1
+    assert metrics["handoff_enriched_from_cache"] == 1

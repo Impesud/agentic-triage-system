@@ -2,7 +2,7 @@
 
 **Settimana 12 (parte 2)** — complementa [LEZIONE_15_MULTI_AGENT_COORDINATION.md](LEZIONE_15_MULTI_AGENT_COORDINATION.md) e [CORSO_LEZIONI.md](CORSO_LEZIONI.md).
 
-**Branch:** `lesson-16-crew-autogen-orchestration` (include lezioni 9–16).
+**Branch:** `lesson-16-crew-autogen-orchestration` (include lezioni 9–16). Demo CLI anche su `lesson-17-multi-agent-performance` (`l16a`/`l16b`).
 
 **Durata:** 2 ore — laboratorio pratico con framework industriali.
 
@@ -140,3 +140,7 @@ pytest tests/ -q   # ~83 su questo branch
 
 - [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) — errori a confine multi-agent
 - [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md) — agente monolitico ReAct (confronto)
+
+## Prossimo passo (Lezione 17)
+
+[LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) — branch `lesson-17-multi-agent-performance`.

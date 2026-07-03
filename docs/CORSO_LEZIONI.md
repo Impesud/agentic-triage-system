@@ -15,6 +15,7 @@ Ogni branch contiene il codice **cumulativo** fino alla lezione indicata; le lez
 | [`lesson-14-planning-loops`](.) | **Lezione 14** — Planning e controllo loop | `git checkout lesson-14-planning-loops` | ~69 |
 | [`lesson-15-multi-agent-topologies`](.) | **Lezione 15** — Multi-agent e topologie | `git checkout lesson-15-multi-agent-topologies` | ~76 |
 | [`lesson-16-crew-autogen-orchestration`](.) | **Lezione 16** — CrewAI & AutoGen | `git checkout lesson-16-crew-autogen-orchestration` | ~83 |
+| [`lesson-17-multi-agent-performance`](.) | **Lezione 17** — Performance MAS | `git checkout lesson-17-multi-agent-performance` | ~92 |
 
 ```mermaid
 gitGraph
@@ -40,13 +41,16 @@ gitGraph
   branch lesson-16-crew-autogen-orchestration
   checkout lesson-16-crew-autogen-orchestration
   commit id: "L16-crew-autogen"
+  branch lesson-17-multi-agent-performance
+  checkout lesson-17-multi-agent-performance
+  commit id: "L17-performance"
 ```
 
 **Settimana 8 (lezioni 11–12):** resilienza, error recovery, benchmarking — vedi [LEZIONE_11_RESILIENZA.md](LEZIONE_11_RESILIENZA.md) e [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md).
 
 **Settimana 9 (lezioni 13–14):** ReAct, SQLite, planning multi-step — vedi [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) e [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md).
 
-**Settimana 12 (lezioni 15–16):** modelli multi-agente e orchestrazione CrewAI/AutoGen — vedi [LEZIONE_15_MULTI_AGENT_COORDINATION.md](LEZIONE_15_MULTI_AGENT_COORDINATION.md) e [LEZIONE_16_CREW_AUTOGEN.md](LEZIONE_16_CREW_AUTOGEN.md).
+**Settimana 12 (lezioni 15–17):** modelli multi-agente e orchestrazione CrewAI/AutoGen — vedi [LEZIONE_15_MULTI_AGENT_COORDINATION.md](LEZIONE_15_MULTI_AGENT_COORDINATION.md) , [LEZIONE_16_CREW_AUTOGEN.md](LEZIONE_16_CREW_AUTOGEN.md) e [LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md).
 
 ---
 
@@ -65,6 +69,7 @@ gitGraph
 | **14** | max_steps, STM ReAct, self-correction in-loop | `_SHORT_TERM_STORE`, `session_id` | [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md) |
 | **15** | Multi-agent, topologie, hand-off Blackboard | `orchestration/`, `SharedHandoffContext` | [LEZIONE_15_MULTI_AGENT_COORDINATION.md](LEZIONE_15_MULTI_AGENT_COORDINATION.md) |
 | **16** | CrewAI sequenziale + AutoGen GroupChat | `multi_agent_triage`, `crew_pipeline`, `autogen_team` | [LEZIONE_16_CREW_AUTOGEN.md](LEZIONE_16_CREW_AUTOGEN.md) |
+| **17** | Pruning, cache pipeline, benchmark MAS | `message_pruning`, `pipeline_cache`, `benchmark_multi_agent` | [LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) |
 
 ---
 
@@ -72,19 +77,17 @@ gitGraph
 
 | Lezione | Comando |
 |---------|---------|
-| 9 — tutte le demo memoria | `PYTHONPATH=src python3 src/main.py` |
-| 9 — singolo scenario | `PYTHONPATH=src python3 src/main.py --scenario m1` (o `m2`, `m3`) |
-| 10 — RAG | `PYTHONPATH=src python3 src/main.py --scenario l10` |
-| 11 — resilienza | `PYTHONPATH=src python3 src/main.py --scenario l11` |
-| 12 — benchmark | `PYTHONPATH=src python3 src/benchmark.py` |
-| 12 — KPI log | `PYTHONPATH=src python3 -m analytics.log_kpi` |
-| 13 — ReAct + SQLite | `PYTHONPATH=src python3 src/main.py --scenario l13` |
-| 14 — Planning multi-step | `PYTHONPATH=src python3 src/main.py --scenario l14` |
 | 15 — Multi-agent topologie | `PYTHONPATH=src python3 src/main.py --scenario l15` |
 | 16a — CrewAI pipeline | `PYTHONPATH=src python3 src/main.py --scenario l16a` |
 | 16b — AutoGen GroupChat | `PYTHONPATH=src python3 src/main.py --scenario l16b` |
-| 16 — dipendenze framework | `pip install -e ".[multiagent]"` |
-| 13/14 — init DB (post-clone) | `PYTHONPATH=src python3 scripts/init_triage_db.py` |
+| 17a — Pruning before/after | `PYTHONPATH=src python3 src/main.py --scenario l17a` |
+| 17b — Benchmark latenza MAS | `PYTHONPATH=src python3 src/main.py --scenario l17b` |
+| Settimana 12 — tutte le demo | `PYTHONPATH=src python3 src/main.py --scenario all` |
+| 12 — benchmark monolitico | `PYTHONPATH=src python3 src/benchmark.py` |
+| 17 — benchmark multi-agent | `PYTHONPATH=src python3 src/benchmark_multi_agent.py` |
+| 12/17 — KPI log | `PYTHONPATH=src python3 -m analytics.log_kpi` |
+| 16/17 — dipendenze framework | `pip install -e ".[multiagent]"` |
+| init DB (post-clone) | `PYTHONPATH=src python3 scripts/init_triage_db.py` |
 | Test (qualsiasi branch) | `pytest tests/ -q` |
 
 **Prerequisito demo live:** `OPENAI_API_KEY` nel file `.env` (non `export` in shell).
@@ -99,7 +102,7 @@ gitGraph
 | Knowledge / RAG | Lezione 10 + 10B | `lesson-10-rag-semantica` |
 | **Settimana 8** | Resilienza, error recovery, benchmarking | `lesson-11-*` → `lesson-12-*` |
 | **Settimana 9** | ReAct, SQLite, planning multi-step | `lesson-13-*` → `lesson-14-*` |
-| **Settimana 12** | Multi-agent, topologie, CrewAI/AutoGen | `lesson-15-*` → `lesson-16-*` |
+| **Settimana 12** | Multi-agent, orchestrazione, performance MAS | `lesson-15-*` → `lesson-17-*` |
 
 ---
 
@@ -116,6 +119,7 @@ gitGraph
 | [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md) | max_steps, STM, self-correction in-loop |
 | [LEZIONE_15_MULTI_AGENT_COORDINATION.md](LEZIONE_15_MULTI_AGENT_COORDINATION.md) | Topologie, Role/Goal/Backstory, Blackboard |
 | [LEZIONE_16_CREW_AUTOGEN.md](LEZIONE_16_CREW_AUTOGEN.md) | CrewAI, AutoGen, multi_agent_triage |
+| [LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) | Pruning, cache pipeline, benchmark MAS |
 
 ---
 
@@ -171,3 +175,21 @@ git push -u origin lesson-16-crew-autogen-orchestration
 | JSON finale valido | `finalize_multi_agent_output`, `parse_llm_output` |
 | Dipendenze opzionali | `pip install -e ".[multiagent]"` |
 | Retrocompatibilità | `pytest tests/ -q` (~83), benchmark L12 |
+
+
+## Per docenti — review Settimana 12 (L17)
+
+| Criterio | Dove verificare |
+|----------|-----------------|
+| Message pruning | `orchestration/message_pruning.py`, `test_message_pruning.py` |
+| Cache pipeline | `pipeline_cache.py`, `test_pipeline_cache.py` |
+| CLI solo L15–L17 | `main.WEEK12_SCENARIOS`, `test_cli_scenarios_week12_only` |
+| Demo l17a/l17b | `run_l17a_pruning_demo`, `benchmark_multi_agent.py` |
+| KPI L17 in log | `analytics/log_kpi.performance_metrics` |
+| Retrocompatibilità | `pytest tests/ -q`, benchmark L12 |
+
+Push suggerito:
+
+```bash
+git push -u origin lesson-17-multi-agent-performance
+```

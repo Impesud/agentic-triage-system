@@ -16,7 +16,9 @@
 Lasciare l'agente libero di ciclare Thought → Action espone il sistema a loop infiniti che esauriscono il budget API.
 
 | Meccanismo | Implementazione |
-|------------|-----------------|
+|---
+**Branch storico demo:** `lesson-14-planning-loops`. Sul branch `lesson-17-multi-agent-performance`, `main.py` non espone più la demo CLI di questa lezione — fare checkout su `lesson-14-planning-loops`.
+---------|-----------------|
 | Hard stop | `DEFAULT_REACT_MAX_STEPS = 4` in [`logic.py`](../src/logic.py) |
 | Fallback strutturato | `TriageResult` con `azione_eseguita: "Fallback per interruzione ciclo ReAct"` |
 | Audit JSONL | `event_type: react_max_steps_fallback` |
@@ -108,7 +110,7 @@ pytest tests/ -q   # ~69 su questo branch
 | File | Modifica L14 |
 |------|----------------|
 | [`logic.py`](../src/logic.py) | `session_id`, `_SHORT_TERM_STORE`, in-loop self-correction, `max_steps=4` |
-| [`main.py`](../src/main.py) | `process_ticket_react`, `run_l14_planning_demo`, bootstrap `init_db` |
+| [`main.py`](../src/main.py) | Su branch L14: `run_l14_planning_demo`; su L17: demo L15–L17 in `logic.react_triage` |
 | [`scripts/init_triage_db.py`](../scripts/init_triage_db.py) | Setup SQLite post-clone (eredita da L13) |
 
 ## Checklist docente
@@ -125,6 +127,7 @@ pytest tests/ -q   # ~69 su questo branch
 
 ## Collegamenti
 
+- [Lezione 17 — Performance MAS](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) — ottimizzazione STM ReAct
 - [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) — tipi errore ReAct
 - [LEZIONE_11_RESILIENZA.md](LEZIONE_11_RESILIENZA.md) — self-correction classica
 - [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md) — KPI JSONL

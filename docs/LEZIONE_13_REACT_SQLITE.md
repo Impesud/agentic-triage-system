@@ -16,7 +16,9 @@
 Fino alla Settimana 8, `logs/activity.jsonl` è lo strumento di audit per KPI, benchmark e analytics. Per interrogare lo storico di un cliente specifico, però, scansionare riga per riga non è sostenibile in produzione.
 
 | Aspetto | JSONL (`log_event`) | SQLite (`log_triage_to_sqlite`) |
-|---------|---------------------|----------------------------------|
+|---
+**Branch storico demo:** `lesson-13-react-sqlite`. Sul branch `lesson-17-multi-agent-performance`, `main.py` non espone più la demo CLI di questa lezione — fare checkout su `lesson-13-react-sqlite`.
+------|---------------------|----------------------------------|
 | Scopo | Audit operativo, KPI L12 | Long-Term Memory per cliente |
 | Ricerca per `cliente_nome` | O(N) scan sequenziale | O(log N) con indice `idx_cliente` |
 | File | `logs/activity.jsonl` | `data/triage_system.db` |
@@ -138,7 +140,7 @@ pytest tests/ -q   # ~66 su questo branch
 | [`tools/history_tools.py`](../src/tools/history_tools.py) | Delega a SQLite (`log_path` deprecato) |
 | [`tools/registry.py`](../src/tools/registry.py) | Tool map → `search_long_term_history_sql` |
 | [`logic.py`](../src/logic.py) | `react_triage()` |
-| [`main.py`](../src/main.py) | Dual-write, `seed_marco_sqlite`, demo `--scenario l13`, bootstrap `init_db` |
+| [`main.py`](../src/main.py) | Su branch L13: dual-write, demo `l13`; su L17: solo scenari L15–L17 (vedi nota in testa) |
 | [`scripts/init_triage_db.py`](../scripts/init_triage_db.py) | Setup SQLite post-clone |
 | [`data/schema/triage_system.sql`](../data/schema/triage_system.sql) | DDL versionato |
 
@@ -153,6 +155,7 @@ pytest tests/ -q   # ~66 su questo branch
 
 ## Collegamenti
 
+- [Lezione 17 — Performance MAS](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) — pruning su `react_triage`, cache tool
 - [Lezione 14 — Planning loop](LEZIONE_14_PLANNING_LOOPS.md) — `max_steps=4`, STM, self-correction in-loop
 - [Lezione 15 — Multi-agent](LEZIONE_15_MULTI_AGENT_COORDINATION.md) — topologie, ruoli, Blackboard
 - [Lezione 16 — CrewAI/AutoGen](LEZIONE_16_CREW_AUTOGEN.md) — `multi_agent_triage`, demo `l16a`/`l16b`

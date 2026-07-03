@@ -18,6 +18,8 @@ Al termine della sotto-lezione lo studente sa:
 4. **Indicizzare** chunk di testo con embedding OpenAI e **interrogare** la collection.
 5. Collegare il flusso al tool `search_policy` e alla demo `--scenario l10`.
 
+
+**Branch storico demo:** `lesson-10-rag-semantica`. Sul branch `lesson-17-multi-agent-performance`, `main.py` non espone più la demo CLI di questa lezione — fare checkout su `lesson-10-rag-semantica`.
 ---
 
 ## Prerequisiti
@@ -474,3 +476,7 @@ Per errori nel flusso ticket (non solo RAG), resta valida la guida [GESTIONE_ERR
 - [README — Demo L10](../README.md#demo-l10)
 - [GESTIONE_ERRORI.md — RAG search_policy](../GESTIONE_ERRORI.md)
 - Documentazione ChromaDB: https://docs.trychroma.com/
+
+## Collegamenti L17
+
+- [LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) — cache query embedding (L17)

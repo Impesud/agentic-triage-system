@@ -2,7 +2,7 @@
 Nucleo del loop agentico (logic.py) — Lezione 9: memoria; Lezione 10: RAG;
 Lezione 11: self-correction su soft error e emergency fallback;
 Lezione 13: loop ReAct multi-step; Lezione 14: max_steps, STM, self-correction in-loop;
-Lezione 16: orchestrazione multi-agent (CrewAI / AutoGen).
+Lezione 16: orchestrazione multi-agent; Lezione 17: pruning e cache pipeline.
 """
 
 from __future__ import annotations
@@ -19,7 +19,12 @@ from prompts.triage_v1 import build_chat_messages
 from schemas.ticket import TriageResult
 from tools.history_tools import should_escalate_repeat_customer
 from tools.logger import log_event
-from tools.logger import log_event
+from orchestration.message_pruning import (
+    apply_pruning_with_log,
+    compact_tool_output,
+    estimate_conversation_tokens,
+)
+from orchestration.pipeline_cache import PipelineContextCache
 from tools.registry import TOOL_MAP, TOOLS_DEFINITION
 
 MAX_TRIAGE_JSON_RETRIES = 3
@@ -61,6 +66,23 @@ class TriageStats:
     attempts: int = 0
     used_self_correction: bool = False
     used_emergency_fallback: bool = False
+
+
+@dataclass(frozen=True)
+class TriageRunMetrics:
+    """Metriche run triage_message per benchmark L17."""
+
+    tokens_est: int
+
+
+@dataclass(frozen=True)
+class ReactRunMetrics:
+    """Metriche run ReAct per benchmark L17."""
+
+    tokens_est: int
+    enable_pruning: bool
+    enable_cache: bool
+    enable_compact_output: bool
 
 
 class ClarificationNeeded(Exception):
@@ -134,7 +156,13 @@ def _call_llm_with_tools(client: Any, messages: list[dict[str, Any]]) -> Any:
     return response.choices[0].message
 
 
-def _execute_tool_calls(conversation: list[Any], tool_calls: Any) -> set[str]:
+def _execute_tool_calls(
+    conversation: list[Any],
+    tool_calls: Any,
+    *,
+    cache: PipelineContextCache | None = None,
+    compact_output: bool = False,
+) -> set[str]:
     tools_called: set[str] = set()
     for tool_call in tool_calls:
         function_name = tool_call.function.name
@@ -142,7 +170,12 @@ def _execute_tool_calls(conversation: list[Any], tool_calls: Any) -> set[str]:
         function_args = json.loads(tool_call.function.arguments)
         if function_name == "search_long_term_history" and "hours" not in function_args:
             function_args.setdefault("hours", 24)
-        tool_output = TOOL_MAP[function_name](**function_args)
+        tool_output = _react_tool_output(
+            function_name,
+            function_args,
+            cache=cache,
+            compact_output=compact_output,
+        )
         conversation.append(
             {
                 "role": "tool",
@@ -434,6 +467,9 @@ def _run_agent_loop(
     messages: list[dict[str, Any]],
     user_input: str,
     context_text: str,
+    *,
+    cache: PipelineContextCache | None = None,
+    compact_output: bool = False,
 ) -> tuple[Any, list[Any], str | None]:
     """
     Esegue tool e fallback policy/LTM.
@@ -450,7 +486,12 @@ def _run_agent_loop(
     if tool_calls:
         print("\n[AGENTE] Attivazione tool in corso...")
         conversation.append(response_message)
-        tools_called = _execute_tool_calls(conversation, tool_calls)
+        tools_called = _execute_tool_calls(
+            conversation,
+            tool_calls,
+            cache=cache,
+            compact_output=compact_output,
+        )
         _apply_all_fallbacks(context_text, conversation, tools_called)
         return client, conversation, None
 
@@ -478,10 +519,20 @@ def triage_message(
     *,
     return_stats: bool = False,
     max_json_retries: int = MAX_TRIAGE_JSON_RETRIES,
-) -> TriageResult | tuple[TriageResult, TriageStats]:
+    enable_optimizations: bool = False,
+    return_metrics: bool = False,
+) -> TriageResult | tuple[TriageResult, TriageStats] | tuple[TriageResult, TriageRunMetrics]:
     context_text = _build_context_text(user_input, history)
     messages = build_chat_messages(user_input, manuale, history=history)
-    client, conversation, initial_raw = _run_agent_loop(messages, user_input, context_text)
+    cache = PipelineContextCache() if enable_optimizations else None
+    compact_output = enable_optimizations
+    client, conversation, initial_raw = _run_agent_loop(
+        messages,
+        user_input,
+        context_text,
+        cache=cache,
+        compact_output=compact_output,
+    )
     result, stats = _finalize_with_self_correction(
         client,
         conversation,
@@ -491,7 +542,62 @@ def triage_message(
     )
     if return_stats:
         return result, stats
+    if return_metrics:
+        return result, TriageRunMetrics(
+            tokens_est=estimate_conversation_tokens(conversation),
+        )
     return result
+
+
+
+
+def _resolve_optimization_flags(
+    enable_optimizations: bool,
+    *,
+    enable_pruning: bool | None,
+    enable_cache: bool | None,
+    enable_compact_output: bool | None,
+) -> tuple[bool, bool, bool]:
+    if not enable_optimizations:
+        return False, False, False
+    pruning = True if enable_pruning is None else enable_pruning
+    cache_on = True if enable_cache is None else enable_cache
+    compact = True if enable_compact_output is None else enable_compact_output
+    return pruning, cache_on, compact
+
+
+def _react_tool_output(
+    function_name: str,
+    function_args: dict,
+    *,
+    cache: PipelineContextCache | None,
+    compact_output: bool,
+) -> str:
+    """Invoca TOOL_MAP con cache pipeline e compattazione opzionale (L17)."""
+    if function_name == "search_policy":
+        query = str(function_args.get("query", ""))
+
+        def call(q: str) -> str:
+            raw = TOOL_MAP["search_policy"](query=q)
+            return compact_tool_output(raw) if compact_output else raw
+
+        if cache is None:
+            return call(query)
+        return cache.get_or_call_policy(query, call)
+
+    if function_name == "search_long_term_history":
+        cliente = str(function_args.get("cliente_nome", ""))
+        hours = int(function_args.get("hours", 24))
+
+        def call(c: str, h: int) -> str:
+            raw = TOOL_MAP["search_long_term_history"](cliente_nome=c, hours=h)
+            return compact_tool_output(raw) if compact_output else raw
+
+        if cache is None:
+            return call(cliente, hours)
+        return cache.get_or_call_ltm(cliente, hours, call)
+
+    return TOOL_MAP[function_name](**function_args)
 
 
 def _build_react_messages(
@@ -513,7 +619,12 @@ def react_triage(
     session_id: str | None = None,
     max_steps: int = DEFAULT_REACT_MAX_STEPS,
     max_json_retries: int = MAX_TRIAGE_JSON_RETRIES,
-) -> TriageResult:
+    enable_optimizations: bool = True,
+    enable_pruning: bool | None = None,
+    enable_cache: bool | None = None,
+    enable_compact_output: bool | None = None,
+    return_metrics: bool = False,
+) -> TriageResult | tuple[TriageResult, ReactRunMetrics]:
     """
     Motore di Triage Agentico ReAct Multi-Step (Lezioni 13–14).
     Esegue cicli iterativi Thought -> Action -> Observation fino a convergenza JSON.
@@ -529,6 +640,14 @@ def react_triage(
         _SHORT_TERM_STORE[session_id] = conversation
     else:
         conversation = _build_react_messages(user_input, manuale, history=history)
+
+    use_pruning, use_cache, compact_output = _resolve_optimization_flags(
+        enable_optimizations,
+        enable_pruning=enable_pruning,
+        enable_cache=enable_cache,
+        enable_compact_output=enable_compact_output,
+    )
+    cache = PipelineContextCache() if use_cache else None
 
     print(
         f"\n🎬 [ReAct Engine] Avvio pianificazione per ticket: '{user_input[:40]}...'",
@@ -553,7 +672,12 @@ def react_triage(
                     f"   🛠️ [ACTION] Invocazione tool '{function_name}' con: {function_args}",
                     flush=True,
                 )
-                tool_output = TOOL_MAP[function_name](**function_args)
+                tool_output = _react_tool_output(
+                    function_name,
+                    function_args,
+                    cache=cache,
+                    compact_output=compact_output,
+                )
                 preview = tool_output[:50] + ("..." if len(tool_output) > 50 else "")
                 print(f"   📥 [OBSERVATION] Risultato: {preview}", flush=True)
                 conversation.append(
@@ -564,6 +688,8 @@ def react_triage(
                         "content": tool_output,
                     }
                 )
+            if use_pruning and (step > 1 or len(tool_calls) > 1):
+                conversation[:] = apply_pruning_with_log(conversation, step=step)
             continue
 
         content = response_message.content
@@ -638,20 +764,32 @@ def multi_agent_triage(
     manuale: str,
     *,
     orchestrator: Literal["crewai", "autogen"] = "crewai",
-) -> TriageResult:
+    enable_optimizations: bool = True,
+    return_metrics: bool = False,
+):
     """
-    Facade orchestrazione multi-agent (Lezione 16).
+    Facade orchestrazione multi-agent (Lezione 16–17).
     CrewAI = pipeline sequenziale; AutoGen = GroupChat collaborativo.
     """
     try:
         if orchestrator == "crewai":
             from orchestration.crew_pipeline import crew_triage
 
-            return crew_triage(user_input, manuale)
+            return crew_triage(
+                user_input,
+                manuale,
+                enable_optimizations=enable_optimizations,
+                return_metrics=return_metrics,
+            )
         if orchestrator == "autogen":
             from orchestration.autogen_team import autogen_triage
 
-            return autogen_triage(user_input, manuale)
+            return autogen_triage(
+                user_input,
+                manuale,
+                enable_optimizations=enable_optimizations,
+                return_metrics=return_metrics,
+            )
     except ImportError as exc:
         raise ImportError(
             f"Dipendenze multi-agent mancanti. Esegui: {_MULTIAGENT_INSTALL_HINT}"

@@ -1,8 +1,8 @@
 # Agentic Customer Care Triage System
 
-Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSON), tool locali, **memoria short/long-term** (Lezione 9), **RAG semantica su policy con ChromaDB** (Lezione 10/10B), **self-correction e emergency fallback** (Lezione 11), **benchmark e log analytics** (Lezione 12), **loop ReAct e SQLite LTM** (Lezione 13) e **planning multi-step con controllo loop** (Lezione 14) e **modelli multi-agente con topologie di comunicazione** (Lezione 15) e **orchestrazione CrewAI/AutoGen** (Lezione 16).
+Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSON), tool locali, **memoria short/long-term** (Lezione 9), **RAG semantica su policy con ChromaDB** (Lezione 10/10B), **self-correction e emergency fallback** (Lezione 11), **benchmark e log analytics** (Lezione 12), **loop ReAct e SQLite LTM** (Lezione 13) e **planning multi-step con controllo loop** (Lezione 14) e **modelli multi-agente con topologie di comunicazione** (Lezione 15) , **orchestrazione CrewAI/AutoGen** (Lezione 16) e **ottimizzazione performance multi-agente** (Lezione 17).
 
-**Branch corrente:** `lesson-16-crew-autogen-orchestration` — include le **lezioni 9–16**.
+**Branch corrente:** `lesson-17-multi-agent-performance` — include le **lezioni 9–17**.
 
 ## Percorso didattico e branch Git
 
@@ -17,7 +17,8 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 | `lesson-13-react-sqlite` | 13 — ReAct + SQLite | + `react_triage`, LTM SQLite indicizzata |
 | `lesson-14-planning-loops` | 14 — Planning loop | + `max_steps=4`, STM ReAct, self-correction in-loop |
 | `lesson-15-multi-agent-topologies` | 15 — Multi-agent | + `orchestration/`, topologie, `SharedHandoffContext` |
-| `lesson-16-crew-autogen-orchestration` | **16 — CrewAI/AutoGen** | + `multi_agent_triage`, demo `l16a`/`l16b` (questo branch) |
+| `lesson-16-crew-autogen-orchestration` | 16 — CrewAI/AutoGen | + `multi_agent_triage`, demo `l16a`/`l16b` |
+| `lesson-17-multi-agent-performance` | **17 — Performance MAS** | + pruning, cache pipeline, demo `l17a`/`l17b` (questo branch) |
 
 | Guida | File |
 |-------|------|
@@ -28,6 +29,7 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 | 14 Planning loop | [docs/LEZIONE_14_PLANNING_LOOPS.md](docs/LEZIONE_14_PLANNING_LOOPS.md) |
 | 15 Multi-agent | [docs/LEZIONE_15_MULTI_AGENT_COORDINATION.md](docs/LEZIONE_15_MULTI_AGENT_COORDINATION.md) |
 | 16 CrewAI/AutoGen | [docs/LEZIONE_16_CREW_AUTOGEN.md](docs/LEZIONE_16_CREW_AUTOGEN.md) |
+| 17 Performance MAS | [docs/LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](docs/LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) |
 
 [GESTIONE_ERRORI.md](GESTIONE_ERRORI.md)
 
@@ -35,10 +37,11 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 
 | Modulo | Ruolo |
 |--------|--------|
-| [`main.py`](src/main.py) | Orchestrazione, `SessionManager`, demo M1–M3, L10–L16 |
-| [`orchestration/`](src/orchestration/) | L15: modelli, topologie, Blackboard; L16: CrewAI, AutoGen, tool adapter |
-| [`logic.py`](src/logic.py) | Loop agentico + `react_triage` + `multi_agent_triage` (L16) |
+| [`main.py`](src/main.py) | Demo Settimana 12 (L15–L17); pipeline ticket su branch storici |
+| [`orchestration/`](src/orchestration/) | L15–L17: topologie, CrewAI/AutoGen, pruning, cache pipeline |
+| [`logic.py`](src/logic.py) | `triage_message`, `react_triage`, `multi_agent_triage` + ottimizzazioni L17 |
 | [`benchmark.py`](src/benchmark.py) | Suite benchmark 5 ticket (Lezione 12) |
+| [`benchmark_multi_agent.py`](src/benchmark_multi_agent.py) | Confronto latenza pipeline (Lezione 17) |
 | [`client.py`](src/client.py) | Client OpenAI (`OPENAI_API_KEY` solo nel file `.env`, non dalla shell) |
 
 | Package / file | Ruolo |
@@ -52,23 +55,30 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 | [`tools/registry.py`](src/tools/registry.py) | `TOOL_MAP` e schema OpenAI |
 | [`prompts/triage_v1.py`](src/prompts/triage_v1.py) | System prompt, few-shot, `build_chat_messages(history=…)` |
 | [`prompts/agents/`](src/prompts/agents/) | System prompt TriageAnalyst / SecurityResolver (Lezione 16) |
-| [`analytics/log_kpi.py`](src/analytics/log_kpi.py) | KPI da `activity.jsonl` (Lezione 12) |
+| [`analytics/log_kpi.py`](src/analytics/log_kpi.py) | KPI da `activity.jsonl` (L12 + eventi L17) |
 | [`paths.py`](src/paths.py) | Percorsi repo (`TRIAGE_DB_PATH`, `LOG_FILE_PATH`, `DEMO_M2_DB_PATH`, …) |
 
 ```mermaid
 flowchart TB
-    subgraph main_py [main.py]
-        PT[process_ticket]
-        CT[continue_ticket]
-        SM[SessionManager]
-        PT --> SM
-        CT --> SM
+    subgraph main_py [main.py — branch L17]
+        CLI["--scenario l15..l17b"]
+        L15[run_l15_topology_demo]
+        L16[run_l16a / run_l16b]
+        L17[run_l17a / run_l17b]
+        AG[api_guard]
+        CLI --> L15
+        CLI --> AG
+        AG --> L16
+        AG --> L17
     end
     subgraph logic_py [logic.py]
         TM[triage_message]
+        RT[react_triage]
+        MA[multi_agent_triage]
         Loop[_run_agent_loop]
         FB[_apply_all_fallbacks]
         TM --> Loop
+        RT --> Loop
         Loop --> FB
         FB --> SC[_finalize_with_self_correction]
         SC --> JSON[_request_final_json]
@@ -82,8 +92,9 @@ flowchart TB
         RAG[policy_semantic]
     end
     SP --> RAG
-    PT --> TM
-    CT --> TM
+    L16 --> MA
+    L17 --> RT
+    MA --> TM
     Loop --> LTM
     Loop --> SP
     Loop --> NM
@@ -113,22 +124,18 @@ flowchart TB
     end
 ```
 
-### API principali (`main.py`)
+### API principali (`main.py` — branch L17)
 
 | Funzione | Uso |
 |----------|-----|
-| `process_ticket(messaggio)` | Nuovo ticket (`OPEN` → triage → routing) |
-| `continue_ticket(ticket_id, messaggio)` | Turno successivo (short-term memory) |
-| `seed_marco_sqlite(n, db_path, reset=…)` | Seed demo M2 su SQLite (LTM indicizzata) |
-| `seed_marco_angry_history(…)` | Legacy JSONL (pre-L13); preferire `seed_marco_sqlite` |
-| `run_demo()` / `run_*_demo()` | Scenari didattici M3 → M1 → M2 |
-| `run_l10_rag_demo()` | Demo Lezione 10: RAG semantica |
-| `run_l11_resilience_demo()` | Demo Lezione 11: self-correction |
-| `run_l13_react_demo()` | Demo Lezione 13: ReAct + SQLite |
-| `run_l14_planning_demo()` | Demo Lezione 14: STM + max_steps |
-| `run_l15_topology_demo()` | Demo Lezione 15: topologie e hand-off Blackboard (senza LLM) |
-| `run_l16a_crew_demo()` / `run_l16b_autogen_demo()` | Demo Lezione 16: CrewAI / AutoGen |
-| `process_ticket_react(msg, session_id=…)` | Wrapper demo ReAct multi-turn |
+| `run_l15_topology_demo()` | Topologie e hand-off Blackboard (senza LLM) |
+| `run_l16a_crew_demo()` / `run_l16b_autogen_demo()` | Orchestrazione CrewAI / AutoGen |
+| `run_l17a_pruning_demo()` | Confronto ReAct con/senza `enable_optimizations` |
+| `run_l17b_latency_demo()` | Benchmark latenza multi-pipeline |
+| `run_week12_all()` | Sequenza `l15 → l16a → l16b → l17a → l17b` |
+| `seed_marco_angry_history(…)` | Fixture test JSONL (legacy) |
+
+**Pipeline ticket classica** (`process_ticket`, `continue_ticket`, demo M1–M3, L10–L14): disponibili sui branch `main` … `lesson-14-*`. Su L17 il focus didattico è la **Settimana 12** (multi-agente e performance).
 
 ## Memoria (Lezione 9)
 
@@ -145,12 +152,12 @@ Stesso `ticket_id`, più turni. `SessionManager` (in-memory) conserva il thread;
 
 Dual-write: ogni ticket processato va in `logs/activity.jsonl` (KPI L12) **e** in `data/triage_system.db` (LTM indicizzata). Il tool `search_long_term_history` interroga SQLite con indice `idx_cliente`; se ≥4 ticket **IT + ARRABBIATO** in 24h → fallback `notify_manager` (priority 4).
 
-**Demo M2 — database isolato:**
+**Demo M2 — database isolato** (branch `main` / `lesson-9` … `lesson-14-*`):
 
 | Operazione | File |
 |------------|------|
 | Seed storico (`seed_marco_sqlite`) | `data/demo_m2_triage.db` |
-| Lettura storico + soglia escalation | `demo_m2_triage.db` durante `run_ltm_demo()` |
+| Lettura storico + soglia escalation | `demo_m2_triage.db` (demo M2 su branch storici) |
 | Eventi live + LTM principale | `logs/activity.jsonl` + `data/triage_system.db` |
 
 ## Pipeline ticket
@@ -219,6 +226,8 @@ flowchart LR
 
 ### Demo L10
 
+> Sul branch L17 usare `lesson-10-rag-semantica` e `--scenario l10`.
+
 La demo chiama **direttamente** `semantic_policy_search`. Query **senza parole in comune** con la policy (es. «annullare contratto e riavere i soldi» → paragrafo «recesso / 14 giorni»).
 
 ```bash
@@ -242,6 +251,7 @@ PYTHONPATH=src python3 src/main.py --scenario l10
 Eventi log: `triage_json_retry`, `emergency_fallback`. Guida: [LEZIONE_11_RESILIENZA.md](docs/LEZIONE_11_RESILIENZA.md).
 
 ```bash
+# Branch lesson-11-resilienza-self-correction
 PYTHONPATH=src python3 src/main.py --scenario l11
 ```
 
@@ -266,6 +276,7 @@ PYTHONPATH=src python3 -m analytics.log_kpi
 Guide: [LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md), [LEZIONE_14_PLANNING_LOOPS.md](docs/LEZIONE_14_PLANNING_LOOPS.md).
 
 ```bash
+# Branch lesson-13-react-sqlite / lesson-14-planning-loops
 PYTHONPATH=src python3 src/main.py --scenario l13
 PYTHONPATH=src python3 src/main.py --scenario l14
 ```
@@ -324,64 +335,72 @@ Il file [`data/triage_system.db`](data/triage_system.db) **non è in Git** (come
 | `data/triage_system.db` | No (gitignored) | LTM runtime indicizzata |
 | `data/demo_m2_triage.db` | No (gitignored) | Seed isolato demo M2 |
 
-**Dopo checkout su `lesson-13-*` … `lesson-16-*`:**
+
+## Performance Multi-Agente (Lezione 17)
+
+Ottimizzazione Context Window e latenza su pipeline L16:
+
+- **Message Pruning** — `orchestration/message_pruning.py` compatta observation tool obsolete
+- **PipelineContextCache** — evita chiamate embedding/query duplicate nella stessa run
+- **`enable_optimizations`** — flag su `react_triage` e `multi_agent_triage`
+
+Guida: [LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](docs/LEZIONE_17_MULTI_AGENT_PERFORMANCE.md).
+
+```bash
+PYTHONPATH=src python3 src/main.py --scenario l17a
+PYTHONPATH=src python3 src/benchmark_multi_agent.py
+```
+
+**CLI `main.py` (branch L17):** solo scenari Settimana 12 — `l15`, `l16a`, `l16b`, `l17a`, `l17b`, `all`.
+
+
+**Dopo checkout su `lesson-13-*` … `lesson-17-*`:**
 
 ```bash
 # Opzione A — script dedicato (senza chiamate LLM)
 PYTHONPATH=src python3 scripts/init_triage_db.py
 
 # Opzione B — qualsiasi avvio di main.py crea il DB all'inizio
-PYTHONPATH=src python3 src/main.py --scenario m3
+PYTHONPATH=src python3 src/main.py --scenario l15
 
 ls -la data/triage_system.db
 ```
 
 Guida completa: [LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md).
 
-## Demo ed esecuzione
+## Demo ed esecuzione (branch L17)
 
-Ordine `run_demo()`: **M3 → M1 → M2**.
+**CLI `main.py`:** solo Settimana 12 — scenari `l15`, `l16a`, `l16b`, `l17a`, `l17b`, `all` (default `l15`).
 
-| ID | Focus |
-|----|--------|
-| **M3** | Pipeline base senza memoria multi-turno |
-| **M1** | Short-term: chiarimento → triage con server-X |
-| **M2** | Long-term: storico Marco, escalation |
+| Scenario | Focus | LLM |
+|----------|--------|-----|
+| **l15** | Topologie + Blackboard | No |
+| **l16a** | CrewAI sequenziale | Sì |
+| **l16b** | AutoGen GroupChat | Sì |
+| **l17a** | Pruning before/after | Sì |
+| **l17b** | Benchmark latenza MAS | Sì |
 
 ```bash
 source .venv/bin/activate
-pip install -e ".[test,multiagent]"   # [multiagent] per demo L16a/L16b
+pip install -e ".[test,multiagent]"
 
-# Branch L13–L16: bootstrap SQLite (opzionale — anche main.py lo fa all'avvio)
 PYTHONPATH=src python3 scripts/init_triage_db.py
 
-PYTHONPATH=src python3 src/main.py              # M3 → M1 → M2
-PYTHONPATH=src python3 src/main.py --scenario m3
-PYTHONPATH=src python3 src/main.py --scenario m1
-PYTHONPATH=src python3 src/main.py --scenario m2
-PYTHONPATH=src python3 src/main.py --scenario l10
-PYTHONPATH=src python3 src/main.py --scenario l11
-PYTHONPATH=src python3 src/main.py --scenario l13
-PYTHONPATH=src python3 src/main.py --scenario l14
 PYTHONPATH=src python3 src/main.py --scenario l15
 PYTHONPATH=src python3 src/main.py --scenario l16a
 PYTHONPATH=src python3 src/main.py --scenario l16b
-PYTHONPATH=src python3 src/benchmark.py
+PYTHONPATH=src python3 src/main.py --scenario l17a
+PYTHONPATH=src python3 src/main.py --scenario l17b
+PYTHONPATH=src python3 src/main.py --scenario all
+
+PYTHONPATH=src python3 src/benchmark.py              # L12 monolitico
+PYTHONPATH=src python3 src/benchmark_multi_agent.py  # L17 multi-pipeline
 PYTHONPATH=src python3 -m analytics.log_kpi
 ```
 
-**API key:** `OPENAI_API_KEY=sk-...` in `.env` (non `export` in shell).
+**Demo lezioni 9–14** (M1–M3, l10–l14): checkout sul branch indicato in [CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md).
 
-| Scenario | Messaggi |
-|----------|----------|
-| **M1** | Server vago → «È il server-X in datacenter Roma.» |
-| **M2** | Marco, cluster **db-primary** offline, quinto incidente |
-| **M3** | Casella aziendale bloccata |
-| **L13** | Marco Rossi, budget 15k, ReAct + SQLite |
-| **L14** | Marco Rossi turno 2, STM + LTM su `session_01` |
-| **L15** | Topologie multi-agente + hand-off Blackboard (senza LLM) |
-| **L16a** | CrewAI pipeline sequenziale (API live) |
-| **L16b** | AutoGen GroupChat (API live) |
+**API key:** `OPENAI_API_KEY=sk-...` in `.env` (non `export` in shell).
 
 ## Struttura progetto
 
@@ -397,7 +416,8 @@ agentic-triage-system/
 │   ├── LEZIONE_13_REACT_SQLITE.md
 │   ├── LEZIONE_14_PLANNING_LOOPS.md
 │   ├── LEZIONE_15_MULTI_AGENT_COORDINATION.md
-│   └── LEZIONE_16_CREW_AUTOGEN.md
+│   ├── LEZIONE_16_CREW_AUTOGEN.md
+│   └── LEZIONE_17_MULTI_AGENT_PERFORMANCE.md
 ├── data/
 │   ├── schema/triage_system.sql # DDL SQLite (versionato)
 │   ├── manuale_it.txt
@@ -411,7 +431,7 @@ agentic-triage-system/
 │   ├── init_triage_db.py        # bootstrap SQLite post-clone
 │   └── esercizio_chroma_policy.py
 ├── src/
-│   ├── main.py, logic.py, benchmark.py
+│   ├── main.py, logic.py, benchmark.py, benchmark_multi_agent.py
 │   ├── memory/, orchestration/, rag/, analytics/, prompts/, tools/, …
 └── tests/
 ```
@@ -423,19 +443,21 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[test,multiagent]"   # [multiagent] richiesto per demo L16a/L16b
 
-# Branch L13–L16: crea il database SQLite locale
+# Bootstrap SQLite locale
 PYTHONPATH=src python3 scripts/init_triage_db.py
 
 pytest tests/ -q
 ```
 
-**83 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
+**~92 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
 
 | File | Verifica |
 |------|----------|
 | `test_logic.py` | Loop, self-correction, ReAct, max_steps, STM |
 | `test_orchestration.py` | Topologie, AgentSpec, hand-off Blackboard (L15) |
 | `test_multi_agent.py` | CrewAI/AutoGen mock, multi_agent_triage (L16) |
+| `test_message_pruning.py` / `test_pipeline_cache.py` | Pruning e cache pipeline (L17) |
+| `test_benchmark_multi_agent.py` | Report benchmark MAS (L17) |
 | `test_logger_sqlite.py` | SQLite init, insert, query indicizzata |
 | `test_policy_semantic.py` | RAG + Chroma, sinonimi, soglia |
 | `test_benchmark.py` | Report benchmark (mock) |
