@@ -31,7 +31,7 @@ from analytics.week12_report import (
 )
 from logic import multi_agent_triage, react_triage
 from memory.extractors import detect_sentiment_label, extract_cliente_nome
-from orchestration.api_guard import require_api_key_for_scenario, skip_llm_block
+from orchestration.api_guard import skip_llm_block
 from paths import LOG_FILE_PATH, MANUALE_IT_PATH, TRIAGE_DB_PATH, WEEK12_REPORT_PATH
 from tools.logger import init_db, log_triage_to_sqlite
 
@@ -102,6 +102,28 @@ def _write_report(report: Week12ReportBuilder) -> Path:
     path = report.write_html()
     print(f"\n[REPORT HTML] Report salvato: {path}", flush=True)
     return path
+
+
+def _register_api_skip(report: Week12ReportBuilder, scenario: str) -> None:
+    """Registra scenario saltato per API key mancante (report HTML completo)."""
+    reason = "OPENAI_API_KEY assente in .env"
+    report.record_skip(scenario, reason)
+    if scenario == "l16a":
+        report.add_triage_scenario(
+            scenario_id="l16a",
+            lesson="16",
+            title="CrewAI sequenziale",
+            skipped=True,
+            skip_reason=reason,
+        )
+    elif scenario == "l16b":
+        report.add_triage_scenario(
+            scenario_id="l16b",
+            lesson="16",
+            title="AutoGen GroupChat",
+            skipped=True,
+            skip_reason=reason,
+        )
 
 
 def run_l15_topology_demo(*, report: Week12ReportBuilder | None = None) -> None:
@@ -369,6 +391,17 @@ def run_week12_all(*, report: Week12ReportBuilder | None = None) -> None:
         run_l17b_latency_demo(report=report)
 
 
+def _run_scenario_with_report(scenario: str, report: Week12ReportBuilder) -> bool:
+    """
+    Esegue uno scenario Settimana 12. Ritorna False se saltato (es. API key assente).
+    """
+    if scenario != "l15" and scenario != "all" and skip_llm_block(f"scenario {scenario}"):
+        _register_api_skip(report, scenario)
+        return False
+    _SCENARIO_RUNNERS[scenario](report=report)
+    return True
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Demo Settimana 12 — Lezioni 15, 16 e 17 (multi-agente e performance)",
@@ -403,12 +436,12 @@ if __name__ == "__main__":
     init_db()
     print(f"[SQLite] Database pronto: {TRIAGE_DB_PATH}", flush=True)
     args = _parse_args()
-    if args.scenario != "all" and not require_api_key_for_scenario(args.scenario):
-        sys.exit(0)
-
     report = Week12ReportBuilder(root_scenario=args.scenario)
     try:
-        _SCENARIO_RUNNERS[args.scenario](report=report)
+        if args.scenario == "all":
+            run_week12_all(report=report)
+        else:
+            _run_scenario_with_report(args.scenario, report)
     finally:
         if not args.no_report:
             _write_report(report)

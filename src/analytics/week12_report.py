@@ -11,6 +11,15 @@ from typing import Any
 
 from paths import WEEK12_REPORT_PATH
 
+# Scenari demo Lezioni 15–17 (Settimana 12)
+LESSON_SCENARIOS: tuple[tuple[str, str, str], ...] = (
+    ("l15", "15", "Topologie e Blackboard"),
+    ("l16a", "16", "CrewAI sequenziale"),
+    ("l16b", "16", "AutoGen GroupChat"),
+    ("l17a", "17", "Pruning ReAct (3 run)"),
+    ("l17b", "17", "Benchmark multi-pipeline"),
+)
+
 
 @dataclass
 class SkippedScenario:
@@ -116,6 +125,31 @@ class Week12ReportBuilder:
     def set_l17b_rows(self, rows: list[BenchmarkRow]) -> None:
         self.l17b_rows = rows
 
+    def scenario_status(self, scenario_id: str) -> str:
+        """Stato scenario per riepilogo HTML: Eseguito | Saltato | Non eseguito."""
+        if any(s.scenario_id == scenario_id for s in self.skipped):
+            return "Saltato"
+        if scenario_id == "l15" and self.l15 is not None:
+            return "Eseguito"
+        if scenario_id in ("l16a", "l16b"):
+            for row in self.triage_rows:
+                if row.scenario_id == scenario_id:
+                    return "Saltato" if row.skipped else "Eseguito"
+        if scenario_id == "l17a" and self.l17a_runs:
+            return "Eseguito"
+        if scenario_id == "l17b" and self.l17b_rows:
+            return "Eseguito"
+        return "Non eseguito"
+
+    def skip_reason_for(self, scenario_id: str) -> str | None:
+        for item in self.skipped:
+            if item.scenario_id == scenario_id:
+                return item.reason
+        for row in self.triage_rows:
+            if row.scenario_id == scenario_id and row.skipped:
+                return row.skip_reason
+        return None
+
     def write_html(self, path: Path | None = None) -> Path:
         out = path or WEEK12_REPORT_PATH
         out.parent.mkdir(parents=True, exist_ok=True)
@@ -141,10 +175,92 @@ def _priority_badge(priorita: str | None) -> str:
     return f'<span class="{cls}">{_esc(priorita)}</span>'
 
 
+def _placeholder_section(title: str, message: str) -> str:
+    return f"""
+        <section>
+          <h2>{title}</h2>
+          <p class="meta">{_esc(message)}</p>
+        </section>"""
+
+
+def _render_l16_section(report: Week12ReportBuilder) -> str:
+    rows_html = []
+    detail_blocks: list[str] = []
+    for scenario_id, _, label in LESSON_SCENARIOS:
+        if not scenario_id.startswith("l16"):
+            continue
+        row = next((r for r in report.triage_rows if r.scenario_id == scenario_id), None)
+        if row and row.skipped:
+            rows_html.append(
+                f"<tr><td>{_esc(scenario_id)}</td><td>{_esc(label)}</td>"
+                f'<td colspan="4" class="skip">{_esc(row.skip_reason)}</td></tr>'
+            )
+        elif row and row.result:
+            res = row.result
+            rows_html.append(
+                f"<tr><td>{_esc(scenario_id)}</td><td>{_esc(label)}</td>"
+                f"<td>{_esc(res.get('categoria'))}</td>"
+                f"<td>{_priority_badge(res.get('priorita'))}</td>"
+                f"<td>{row.wall_ms:.0f} ms</td>"
+                f"<td>{_esc(res.get('riassunto_breve'))}</td></tr>"
+            )
+            detail = _esc(json.dumps(res, ensure_ascii=False, indent=2))
+            detail_blocks.append(
+                f"""
+          <details>
+            <summary>Dettaglio JSON — {_esc(scenario_id)}</summary>
+            <pre class="json">{detail}</pre>
+          </details>"""
+            )
+        else:
+            rows_html.append(
+                f"<tr><td>{_esc(scenario_id)}</td><td>{_esc(label)}</td>"
+                f'<td colspan="4" class="meta">Non eseguito in questa run</td></tr>'
+            )
+    return f"""
+        <section>
+          <h2>Lezione 16 — Orchestrazione multi-agent</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Scenario</th><th>Descrizione</th><th>Categoria</th>
+                <th>Priorità</th><th>Tempo</th><th>Riassunto</th>
+              </tr>
+            </thead>
+            <tbody>{"".join(rows_html)}</tbody>
+          </table>
+        </section>{"".join(detail_blocks)}"""
+
+
 def render_week12_html(report: Week12ReportBuilder) -> str:
     """Renderizza report HTML self-contained."""
     generated = report.started_at.strftime("%Y-%m-%d %H:%M UTC")
     sections: list[str] = []
+
+    summary_rows = []
+    for scenario_id, lesson, label in LESSON_SCENARIOS:
+        status = report.scenario_status(scenario_id)
+        reason = report.skip_reason_for(scenario_id) if status == "Saltato" else ""
+        status_cell = _esc(status)
+        if status == "Saltato" and reason:
+            status_cell = f'<span class="skip">{status_cell}</span>'
+        summary_rows.append(
+            f"<tr><td><code>{_esc(scenario_id)}</code></td>"
+            f"<td>L{lesson}</td><td>{_esc(label)}</td>"
+            f"<td>{status_cell}</td><td>{_esc(reason or '—')}</td></tr>"
+        )
+    sections.append(
+        f"""
+        <section>
+          <h2>Riepilogo scenari (Lezioni 15–17)</h2>
+          <table>
+            <thead>
+              <tr><th>Scenario</th><th>Lezione</th><th>Descrizione</th><th>Stato</th><th>Note</th></tr>
+            </thead>
+            <tbody>{"".join(summary_rows)}</tbody>
+          </table>
+        </section>"""
+    )
 
     if report.skipped:
         rows = "".join(
@@ -187,49 +303,15 @@ def render_week12_html(report: Week12ReportBuilder) -> str:
         </section>"""
         )
 
-    if report.triage_rows:
-        rows_html = []
-        for row in report.triage_rows:
-            if row.skipped:
-                rows_html.append(
-                    f"<tr><td>{_esc(row.scenario_id)}</td><td>{_esc(row.title)}</td>"
-                    f'<td colspan="4" class="skip">{_esc(row.skip_reason)}</td></tr>'
-                )
-                continue
-            res = row.result or {}
-            rows_html.append(
-                f"<tr><td>{_esc(row.scenario_id)}</td><td>{_esc(row.title)}</td>"
-                f"<td>{_esc(res.get('categoria'))}</td>"
-                f"<td>{_priority_badge(res.get('priorita'))}</td>"
-                f"<td>{row.wall_ms:.0f} ms</td>"
-                f"<td>{_esc(res.get('riassunto_breve'))}</td></tr>"
-            )
-        sections.append(
-            f"""
-        <section>
-          <h2>Lezione 16 — Orchestrazione multi-agent</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Scenario</th><th>Titolo</th><th>Categoria</th>
-                <th>Priorità</th><th>Tempo</th><th>Riassunto</th>
-              </tr>
-            </thead>
-            <tbody>{"".join(rows_html)}</tbody>
-          </table>
-        </section>"""
+    else:
+        msg = (
+            report.skip_reason_for("l15") or "Non eseguito in questa run"
+            if report.scenario_status("l15") == "Saltato"
+            else "Non eseguito in questa run"
         )
+        sections.append(_placeholder_section("Lezione 15 — Topologie e Blackboard", msg))
 
-        for row in report.triage_rows:
-            if row.result and not row.skipped:
-                detail = _esc(json.dumps(row.result, ensure_ascii=False, indent=2))
-                sections.append(
-                    f"""
-          <details>
-            <summary>Dettaglio JSON — {_esc(row.scenario_id)}</summary>
-            <pre class="json">{detail}</pre>
-          </details>"""
-                )
+    sections.append(_render_l16_section(report))
 
     if report.l17a_runs:
         rows = "".join(
@@ -257,6 +339,13 @@ def render_week12_html(report: Week12ReportBuilder) -> str:
         </section>"""
         )
 
+    else:
+        if report.scenario_status("l17a") == "Saltato":
+            msg = report.skip_reason_for("l17a") or "Saltato"
+        else:
+            msg = "Non eseguito in questa run"
+        sections.append(_placeholder_section("Lezione 17a — Confronto ottimizzazioni ReAct", msg))
+
     if report.l17b_rows:
         rows = "".join(
             f"<tr><td>{_esc(r.name)}</td><td>{r.wall_ms:.0f}</td>"
@@ -276,6 +365,13 @@ def render_week12_html(report: Week12ReportBuilder) -> str:
           </table>
         </section>"""
         )
+
+    else:
+        if report.scenario_status("l17b") == "Saltato":
+            msg = report.skip_reason_for("l17b") or "Saltato"
+        else:
+            msg = "Non eseguito in questa run"
+        sections.append(_placeholder_section("Lezione 17b — Benchmark multi-pipeline", msg))
 
     body = "\n".join(sections) if sections else "<p>Nessun risultato registrato.</p>"
 
