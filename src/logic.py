@@ -566,6 +566,40 @@ def _resolve_optimization_flags(
     return pruning, cache_on, compact
 
 
+def _react_run_metrics(
+    conversation: list[Any],
+    *,
+    enable_pruning: bool,
+    enable_cache: bool,
+    enable_compact_output: bool,
+) -> ReactRunMetrics:
+    return ReactRunMetrics(
+        tokens_est=estimate_conversation_tokens(conversation),
+        enable_pruning=enable_pruning,
+        enable_cache=enable_cache,
+        enable_compact_output=enable_compact_output,
+    )
+
+
+def _react_finish(
+    result: TriageResult,
+    conversation: list[Any],
+    *,
+    return_metrics: bool,
+    use_pruning: bool,
+    use_cache: bool,
+    compact_output: bool,
+) -> TriageResult | tuple[TriageResult, ReactRunMetrics]:
+    if return_metrics:
+        return result, _react_run_metrics(
+            conversation,
+            enable_pruning=use_pruning,
+            enable_cache=use_cache,
+            enable_compact_output=compact_output,
+        )
+    return result
+
+
 def _react_tool_output(
     function_name: str,
     function_args: dict,
@@ -707,7 +741,14 @@ def react_triage(
             result = parse_llm_output(content.strip())
             if session_id:
                 _SHORT_TERM_STORE[session_id] = conversation
-            return result
+            return _react_finish(
+                result,
+                conversation,
+                return_metrics=return_metrics,
+                use_pruning=use_pruning,
+                use_cache=use_cache,
+                compact_output=compact_output,
+            )
         except ValueError as parsing_err:
             print(
                 f"   ⚠️ [Self-Correction] Formato non valido. "
@@ -753,7 +794,14 @@ def react_triage(
     )
     if session_id:
         _SHORT_TERM_STORE[session_id] = conversation
-    return fallback
+    return _react_finish(
+        fallback,
+        conversation,
+        return_metrics=return_metrics,
+        use_pruning=use_pruning,
+        use_cache=use_cache,
+        compact_output=compact_output,
+    )
 
 
 _MULTIAGENT_INSTALL_HINT = 'pip install -e ".[multiagent]"'

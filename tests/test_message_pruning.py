@@ -56,3 +56,15 @@ def test_estimate_conversation_tokens_sums():
         {"role": "tool", "content": "efgh"},
     ]
     assert estimate_conversation_tokens(messages) == estimate_tokens("abcd") + estimate_tokens("efgh")
+
+
+def test_estimate_conversation_tokens_sdk_message():
+    from types import SimpleNamespace
+
+    messages = [
+        {"role": "user", "content": "abcd"},
+        SimpleNamespace(content="assistant reply", tool_calls=None),
+    ]
+    assert estimate_conversation_tokens(messages) == estimate_tokens("abcd") + estimate_tokens(
+        "assistant reply"
+    )

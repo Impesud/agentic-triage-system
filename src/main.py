@@ -1,13 +1,16 @@
 """
 Demo didattiche Settimana 12 — Lezioni 15, 16 e 17 (multi-agente).
 
+Documentazione demo live: docs/SETTIMANA_12_DEMO_LIVE.md
+
 Esecuzione:
+  PYTHONPATH=src python3 src/main.py              # default: solo l15 (senza LLM)
   PYTHONPATH=src python3 src/main.py --scenario l15
   PYTHONPATH=src python3 src/main.py --scenario l16a
   PYTHONPATH=src python3 src/main.py --scenario l16b
   PYTHONPATH=src python3 src/main.py --scenario l17a
   PYTHONPATH=src python3 src/main.py --scenario l17b
-  PYTHONPATH=src python3 src/main.py --scenario all
+  PYTHONPATH=src python3 src/main.py --scenario all   # L15 → L16a → L16b → L17a → L17b
 """
 
 from __future__ import annotations

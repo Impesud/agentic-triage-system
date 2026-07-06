@@ -5,6 +5,8 @@ import pytest
 
 from logic import (
     MAX_TRIAGE_JSON_RETRIES,
+    ReactRunMetrics,
+    TriageRunMetrics,
     _build_context_text,
     _detects_angry_sentiment,
     _emergency_triage_result,
@@ -46,6 +48,25 @@ def test_triage_message_without_tools(mock_get_client):
 
     assert result.categoria == "IT"
     mock_client.chat.completions.create.assert_called_once()
+
+
+@patch("logic.get_client")
+def test_triage_message_return_metrics(mock_get_client):
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    json_out = (
+        '{"analisi_problema":"1. P. 2. C. 3. IT. 4. LOW.",'
+        '"categoria":"IT","priorita":"LOW","riassunto_breve":"test ok",'
+        '"messaggio_originale":"help"}'
+    )
+    mock_client.chat.completions.create.return_value = _completion(content=json_out)
+
+    outcome = triage_message("help", manuale="Manuale IT", return_metrics=True)
+    assert isinstance(outcome, tuple)
+    result, metrics = outcome
+    assert result.categoria == "IT"
+    assert isinstance(metrics, TriageRunMetrics)
+    assert metrics.tokens_est > 0
 
 
 @patch("logic.get_client")
@@ -345,6 +366,25 @@ def test_react_triage_with_tool_then_json(mock_get_client, tmp_path, monkeypatch
 
     assert result.categoria == "SALES"
     assert mock_client.chat.completions.create.call_count == 2
+
+
+@patch("logic.get_client")
+def test_react_triage_return_metrics(mock_get_client):
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    final = (
+        '{"analisi_problema":"1. P. 2. C. 3. IT. 4. LOW.",'
+        '"categoria":"IT","priorita":"LOW","riassunto_breve":"test ok",'
+        '"messaggio_originale":"help"}'
+    )
+    mock_client.chat.completions.create.return_value = _completion(content=final)
+
+    outcome = react_triage("help", manuale="Manuale IT", return_metrics=True)
+    assert isinstance(outcome, tuple)
+    result, metrics = outcome
+    assert result.categoria == "IT"
+    assert isinstance(metrics, ReactRunMetrics)
+    assert metrics.tokens_est > 0
 
 
 @patch("logic.get_client")

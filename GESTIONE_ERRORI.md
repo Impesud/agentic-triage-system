@@ -164,7 +164,9 @@ La Lezione 15 **non introduce nuovi errori runtime**: il package `orchestration/
 
 **Lezione 14 — ReAct:** se il loop esaurisce `max_steps` senza JSON valido, `react_triage` restituisce un `TriageResult` di fallback (non `None`) e logga `react_max_steps_fallback`. La self-correction **in-loop** (JSON invalido senza tool) consuma uno step e reinietta l'errore Pydantic — distinta dalla self-correction L11 post-loop.
 
-**M1** → ticket `OPEN` su chiarimento. **M2** → long-term SQLite + escalation Marco (`seed_marco_sqlite`). **L10** → RAG sinonimica (score ≥ 0.38). **L13/L14** → demo ReAct (`react_triage`). **L15** → demo topologie (`run_l15_topology_demo`, senza LLM). **L16** → `multi_agent_triage` (CrewAI/AutoGen, API live). Fallback policy/LTM in `_apply_all_fallbacks` (non sono errori).
+**M1** → ticket `OPEN` su chiarimento. **M2** → long-term SQLite + escalation Marco. **L10** → RAG sinonimica. **L13/L14** → `react_triage` (branch storici). **L15** → topologie senza LLM. **L16** → `multi_agent_triage`. Fallback policy/LTM in `_apply_all_fallbacks` (non sono errori).
+
+**Demo live Settimana 12:** [docs/SETTIMANA_12_DEMO_LIVE.md](docs/SETTIMANA_12_DEMO_LIVE.md) — `main.py` default = solo `l15`; `--scenario all` = sequenza L15→L17; `api_guard` salta LLM senza API key.
 
 Il fallback **non è un errore**: è una guardia operativa in `_run_agent_loop` dopo la prima risposta LLM; le observation entrano nel contesto della seconda chiamata. Se un tool solleva eccezione, il boundary in `main.py` cattura `ValueError`/`OSError`.
 

@@ -2,6 +2,8 @@
 
 **Settimana 12 (parte 3)** — complementa [LEZIONE_16_CREW_AUTOGEN.md](LEZIONE_16_CREW_AUTOGEN.md) e [CORSO_LEZIONI.md](CORSO_LEZIONI.md).
 
+**Demo live:** [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md) — sezioni `l17a`, `l17b` e sequenza `all`.
+
 **Branch:** `lesson-17-multi-agent-performance` (include lezioni 9–17).
 
 **Durata:** 2 ore — Context Window, Message Pruning, contenimento latenza.
@@ -64,7 +66,10 @@ PYTHONPATH=src python3 scripts/init_triage_db.py
 
 ## Demo live (solo Settimana 12)
 
+Vedi anche [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md) per prerequisiti, output atteso e troubleshooting.
+
 ```bash
+PYTHONPATH=src python3 src/main.py                    # default: solo l15
 PYTHONPATH=src python3 src/main.py --scenario l15    # topologie (no LLM)
 PYTHONPATH=src python3 src/main.py --scenario l16a   # CrewAI
 PYTHONPATH=src python3 src/main.py --scenario l16b   # AutoGen

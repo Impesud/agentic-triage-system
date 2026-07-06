@@ -2,6 +2,8 @@
 
 **Settimana 12 (parte 1)** — complementa [CORSO_LEZIONI.md](CORSO_LEZIONI.md).
 
+**Demo live:** [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md) — sezione `l15`.
+
 **Branch:** `lesson-15-multi-agent-topologies` (include lezioni 9–15; L16 sul branch successivo).
 
 **Durata:** 2 ore — architettura distribuita e comunicazione concettuale (nessun framework esterno).
@@ -87,11 +89,15 @@ Campi principali: `ticket_message`, `cliente_nome`, `sentiment`, `storico_summar
 ## Demo L15
 
 ```bash
-git checkout lesson-15-multi-agent-topologies
+git checkout lesson-15-multi-agent-topologies   # oppure lesson-17-* per CLI cumulativa
+PYTHONPATH=src python3 src/main.py              # default = l15
+# oppure esplicitamente:
 PYTHONPATH=src python3 src/main.py --scenario l15
 ```
 
 La demo **non richiede OPENAI_API_KEY**: stampa le topologie, la squadra e simula il hand-off sul ticket Marco Rossi.
+
+**Prossimo passo in aula:** `--scenario l16a` (vedi [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md)).
 
 ## Test automatici (L15)
 

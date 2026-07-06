@@ -2,6 +2,8 @@
 
 **Settimana 12 (parte 2)** — complementa [LEZIONE_15_MULTI_AGENT_COORDINATION.md](LEZIONE_15_MULTI_AGENT_COORDINATION.md) e [CORSO_LEZIONI.md](CORSO_LEZIONI.md).
 
+**Demo live:** [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md) — sezioni `l16a` e `l16b`.
+
 **Branch:** `lesson-16-crew-autogen-orchestration` (include lezioni 9–16). Demo CLI anche su `lesson-17-multi-agent-performance` (`l16a`/`l16b`).
 
 **Durata:** 2 ore — laboratorio pratico con framework industriali.

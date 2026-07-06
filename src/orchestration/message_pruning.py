@@ -9,6 +9,13 @@ from tools.logger import log_event
 _PROTECTED_ROLES = frozenset({"system", "user"})
 
 
+def _message_field(message: Any, key: str, default: Any = None) -> Any:
+    """Legge un campo da messaggio dict o oggetto SDK OpenAI (es. ChatCompletionMessage)."""
+    if isinstance(message, dict):
+        return message.get(key, default)
+    return getattr(message, key, default)
+
+
 def estimate_tokens(text: str) -> int:
     """Stima token: tiktoken se installato, altrimenti len//4."""
     try:
@@ -19,14 +26,14 @@ def estimate_tokens(text: str) -> int:
         return max(0, len(text) // 4)
 
 
-def estimate_conversation_tokens(messages: list[dict[str, Any]]) -> int:
-    """Somma stime token su role/content dei messaggi OpenAI-style."""
+def estimate_conversation_tokens(messages: list[Any]) -> int:
+    """Somma stime token su role/content dei messaggi OpenAI-style (dict o SDK)."""
     total = 0
     for message in messages:
-        content = message.get("content")
+        content = _message_field(message, "content")
         if isinstance(content, str):
             total += estimate_tokens(content)
-        tool_calls = message.get("tool_calls")
+        tool_calls = _message_field(message, "tool_calls")
         if tool_calls:
             total += estimate_tokens(str(tool_calls))
     return total
@@ -54,12 +61,12 @@ def compact_tool_output(content: str, *, max_chars: int = 400) -> str:
 
 
 def prune_conversation(
-    messages: list[dict[str, Any]],
+    messages: list[Any],
     *,
     keep_last_tool_results: int = 1,
     always_keep_roles: frozenset[str] = _PROTECTED_ROLES,
     max_chars_per_pruned: int = 200,
-) -> tuple[list[dict[str, Any]], int]:
+) -> tuple[list[Any], int]:
     """
     Potatura observation tool obsolete nella cronologia.
 
@@ -69,18 +76,21 @@ def prune_conversation(
         raise ValueError("keep_last_tool_results deve essere >= 0")
 
     tool_seen: dict[str, int] = {}
-    pruned: list[dict[str, Any]] = []
+    pruned: list[Any] = []
     bytes_saved = 0
 
     for message in reversed(messages):
-        role = message.get("role")
+        role = _message_field(message, "role")
         if role in always_keep_roles:
             pruned.append(message)
             continue
 
         if role == "tool":
-            name = str(message.get("name", "unknown_tool"))
-            content = message.get("content")
+            if not isinstance(message, dict):
+                pruned.append(message)
+                continue
+            name = str(_message_field(message, "name", "unknown_tool"))
+            content = _message_field(message, "content")
             if not isinstance(content, str):
                 pruned.append(message)
                 continue
@@ -105,11 +115,11 @@ def prune_conversation(
 
 
 def apply_pruning_with_log(
-    messages: list[dict[str, Any]],
+    messages: list[Any],
     *,
     step: int | None = None,
     keep_last_tool_results: int = 1,
-) -> list[dict[str, Any]]:
+) -> list[Any]:
     """Applica prune_conversation e registra message_pruning_applied se utile."""
     before_tokens = estimate_conversation_tokens(messages)
     pruned, bytes_saved = prune_conversation(

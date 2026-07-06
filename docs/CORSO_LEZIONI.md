@@ -15,7 +15,7 @@ Ogni branch contiene il codice **cumulativo** fino alla lezione indicata; le lez
 | [`lesson-14-planning-loops`](.) | **Lezione 14** — Planning e controllo loop | `git checkout lesson-14-planning-loops` | ~69 |
 | [`lesson-15-multi-agent-topologies`](.) | **Lezione 15** — Multi-agent e topologie | `git checkout lesson-15-multi-agent-topologies` | ~76 |
 | [`lesson-16-crew-autogen-orchestration`](.) | **Lezione 16** — CrewAI & AutoGen | `git checkout lesson-16-crew-autogen-orchestration` | ~83 |
-| [`lesson-17-multi-agent-performance`](.) | **Lezione 17** — Performance MAS | `git checkout lesson-17-multi-agent-performance` | ~92 |
+| [`lesson-17-multi-agent-performance`](.) | **Lezione 17** — Performance MAS | `git checkout lesson-17-multi-agent-performance` | ~106 |
 
 ```mermaid
 gitGraph
@@ -50,7 +50,7 @@ gitGraph
 
 **Settimana 9 (lezioni 13–14):** ReAct, SQLite, planning multi-step — vedi [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) e [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md).
 
-**Settimana 12 (lezioni 15–17):** modelli multi-agente e orchestrazione CrewAI/AutoGen — vedi [LEZIONE_15_MULTI_AGENT_COORDINATION.md](LEZIONE_15_MULTI_AGENT_COORDINATION.md) , [LEZIONE_16_CREW_AUTOGEN.md](LEZIONE_16_CREW_AUTOGEN.md) e [LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md).
+**Settimana 12 (lezioni 15–17):** modelli multi-agente, orchestrazione e performance — manuale demo live: **[SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md)**; teoria: [LEZIONE_15](LEZIONE_15_MULTI_AGENT_COORDINATION.md), [LEZIONE_16](LEZIONE_16_CREW_AUTOGEN.md), [LEZIONE_17](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md).
 
 ---
 
@@ -75,9 +75,11 @@ gitGraph
 
 ## Comandi rapidi per lezione
 
+> **Manuale demo live Settimana 12:** [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md) — prerequisiti, sequenza `all`, output atteso per scenario.
+
 | Lezione | Comando |
 |---------|---------|
-| 15 — Multi-agent topologie | `PYTHONPATH=src python3 src/main.py --scenario l15` |
+| 15 — Multi-agent topologie | `PYTHONPATH=src python3 src/main.py` oppure `--scenario l15` |
 | 16a — CrewAI pipeline | `PYTHONPATH=src python3 src/main.py --scenario l16a` |
 | 16b — AutoGen GroupChat | `PYTHONPATH=src python3 src/main.py --scenario l16b` |
 | 17a — Pruning before/after | `PYTHONPATH=src python3 src/main.py --scenario l17a` |
@@ -120,6 +122,7 @@ gitGraph
 | [LEZIONE_15_MULTI_AGENT_COORDINATION.md](LEZIONE_15_MULTI_AGENT_COORDINATION.md) | Topologie, Role/Goal/Backstory, Blackboard |
 | [LEZIONE_16_CREW_AUTOGEN.md](LEZIONE_16_CREW_AUTOGEN.md) | CrewAI, AutoGen, multi_agent_triage |
 | [LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) | Pruning, cache pipeline, benchmark MAS |
+| [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md) | **Manuale operativo demo live L15–L17** |
 
 ---
 
@@ -154,6 +157,16 @@ git push -u origin lesson-14-planning-loops
 git push -u origin lesson-15-multi-agent-topologies
 git push -u origin lesson-16-crew-autogen-orchestration
 ```
+
+## Per docenti — review Settimana 12 (panoramica)
+
+Vedi [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md) per la checklist completa e la timeline delle 3 sessioni.
+
+| Verifica rapida | Comando |
+|-----------------|---------|
+| Default CLI = solo L15 | `PYTHONPATH=src python3 src/main.py` |
+| Sequenza intera | `PYTHONPATH=src python3 src/main.py --scenario all` |
+| Senza API key | `all` esegue L15 e salta LLM con `[SKIP]` |
 
 ## Per docenti — review Settimana 12 (L15)
 

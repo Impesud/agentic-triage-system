@@ -30,6 +30,7 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 | 15 Multi-agent | [docs/LEZIONE_15_MULTI_AGENT_COORDINATION.md](docs/LEZIONE_15_MULTI_AGENT_COORDINATION.md) |
 | 16 CrewAI/AutoGen | [docs/LEZIONE_16_CREW_AUTOGEN.md](docs/LEZIONE_16_CREW_AUTOGEN.md) |
 | 17 Performance MAS | [docs/LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](docs/LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) |
+| **Settimana 12 demo live** | [docs/SETTIMANA_12_DEMO_LIVE.md](docs/SETTIMANA_12_DEMO_LIVE.md) |
 
 [GESTIONE_ERRORI.md](GESTIONE_ERRORI.md)
 
@@ -370,7 +371,14 @@ Guida completa: [LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md).
 
 ## Demo ed esecuzione (branch L17)
 
-**CLI `main.py`:** solo Settimana 12 — scenari `l15`, `l16a`, `l16b`, `l17a`, `l17b`, `all` (default `l15`).
+**Manuale demo live completo:** [docs/SETTIMANA_12_DEMO_LIVE.md](docs/SETTIMANA_12_DEMO_LIVE.md)
+
+**CLI `main.py`:** solo Settimana 12 — scenari `l15`, `l16a`, `l16b`, `l17a`, `l17b`, `all`.
+
+| Comando | Effetto |
+|---------|---------|
+| `python3 src/main.py` | **Solo L15** (default, senza LLM) |
+| `python3 src/main.py --scenario all` | Sequenza **L15 → L16a → L16b → L17a → L17b** |
 
 | Scenario | Focus | LLM |
 |----------|--------|-----|
@@ -417,7 +425,8 @@ agentic-triage-system/
 │   ├── LEZIONE_14_PLANNING_LOOPS.md
 │   ├── LEZIONE_15_MULTI_AGENT_COORDINATION.md
 │   ├── LEZIONE_16_CREW_AUTOGEN.md
-│   └── LEZIONE_17_MULTI_AGENT_PERFORMANCE.md
+│   ├── LEZIONE_17_MULTI_AGENT_PERFORMANCE.md
+│   └── SETTIMANA_12_DEMO_LIVE.md
 ├── data/
 │   ├── schema/triage_system.sql # DDL SQLite (versionato)
 │   ├── manuale_it.txt
@@ -449,7 +458,7 @@ PYTHONPATH=src python3 scripts/init_triage_db.py
 pytest tests/ -q
 ```
 
-**~92 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
+**~106 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
 
 | File | Verifica |
 |------|----------|
