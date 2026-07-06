@@ -28,6 +28,7 @@ KPI disponibili:
 | Multi-agent (L15) | Nessun nuovo evento JSONL (demo concettuale `l15`) |
 | Orchestrazione (L16) | `crew_triage_complete`, `autogen_triage_complete`, `multi_agent_fallback` |
 | Performance (L17) | `message_pruning_applied`, `embedding_cache_hit`, `pipeline_latency_report` |
+| Sicurezza (L18) | `security_input_blocked`, `security_handoff_blocked`, `security_tool_denied` |
 | Tool usage (proxy) | stringhe `search_policy`, `notify_manager`, … nei payload |
 
 Se `triage_json_retry` è alto → problema **sintassi JSON** (prompt o self-correction).
@@ -99,5 +100,6 @@ Dopo l’aggiunta, il benchmark con ticket budget 12k€ / tono aggressivo dovre
 - [Lezione 15 — Multi-agent](LEZIONE_15_MULTI_AGENT_COORDINATION.md) — topologie e Blackboard
 - [Lezione 16 — CrewAI/AutoGen](LEZIONE_16_CREW_AUTOGEN.md) — eventi `crew_triage_complete`, `autogen_triage_complete`
 - [Lezione 17 — Performance MAS](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) — pruning, cache, benchmark multi-agent
+- [Lezione 18 — Sicurezza MAS](LEZIONE_18_MULTI_AGENT_SECURITY.md) — guardrail, hand-off, tool gate
 - [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md)
 - [LEZIONE_10B_CHROMADB.md](LEZIONE_10B_CHROMADB.md)

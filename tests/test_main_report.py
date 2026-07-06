@@ -43,15 +43,20 @@ def test_l15_run_populates_report():
 
 
 @patch("main.open_html_in_browser", return_value=True)
-def test_write_report_opens_browser(mock_open, tmp_path, monkeypatch):
+def test_write_report_opens_browser_and_writes_json(mock_open, tmp_path, monkeypatch):
     monkeypatch.setattr(
         "analytics.week12_report.WEEK12_REPORT_PATH",
         tmp_path / "week12_demo_report.html",
+    )
+    monkeypatch.setattr(
+        "analytics.week12_report.WEEK12_REPORT_JSON_PATH",
+        tmp_path / "week12_demo_report.json",
     )
     report = Week12ReportBuilder(root_scenario="l15")
     report.set_l15(ticket="t", topologies=["sequential"], agents=[], handoff={})
     path = _write_report(report, open_browser=True)
     assert path.exists()
+    assert (tmp_path / "week12_demo_report.json").exists()
     mock_open.assert_called_once_with(path)
 
 

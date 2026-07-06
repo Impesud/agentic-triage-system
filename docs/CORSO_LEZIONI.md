@@ -16,6 +16,7 @@ Ogni branch contiene il codice **cumulativo** fino alla lezione indicata; le lez
 | [`lesson-15-multi-agent-topologies`](.) | **Lezione 15** — Multi-agent e topologie | `git checkout lesson-15-multi-agent-topologies` | ~76 |
 | [`lesson-16-crew-autogen-orchestration`](.) | **Lezione 16** — CrewAI & AutoGen | `git checkout lesson-16-crew-autogen-orchestration` | ~83 |
 | [`lesson-17-multi-agent-performance`](.) | **Lezione 17** — Performance MAS | `git checkout lesson-17-multi-agent-performance` | ~106 |
+| [`lesson-18-multi-agent-security`](.) | **Lezione 18** — Sicurezza MAS | `git checkout lesson-18-multi-agent-security` | ~142 |
 
 ```mermaid
 gitGraph
@@ -44,6 +45,9 @@ gitGraph
   branch lesson-17-multi-agent-performance
   checkout lesson-17-multi-agent-performance
   commit id: "L17-performance"
+  branch lesson-18-multi-agent-security
+  checkout lesson-18-multi-agent-security
+  commit id: "L18-security"
 ```
 
 **Settimana 8 (lezioni 11–12):** resilienza, error recovery, benchmarking — vedi [LEZIONE_11_RESILIENZA.md](LEZIONE_11_RESILIENZA.md) e [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md).
@@ -51,6 +55,8 @@ gitGraph
 **Settimana 9 (lezioni 13–14):** ReAct, SQLite, planning multi-step — vedi [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) e [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md).
 
 **Settimana 12 (lezioni 15–17):** modelli multi-agente, orchestrazione e performance — manuale demo live: **[SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md)**; teoria: [LEZIONE_15](LEZIONE_15_MULTI_AGENT_COORDINATION.md), [LEZIONE_16](LEZIONE_16_CREW_AUTOGEN.md), [LEZIONE_17](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md).
+
+**Settimana 13 (lezione 18):** sicurezza MAS — guardrail, hand-off, tool gate — manuale demo live: **[SETTIMANA_13_DEMO_LIVE.md](SETTIMANA_13_DEMO_LIVE.md)**; teoria: [LEZIONE_18](LEZIONE_18_MULTI_AGENT_SECURITY.md).
 
 ---
 
@@ -70,6 +76,7 @@ gitGraph
 | **15** | Multi-agent, topologie, hand-off Blackboard | `orchestration/`, `SharedHandoffContext` | [LEZIONE_15_MULTI_AGENT_COORDINATION.md](LEZIONE_15_MULTI_AGENT_COORDINATION.md) |
 | **16** | CrewAI sequenziale + AutoGen GroupChat | `multi_agent_triage`, `crew_pipeline`, `autogen_team` | [LEZIONE_16_CREW_AUTOGEN.md](LEZIONE_16_CREW_AUTOGEN.md) |
 | **17** | Pruning, cache pipeline, benchmark MAS | `message_pruning`, `pipeline_cache`, `benchmark_multi_agent` | [LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) |
+| **18** | Guardrail input, hand-off sanitizer, tool gate | `input_guardrail`, `handoff_sanitizer`, `tool_policy_gate`, `security_alerts` | [LEZIONE_18_MULTI_AGENT_SECURITY.md](LEZIONE_18_MULTI_AGENT_SECURITY.md) |
 
 ---
 
@@ -84,7 +91,9 @@ gitGraph
 | 16b — AutoGen GroupChat | `PYTHONPATH=src python3 src/main.py --scenario l16b` |
 | 17a — Pruning before/after | `PYTHONPATH=src python3 src/main.py --scenario l17a` |
 | 17b — Benchmark latenza MAS | `PYTHONPATH=src python3 src/main.py --scenario l17b` |
-| Settimana 12 — tutte le demo | `PYTHONPATH=src python3 src/main.py --scenario all` |
+| 18a — Input Guardrail | `PYTHONPATH=src python3 src/main.py --scenario l18a` |
+| 18b — Hand-off + tool gate | `PYTHONPATH=src python3 src/main.py --scenario l18b` |
+| Settimana 12–13 — tutte le demo | `PYTHONPATH=src python3 src/main.py --scenario all` |
 | Report HTML (auto a fine run) | `logs/week12_demo_report.html` |
 | 12 — benchmark monolitico | `PYTHONPATH=src python3 src/benchmark.py` |
 | 17 — benchmark multi-agent | `PYTHONPATH=src python3 src/benchmark_multi_agent.py` |
@@ -106,6 +115,7 @@ gitGraph
 | **Settimana 8** | Resilienza, error recovery, benchmarking | `lesson-11-*` → `lesson-12-*` |
 | **Settimana 9** | ReAct, SQLite, planning multi-step | `lesson-13-*` → `lesson-14-*` |
 | **Settimana 12** | Multi-agent, orchestrazione, performance MAS | `lesson-15-*` → `lesson-17-*` |
+| **Settimana 13** | Sicurezza MAS: guardrail, hand-off, tool gate | `lesson-18-*` |
 
 ---
 
@@ -123,7 +133,9 @@ gitGraph
 | [LEZIONE_15_MULTI_AGENT_COORDINATION.md](LEZIONE_15_MULTI_AGENT_COORDINATION.md) | Topologie, Role/Goal/Backstory, Blackboard |
 | [LEZIONE_16_CREW_AUTOGEN.md](LEZIONE_16_CREW_AUTOGEN.md) | CrewAI, AutoGen, multi_agent_triage |
 | [LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) | Pruning, cache pipeline, benchmark MAS |
+| [LEZIONE_18_MULTI_AGENT_SECURITY.md](LEZIONE_18_MULTI_AGENT_SECURITY.md) | Guardrail, hand-off sanitizer, tool gate |
 | [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md) | **Manuale operativo demo live L15–L17** |
+| [SETTIMANA_13_DEMO_LIVE.md](SETTIMANA_13_DEMO_LIVE.md) | **Manuale operativo demo live L18** |
 
 ---
 
@@ -188,7 +200,7 @@ Vedi [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md) per la checklist com
 | Hand-off Blackboard | `build_resolver_task_description`, test handoff |
 | JSON finale valido | `finalize_multi_agent_output`, `parse_llm_output` |
 | Dipendenze opzionali | `pip install -e ".[multiagent]"` |
-| Retrocompatibilità | `pytest tests/ -q` (~129), benchmark L12 |
+| Retrocompatibilità | `pytest tests/ -q` (~106), benchmark L12 |
 
 
 ## Per docenti — review Settimana 12 (L17)
@@ -197,13 +209,31 @@ Vedi [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md) per la checklist com
 |----------|-----------------|
 | Message pruning | `orchestration/message_pruning.py`, `test_message_pruning.py` |
 | Cache pipeline | `pipeline_cache.py`, `test_pipeline_cache.py` |
-| CLI solo L15–L17 | `main.WEEK12_SCENARIOS`, `test_cli_scenarios_week12_only` |
+| CLI L15–L18 | `main.WEEK12_SCENARIOS`, `test_cli_scenarios_week12_only` |
 | Demo l17a/l17b | `run_l17a_pruning_demo`, `benchmark_multi_agent.py` |
 | KPI L17 in log | `analytics/log_kpi.performance_metrics` |
-| Retrocompatibilità | `pytest tests/ -q` (~129), benchmark L12 |
+| Retrocompatibilità | `pytest tests/ -q` (~106), benchmark L12 |
 
 Push suggerito:
 
 ```bash
 git push -u origin lesson-17-multi-agent-performance
+```
+
+## Per docenti — review Settimana 13 (L18)
+
+| Criterio | Dove verificare |
+|----------|-----------------|
+| Input guardrail | `orchestration/input_guardrail.py`, `test_input_guardrail.py` |
+| Allerte SQLite | `security_store.py`, tabella `security_alerts`, `test_security_store.py` |
+| Hand-off sanitizer | `handoff_sanitizer.py`, `test_handoff_sanitizer.py` |
+| Tool policy gate | `tool_policy_gate.py`, `test_tool_policy_gate.py` |
+| Demo l18a/l18b (no LLM) | `main.run_l18a_guardrail_demo`, `run_l18b_handoff_tool_gate_demo` |
+| KPI L18 in log | `analytics/log_kpi.security_metrics` |
+| Retrocompatibilità | `pytest tests/ -q` (~145), benchmark L12 |
+
+Push suggerito:
+
+```bash
+git push -u origin lesson-18-multi-agent-security
 ```

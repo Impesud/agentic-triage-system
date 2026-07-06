@@ -3,7 +3,7 @@
 **Progetto finale** — complementa [CORSO_LEZIONI.md](CORSO_LEZIONI.md) e le lezioni 9–14.
 
 **Branch di riferimento:** `lesson-14-planning-loops` (progetto SOC completo: `progetto-2`)
-> **Nota (branch `lesson-17-multi-agent-performance`):** le [Lezioni 15–17](LEZIONE_15_MULTI_AGENT_COORDINATION.md) coprono multi-agente, orchestrazione CrewAI/AutoGen e ottimizzazione performance. Il progettino SOC resta ancorato alle competenze **L9–L14**; la squadra Analyst/Resolver (L16–L17) è il percorso avanzato opzionale (`progetto-2`).
+> **Nota (branch `lesson-18-multi-agent-security`):** le [Lezioni 15–18](LEZIONE_15_MULTI_AGENT_COORDINATION.md) coprono multi-agente, orchestrazione CrewAI/AutoGen, ottimizzazione performance e **sicurezza MAS** ([L18](LEZIONE_18_MULTI_AGENT_SECURITY.md)). Il progettino SOC resta ancorato alle competenze **L9–L14**; la squadra Analyst/Resolver (L16–L18) è il percorso avanzato opzionale (`progetto-2`).
 
 
 **Motore obbligatorio:** `react_triage` (ReAct multi-step, max 4 step, self-correction in-loop)

@@ -2,7 +2,9 @@ from main import L16_TICKET, WEEK12_SCENARIOS, seed_marco_angry_history
 
 
 def test_cli_scenarios_week12_only():
-    assert WEEK12_SCENARIOS == ("l15", "l16a", "l16b", "l17a", "l17b", "all")
+    assert WEEK12_SCENARIOS == (
+        "l15", "l16a", "l16b", "l17a", "l17b", "l18a", "l18b", "all"
+    )
 
 
 def test_l16_ticket_contains_marco():

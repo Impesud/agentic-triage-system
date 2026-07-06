@@ -70,6 +70,10 @@ def init_db(db_path: str | None = None) -> None:
         )
         conn.commit()
 
+    from orchestration.security_store import init_security_tables
+
+    init_security_tables(path)
+
 
 def log_triage_to_sqlite(ticket_data: dict[str, Any], db_path: str | None = None) -> None:
     """Scrive un record di triage in SQLite (Long-Term Memory indicizzata)."""

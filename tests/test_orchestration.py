@@ -40,7 +40,7 @@ def test_analyst_resolver_tool_partition():
     resolver_tools = set(IMPESUD_AGENT_TEAM[1].tools)
     assert not analyst_tools & resolver_tools
     assert analyst_tools == {"search_long_term_history"}
-    assert resolver_tools == {"search_policy", "notify_manager"}
+    assert resolver_tools == {"search_policy", "notify_manager", "isolate_account"}
 
 
 def test_simulate_handoff_marco_rossi():

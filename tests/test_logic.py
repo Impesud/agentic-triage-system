@@ -7,6 +7,7 @@ from logic import (
     MAX_TRIAGE_JSON_RETRIES,
     ReactRunMetrics,
     TriageRunMetrics,
+    _append_fallback_tools,
     _build_context_text,
     _detects_angry_sentiment,
     _emergency_triage_result,
@@ -167,10 +168,16 @@ def test_vip_escalation_fallback_when_llm_skips_tool(mock_get_client):
         "vorremmo parlare urgentemente con un responsabile commerciale."
     )
     mock_notify = MagicMock(return_value="ok")
-    with patch.dict("logic.TOOL_MAP", {"notify_manager": mock_notify}, clear=False):
+    mock_policy = MagicMock(return_value="Policy: budget VIP escalation")
+    with patch.dict(
+        "logic.TOOL_MAP",
+        {"notify_manager": mock_notify, "search_policy": mock_policy},
+        clear=False,
+    ):
         result = triage_message(vip_input, manuale="")
 
     assert result.categoria == "SALES"
+    mock_policy.assert_called_once()
     mock_notify.assert_called_once()
     assert mock_notify.call_args.kwargs["priority"] == 4
     assert mock_client.chat.completions.create.call_count == 2
@@ -246,9 +253,11 @@ def test_fallback_appends_tool_messages_to_conversation(mock_get_client):
     ]
 
     vip_input = "Budget approvato di 15.000€ per progetto enterprise."
+    mock_notify = MagicMock(return_value="ok")
+    mock_policy = MagicMock(return_value="Policy: VIP")
     with patch.dict(
         "logic.TOOL_MAP",
-        {"notify_manager": MagicMock(return_value="ok")},
+        {"notify_manager": mock_notify, "search_policy": mock_policy},
         clear=False,
     ):
         triage_message(vip_input, manuale="")
@@ -257,6 +266,19 @@ def test_fallback_appends_tool_messages_to_conversation(mock_get_client):
     tool_messages = [m for m in second_call_messages if isinstance(m, dict) and m.get("role") == "tool"]
     assert any(m.get("name") == "notify_manager" for m in tool_messages)
     assert any(m.get("tool_call_id") == "fallback-nm-1" for m in tool_messages)
+
+
+def test_fallback_notify_denied_without_policy_evidence():
+    conversation: list[dict] = []
+    tools_called: set[str] = set()
+    pending = [
+        ("notify_manager", {"message": "Escalation critica", "priority": 4}, "fallback-nm-1"),
+    ]
+    _append_fallback_tools(conversation, tools_called, pending)
+    tool_messages = [m for m in conversation if m.get("role") == "tool"]
+    assert len(tool_messages) == 1
+    assert "[SECURITY DENIED]" in tool_messages[0]["content"]
+    assert "notify_manager" in tools_called
 
 
 def test_emergency_triage_result_is_valid_pydantic():

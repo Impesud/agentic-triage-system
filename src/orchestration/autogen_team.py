@@ -1,4 +1,4 @@
-"""Team AutoGen conversazionale Analyst + Resolver (Lezione 16–17)."""
+"""Team AutoGen conversazionale Analyst + Resolver (Lezione 16–18)."""
 
 from __future__ import annotations
 
@@ -13,8 +13,11 @@ from client import MODEL
 from orchestration.crew_pipeline import estimate_crew_pipeline_tokens
 from orchestration.framework_env import ensure_framework_env
 from orchestration.handoff_enrichment import enrich_handoff_from_cache
+from orchestration.handoff_sanitizer import enforce_handoff_safety
 from orchestration.models import CommunicationTopology, MultiAgentRunMetrics
 from orchestration.pipeline_cache import PipelineContextCache
+from orchestration.security_pipeline import guard_ticket_input
+from orchestration.tool_policy_gate import ToolPolicyContext
 from orchestration.prompt_compression import compact_manuale_for_resolver
 from orchestration.result_parser import extract_json_candidate_from_messages, finalize_multi_agent_output
 from orchestration.tool_adapters import make_autogen_tools
@@ -65,6 +68,7 @@ async def _run_autogen_team(
     manuale: str,
     *,
     enable_optimizations: bool,
+    enable_security_guard: bool,
 ) -> tuple[str, MultiAgentRunMetrics]:
     api_key = ensure_framework_env()
     cache = PipelineContextCache() if enable_optimizations else None
@@ -91,11 +95,14 @@ async def _run_autogen_team(
     enriched_handoff = (
         enrich_handoff_from_cache(seed_handoff, cache) if cache else seed_handoff
     )
+    if enable_security_guard:
+        enriched_handoff = enforce_handoff_safety(enriched_handoff)
     resolver_handoff_json = enriched_handoff.model_dump_json()
     handoff_enriched = bool(
         enriched_handoff.policy_excerpt or enriched_handoff.ltm_digest
     )
     compact_manuale = enable_optimizations and handoff_enriched
+    policy_ctx = ToolPolicyContext(cache=cache, handoff=enriched_handoff)
 
     if handoff_enriched:
         log_event(
@@ -117,7 +124,7 @@ async def _run_autogen_team(
             manuale, resolver_handoff_json, compact_manuale=compact_manuale
         ),
         model_client=model_client,
-        tools=make_autogen_tools(SECURITY_RESOLVER.tools, cache=cache, compact_output=compact),
+        tools=make_autogen_tools(SECURITY_RESOLVER.tools, cache=cache, compact_output=compact, policy_ctx=policy_ctx),
     )
 
     termination = MaxMessageTermination(8) | TextMentionTermination("TRIAGE_COMPLETE")
@@ -160,11 +167,19 @@ def autogen_triage(
     *,
     enable_optimizations: bool = True,
     return_metrics: bool = False,
+    enable_security_guard: bool = True,
 ) -> TriageResult | tuple[TriageResult, MultiAgentRunMetrics]:
     """Orchestrazione AutoGen: Analyst solo → arricchimento cache → GroupChat."""
+    if enable_security_guard:
+        guard_ticket_input(user_input)
     print("\n🎬 [AutoGen] Avvio pipeline Analyst → Resolver...", flush=True)
     raw, metrics = asyncio.run(
-        _run_autogen_team(user_input, manuale, enable_optimizations=enable_optimizations)
+        _run_autogen_team(
+            user_input,
+            manuale,
+            enable_optimizations=enable_optimizations,
+            enable_security_guard=enable_security_guard,
+        )
     )
 
     log_event(

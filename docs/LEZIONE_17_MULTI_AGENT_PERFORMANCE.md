@@ -139,10 +139,18 @@ Quando il Blackboard è arricchito post-Analyst (`policy_excerpt`, `ltm_digest`)
 
 - [LEZIONE_15_MULTI_AGENT_COORDINATION.md](LEZIONE_15_MULTI_AGENT_COORDINATION.md) — Blackboard
 - [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md) — ReAct / STM
-- [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md) — KPI log
+- [LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) — KPI log
+
+## Prossimo passo (Lezione 18)
+
+[LEZIONE_18_MULTI_AGENT_SECURITY.md](LEZIONE_18_MULTI_AGENT_SECURITY.md) — branch `lesson-18-multi-agent-security`.
 
 ## Documentazione correlata
 
 - [CORSO_LEZIONI.md](CORSO_LEZIONI.md) — mappa branch e comandi
 - [README.md](../README.md) — architettura cumulativa
 - [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) — eventi audit L17
+
+## Nota branch L18
+
+Su `lesson-18-multi-agent-security`, `main.py` include anche `l18a`/`l18b`. Vedi [SETTIMANA_13_DEMO_LIVE.md](SETTIMANA_13_DEMO_LIVE.md) e [LEZIONE_18_MULTI_AGENT_SECURITY.md](LEZIONE_18_MULTI_AGENT_SECURITY.md).

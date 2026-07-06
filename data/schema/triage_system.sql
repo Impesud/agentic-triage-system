@@ -15,3 +15,17 @@ CREATE TABLE IF NOT EXISTS tickets (
 );
 
 CREATE INDEX IF NOT EXISTS idx_cliente ON tickets(cliente_nome);
+
+-- Lezione 18: allerte guardrail sicurezza
+CREATE TABLE IF NOT EXISTS security_alerts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    alert_type TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    blocked_stage TEXT NOT NULL,
+    matched_pattern TEXT,
+    input_excerpt TEXT NOT NULL,
+    payload_json TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_security_alerts_type ON security_alerts(alert_type);

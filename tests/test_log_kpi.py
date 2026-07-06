@@ -57,3 +57,17 @@ def test_performance_metrics_l17():
     assert metrics["message_pruning_applied"] == 1
     assert metrics["embedding_cache_hit"] == 1
     assert metrics["handoff_enriched_from_cache"] == 1
+
+
+def test_security_metrics_l18():
+    from analytics.log_kpi import security_metrics
+
+    events = [
+        {"event_type": "security_input_blocked", "payload": {}},
+        {"event_type": "security_handoff_blocked", "payload": {}},
+        {"event_type": "security_tool_denied", "payload": {}},
+    ]
+    metrics = security_metrics(events)
+    assert metrics["security_input_blocked"] == 1
+    assert metrics["security_handoff_blocked"] == 1
+    assert metrics["security_tool_denied"] == 1

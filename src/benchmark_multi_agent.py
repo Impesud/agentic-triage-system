@@ -28,6 +28,9 @@ class PipelineRunResult:
     cache_policy_hits: int | None = None
     cache_ltm_hits: int | None = None
     categoria: str | None = None
+    priorita: str | None = None
+    riassunto_breve: str | None = None
+    azione_eseguita: str | None = None
 
 
 def _load_manuale() -> str:
@@ -69,6 +72,9 @@ def _run_labeled(name: str, fn) -> PipelineRunResult:
         cache_policy_hits=policy_hits,
         cache_ltm_hits=ltm_hits,
         categoria=getattr(result, "categoria", None),
+        priorita=getattr(result, "priorita", None),
+        riassunto_breve=getattr(result, "riassunto_breve", None),
+        azione_eseguita=getattr(result, "azione_eseguita", None),
     )
     log_event(
         "pipeline_latency_report",

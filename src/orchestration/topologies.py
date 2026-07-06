@@ -91,7 +91,7 @@ SECURITY_RESOLVER = AgentSpec(
         "Specialista compliance e policy aziendali. Riceve il contesto "
         "dall'Analyst tramite SharedHandoffContext e conclude il triage."
     ),
-    tools=("search_policy", "notify_manager"),
+    tools=("search_policy", "notify_manager", "isolate_account"),
 )
 
 IMPESUD_AGENT_TEAM: tuple[AgentSpec, ...] = (TRIAGE_ANALYST, SECURITY_RESOLVER)

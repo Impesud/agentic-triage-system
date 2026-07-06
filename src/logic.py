@@ -2,7 +2,8 @@
 Nucleo del loop agentico (logic.py) — Lezione 9: memoria; Lezione 10: RAG;
 Lezione 11: self-correction su soft error e emergency fallback;
 Lezione 13: loop ReAct multi-step; Lezione 14: max_steps, STM, self-correction in-loop;
-Lezione 16: orchestrazione multi-agent; Lezione 17: pruning e cache pipeline.
+Lezione 16: orchestrazione multi-agent; Lezione 17: pruning e cache pipeline;
+Lezione 18: input guardrail e tool policy gate.
 """
 
 from __future__ import annotations
@@ -25,6 +26,12 @@ from orchestration.message_pruning import (
     estimate_conversation_tokens,
 )
 from orchestration.pipeline_cache import PipelineContextCache
+from orchestration.security_pipeline import guard_ticket_input
+from orchestration.tool_policy_gate import (
+    ToolPolicyContext,
+    invoke_isolate_account,
+    invoke_notify_manager,
+)
 from tools.registry import TOOL_MAP, TOOLS_DEFINITION
 
 MAX_TRIAGE_JSON_RETRIES = 3
@@ -193,6 +200,8 @@ def _append_fallback_tools(
     pending: list[tuple[str, dict[str, Any], str]],
     *,
     first_assistant: Any | None = None,
+    cache: PipelineContextCache | None = None,
+    compact_output: bool = False,
 ) -> bool:
     if not pending:
         return False
@@ -218,9 +227,16 @@ def _append_fallback_tools(
         }
     )
 
+    fallback_cache = cache if cache is not None else PipelineContextCache()
+
     for name, args, tool_id in pending:
         tools_called.add(name)
-        tool_output = TOOL_MAP[name](**args)
+        tool_output = _react_tool_output(
+            name,
+            args,
+            cache=fallback_cache,
+            compact_output=compact_output,
+        )
         conversation.append(
             {
                 "role": "tool",
@@ -238,6 +254,8 @@ def _apply_policy_fallback(
     tools_called: set[str],
     *,
     first_assistant: Any | None = None,
+    cache: PipelineContextCache | None = None,
+    compact_output: bool = False,
 ) -> bool:
     if not _policy_fallback_needed(context_text, tools_called):
         return False
@@ -254,6 +272,16 @@ def _apply_policy_fallback(
                 "fallback-sp-1",
             )
         )
+
+    if needs_vip and "search_policy" not in tools_called:
+        if not any(item[0] == "search_policy" for item in pending):
+            pending.append(
+                (
+                    "search_policy",
+                    {"query": "budget VIP escalation soglia 10000 euro"},
+                    "fallback-sp-vip",
+                )
+            )
 
     if "notify_manager" not in tools_called:
         if needs_vip:
@@ -276,7 +304,14 @@ def _apply_policy_fallback(
     if not pending:
         return False
 
-    _append_fallback_tools(conversation, tools_called, pending, first_assistant=first_assistant)
+    _append_fallback_tools(
+        conversation,
+        tools_called,
+        pending,
+        first_assistant=first_assistant,
+        cache=cache,
+        compact_output=compact_output,
+    )
     print(f"[AGENTE] {reason}", flush=True)
     return True
 
@@ -287,6 +322,8 @@ def _apply_long_term_fallback(
     tools_called: set[str],
     *,
     first_assistant: Any | None = None,
+    cache: PipelineContextCache | None = None,
+    compact_output: bool = False,
 ) -> bool:
     cliente = extract_cliente_nome(context_text)
     if not cliente:
@@ -304,6 +341,16 @@ def _apply_long_term_fallback(
         )
 
     if _long_term_fallback_needed(context_text, tools_called) and "notify_manager" not in tools_called:
+        if "search_policy" not in tools_called and not any(
+            item[0] == "search_policy" for item in pending
+        ):
+            pending.append(
+                (
+                    "search_policy",
+                    {"query": "escalation storico cliente ARRABBIATO policy"},
+                    "fallback-ltm-sp",
+                )
+            )
         pending.append(
             (
                 "notify_manager",
@@ -322,7 +369,12 @@ def _apply_long_term_fallback(
         return False
 
     ran = _append_fallback_tools(
-        conversation, tools_called, pending, first_assistant=first_assistant
+        conversation,
+        tools_called,
+        pending,
+        first_assistant=first_assistant,
+        cache=cache,
+        compact_output=compact_output,
     )
     if ran:
         print(
@@ -338,13 +390,25 @@ def _apply_all_fallbacks(
     tools_called: set[str],
     *,
     first_assistant: Any | None = None,
+    cache: PipelineContextCache | None = None,
+    compact_output: bool = False,
 ) -> bool:
     ran_policy = _apply_policy_fallback(
-        context_text, conversation, tools_called, first_assistant=first_assistant
+        context_text,
+        conversation,
+        tools_called,
+        first_assistant=first_assistant,
+        cache=cache,
+        compact_output=compact_output,
     )
     first_assistant = None
     ran_ltm = _apply_long_term_fallback(
-        context_text, conversation, tools_called, first_assistant=first_assistant
+        context_text,
+        conversation,
+        tools_called,
+        first_assistant=first_assistant,
+        cache=cache,
+        compact_output=compact_output,
     )
     return ran_policy or ran_ltm
 
@@ -492,7 +556,13 @@ def _run_agent_loop(
             cache=cache,
             compact_output=compact_output,
         )
-        _apply_all_fallbacks(context_text, conversation, tools_called)
+        _apply_all_fallbacks(
+            context_text,
+            conversation,
+            tools_called,
+            cache=cache,
+            compact_output=compact_output,
+        )
         return client, conversation, None
 
     fallback_ran = _apply_all_fallbacks(
@@ -500,6 +570,8 @@ def _run_agent_loop(
         conversation,
         tools_called,
         first_assistant=response_message,
+        cache=cache,
+        compact_output=compact_output,
     )
     if fallback_ran:
         return client, conversation, None
@@ -521,7 +593,10 @@ def triage_message(
     max_json_retries: int = MAX_TRIAGE_JSON_RETRIES,
     enable_optimizations: bool = False,
     return_metrics: bool = False,
+    enable_security_guard: bool = True,
 ) -> TriageResult | tuple[TriageResult, TriageStats] | tuple[TriageResult, TriageRunMetrics]:
+    if enable_security_guard:
+        guard_ticket_input(user_input)
     context_text = _build_context_text(user_input, history)
     messages = build_chat_messages(user_input, manuale, history=history)
     cache = PipelineContextCache() if enable_optimizations else None
@@ -606,8 +681,17 @@ def _react_tool_output(
     *,
     cache: PipelineContextCache | None,
     compact_output: bool,
+    policy_ctx: ToolPolicyContext | None = None,
 ) -> str:
-    """Invoca TOOL_MAP con cache pipeline e compattazione opzionale (L17)."""
+    """Invoca TOOL_MAP con cache pipeline, gate L18 e compattazione opzionale."""
+    ctx = policy_ctx or ToolPolicyContext(cache=cache)
+    if ctx.cache is None and cache is not None:
+        ctx = ToolPolicyContext(
+            cache=cache,
+            handoff=ctx.handoff,
+            pipeline_categoria=ctx.pipeline_categoria,
+        )
+
     if function_name == "search_policy":
         query = str(function_args.get("query", ""))
 
@@ -630,6 +714,22 @@ def _react_tool_output(
         if cache is None:
             return call(cliente, hours)
         return cache.get_or_call_ltm(cliente, hours, call)
+
+    if function_name == "notify_manager":
+        return invoke_notify_manager(
+            str(function_args.get("message", "")),
+            int(function_args.get("priority", 1)),
+            lambda **kw: TOOL_MAP["notify_manager"](**kw),
+            ctx,
+        )
+
+    if function_name == "isolate_account":
+        return invoke_isolate_account(
+            str(function_args.get("account_name", "")),
+            str(function_args.get("reason", "")),
+            lambda **kw: TOOL_MAP["isolate_account"](**kw),
+            ctx,
+        )
 
     return TOOL_MAP[function_name](**function_args)
 
@@ -658,12 +758,15 @@ def react_triage(
     enable_cache: bool | None = None,
     enable_compact_output: bool | None = None,
     return_metrics: bool = False,
+    enable_security_guard: bool = True,
 ) -> TriageResult | tuple[TriageResult, ReactRunMetrics]:
     """
     Motore di Triage Agentico ReAct Multi-Step (Lezioni 13–14).
     Esegue cicli iterativi Thought -> Action -> Observation fino a convergenza JSON.
     Con session_id riusa la conversazione in _SHORT_TERM_STORE (Short-Term Memory).
     """
+    if enable_security_guard:
+        guard_ticket_input(user_input)
     client = get_client()
 
     if session_id and session_id in _SHORT_TERM_STORE:
@@ -814,11 +917,14 @@ def multi_agent_triage(
     orchestrator: Literal["crewai", "autogen"] = "crewai",
     enable_optimizations: bool = True,
     return_metrics: bool = False,
+    enable_security_guard: bool = True,
 ):
     """
-    Facade orchestrazione multi-agent (Lezione 16–17).
+    Facade orchestrazione multi-agent (Lezione 16–18).
     CrewAI = pipeline sequenziale; AutoGen = GroupChat collaborativo.
     """
+    if enable_security_guard:
+        guard_ticket_input(user_input)
     try:
         if orchestrator == "crewai":
             from orchestration.crew_pipeline import crew_triage
@@ -828,6 +934,7 @@ def multi_agent_triage(
                 manuale,
                 enable_optimizations=enable_optimizations,
                 return_metrics=return_metrics,
+                enable_security_guard=False,
             )
         if orchestrator == "autogen":
             from orchestration.autogen_team import autogen_triage
@@ -837,6 +944,7 @@ def multi_agent_triage(
                 manuale,
                 enable_optimizations=enable_optimizations,
                 return_metrics=return_metrics,
+                enable_security_guard=False,
             )
     except ImportError as exc:
         raise ImportError(

@@ -24,7 +24,7 @@ def require_api_key_for_scenario(scenario: str) -> bool:
     print(
         "\n[SKIP] OPENAI_API_KEY assente in .env — "
         f"scenario '{scenario}' richiede API live. "
-        "Esegui solo l15 o configura .env.\n"
+        "Esegui solo l15, l18a, l18b o configura .env.\n"
     )
     return False
 

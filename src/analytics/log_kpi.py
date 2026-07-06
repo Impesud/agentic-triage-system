@@ -64,6 +64,18 @@ def self_correction_metrics(events: list[dict[str, Any]]) -> dict[str, int]:
 
 
 
+def security_metrics(events: list[dict[str, Any]]) -> dict[str, int]:
+    """Metriche Lezione 18: guardrail input, hand-off, tool gate."""
+    types = event_type_counts(events)
+    return {
+        "security_input_blocked": types.get("security_input_blocked", 0),
+        "security_handoff_blocked": types.get("security_handoff_blocked", 0),
+        "security_tool_denied": types.get("security_tool_denied", 0),
+        "handoff_field_redacted": types.get("handoff_field_redacted", 0),
+        "isolate_account_stub": types.get("isolate_account_stub", 0),
+    }
+
+
 def performance_metrics(events: list[dict[str, Any]]) -> dict[str, int]:
     """Metriche Lezione 17: pruning, cache embedding, latenza pipeline."""
     types = event_type_counts(events)
@@ -84,6 +96,7 @@ def format_kpi_report(events: list[dict[str, Any]]) -> str:
     tools = tool_usage_rate(events)
     correction = self_correction_metrics(events)
     performance = performance_metrics(events)
+    security = security_metrics(events)
     lines = [
         "=== KPI DA activity.jsonl ===",
         f"Eventi totali: {len(events)}",
@@ -114,6 +127,12 @@ def format_kpi_report(events: list[dict[str, Any]]) -> str:
             f"  autogen_triage_complete: {performance['autogen_triage_complete']}",
             f"  multi_agent_fallback: {performance['multi_agent_fallback']}",
             f"  handoff_enriched_from_cache: {performance['handoff_enriched_from_cache']}",
+            "",
+            "Sicurezza multi-agent (L18):",
+            f"  security_input_blocked: {security['security_input_blocked']}",
+            f"  security_handoff_blocked: {security['security_handoff_blocked']}",
+            f"  security_tool_denied: {security['security_tool_denied']}",
+            f"  handoff_field_redacted: {security['handoff_field_redacted']}",
             "==================================",
         ]
     )

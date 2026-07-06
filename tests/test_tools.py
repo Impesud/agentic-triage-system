@@ -64,6 +64,7 @@ def test_notify_manager_and_registry():
         "notify_manager",
         "search_policy",
         "search_long_term_history",
+        "isolate_account",
     }
     assert "successo" in notify_manager("VIP 15k", 4).lower()
 

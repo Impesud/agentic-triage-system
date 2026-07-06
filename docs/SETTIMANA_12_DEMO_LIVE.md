@@ -1,6 +1,8 @@
 # Settimana 12 — Guida alla demo live (Lezioni 15, 16 e 17)
 
-Manuale operativo per docenti e studenti: **come eseguire tutte le demo** del branch `lesson-17-multi-agent-performance` dalla CLI.
+Manuale operativo per docenti e studenti: **come eseguire le demo L15–L17** dal branch corrente.
+
+> **Branch `lesson-18-multi-agent-security`:** include anche la **Lezione 18** (`l18a`, `l18b`). Vedi [SETTIMANA_13_DEMO_LIVE.md](SETTIMANA_13_DEMO_LIVE.md). Con `--scenario all` vengono eseguiti **sempre** L18a/L18b anche senza API key.
 
 Guide teoriche per singola lezione:
 
@@ -14,7 +16,7 @@ Indice corso: [CORSO_LEZIONI.md](CORSO_LEZIONI.md).
 
 ## Cosa fa `main.py` su questo branch
 
-Su `lesson-17-multi-agent-performance`, [`src/main.py`](../src/main.py) espone **solo** la Settimana 12:
+Su `lesson-17-multi-agent-performance`, [`src/main.py`](../src/main.py) espone la Settimana 12:
 
 | Scenario | Lezione | Funzione | API OpenAI |
 |----------|---------|----------|------------|
@@ -23,7 +25,9 @@ Su `lesson-17-multi-agent-performance`, [`src/main.py`](../src/main.py) espone *
 | `l16b` | 16 | AutoGen GroupChat | **Sì** |
 | `l17a` | 17 | ReAct: baseline vs compact/cache vs full opt | **Sì** |
 | `l17b` | 17 | Benchmark latenza multi-pipeline | **Sì** |
-| `all` | 15→17 | Sequenza completa in ordine didattico | misto |
+| `all` | 15→17 | Sequenza L15–L17 (L16/L17 saltati senza API key) | misto |
+
+Su **`lesson-18-multi-agent-security`** aggiungere: `l18a`, `l18b` (no LLM) e `all` esteso a L15→L18.
 
 **Demo storiche** (M1–M3, `l10`–`l14`, `process_ticket`): disponibili sui branch `main` … `lesson-14-*`, non su questo branch.
 
@@ -46,7 +50,7 @@ ls -la data/triage_system.db
 ```
 
 3. **Manuale IT** — presente in `data/manuale_it.txt` (caricato da `load_it_manual()`).
-4. **Verifica test** (opzionale): `PYTHONPATH=src pytest tests/ -q` (~129 test).
+4. **Verifica test** (opzionale): `PYTHONPATH=src pytest tests/ -q` (~106 su L17, ~145 su L18).
 
 ---
 
@@ -77,10 +81,21 @@ PYTHONPATH=src python3 src/benchmark_multi_agent.py
 PYTHONPATH=src python3 -m analytics.log_kpi
 ```
 
-Al termine di ogni esecuzione viene scritto **`logs/week12_demo_report.html`** con:
+Al termine di ogni esecuzione vengono scritti:
 
-- **Riepilogo** di tutti e 5 gli scenari (`l15`, `l16a`, `l16b`, `l17a`, `l17b`) e stato (Eseguito / Saltato / Non eseguito)
-- **Sezione per ogni lezione** 15, 16, 17a e 17b (anche come placeholder se non eseguita in quella run)
+| File | Ruolo |
+|------|--------|
+| **`logs/week12_demo_report.html`** | **Sintesi** per revisione post-lab: tabelle, badge, sezioni `<details>` con dati strutturati |
+| **`logs/week12_demo_report.json`** | Stessi dati del builder in JSON (diff tra run, script) |
+| **`logs/activity.jsonl`** | **Trace completo** step-by-step (eventi `pipeline_latency_report`, `security_*`, tool, ecc.) — non duplicato nell'HTML |
+
+Contenuto HTML/JSON:
+
+- **Riepilogo** di tutti gli scenari L15–L18 e stato (Eseguito / Saltato / Non eseguito)
+- **Sezione per ogni lezione** con tabella sintetica + `<details>` espandibili (ticket, `TriageResult`, metriche ReAct, guardrail)
+- Placeholder per scenari non eseguiti in quella run
+
+**Non** include: dump integrale della console né ogni riga ReAct/CrewAI — per quello usare `activity.jsonl` o rivedere l'output terminale durante la demo.
 
 Disabilitare report: `--no-report` · Disabilitare apertura browser: `--no-open`
 
@@ -110,7 +125,8 @@ Se `OPENAI_API_KEY` manca in `.env`:
 |----------|---------------|
 | `l15` | Funziona normalmente |
 | `l16a`, `l16b`, `l17a`, `l17b` | Messaggio `[SKIP]`, exit 0 |
-| `all` | Esegue `l15`, poi salta ogni blocco LLM con `[SKIP]` |
+| `l18a`, `l18b` | Funzionano **senza** API key |
+| `all` | Esegue `l15`, poi salta blocchi LLM con `[SKIP]`; su L18 esegue sempre `l18a`/`l18b` |
 
 Modulo: [`src/orchestration/api_guard.py`](../src/orchestration/api_guard.py).
 

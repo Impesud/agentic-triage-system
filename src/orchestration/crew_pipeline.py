@@ -1,4 +1,4 @@
-"""Pipeline CrewAI sequenziale Analyst → Resolver (Lezione 16–17)."""
+"""Pipeline CrewAI sequenziale Analyst → Resolver (Lezione 16–18)."""
 
 from __future__ import annotations
 
@@ -6,10 +6,13 @@ from crewai import Agent, Crew, Process, Task
 
 from orchestration.framework_env import ensure_framework_env
 from orchestration.handoff_enrichment import enrich_handoff_from_cache
+from orchestration.handoff_sanitizer import enforce_handoff_safety
 from orchestration.message_pruning import estimate_tokens
 from orchestration.models import CommunicationTopology, MultiAgentRunMetrics
 from orchestration.pipeline_cache import PipelineContextCache
 from orchestration.prompt_compression import compact_manuale_for_resolver
+from orchestration.security_pipeline import guard_ticket_input
+from orchestration.tool_policy_gate import ToolPolicyContext
 from orchestration.result_parser import finalize_multi_agent_output
 from orchestration.tool_adapters import make_crewai_tools
 from orchestration.topologies import SECURITY_RESOLVER, TRIAGE_ANALYST, simulate_analyst_handoff
@@ -59,7 +62,9 @@ def _build_resolver_agent(
     cache: PipelineContextCache | None,
     compact: bool,
     compact_manuale: bool,
+    policy_ctx: ToolPolicyContext | None = None,
 ) -> Agent:
+    ctx = policy_ctx or ToolPolicyContext(cache=cache)
     return Agent(
         role=SECURITY_RESOLVER.role,
         goal=SECURITY_RESOLVER.goal,
@@ -68,7 +73,12 @@ def _build_resolver_agent(
             resolver_handoff_json,
             compact_manuale=compact_manuale,
         ),
-        tools=make_crewai_tools(SECURITY_RESOLVER.tools, cache=cache, compact_output=compact),
+        tools=make_crewai_tools(
+            SECURITY_RESOLVER.tools,
+            cache=cache,
+            compact_output=compact,
+            policy_ctx=ctx,
+        ),
         verbose=True,
         allow_delegation=False,
     )
@@ -80,10 +90,13 @@ def crew_triage(
     *,
     enable_optimizations: bool = True,
     return_metrics: bool = False,
+    enable_security_guard: bool = True,
 ) -> TriageResult | tuple[TriageResult, MultiAgentRunMetrics]:
     """
     Orchestrazione CrewAI in due fasi: Analyst → arricchimento Blackboard → Resolver.
     """
+    if enable_security_guard:
+        guard_ticket_input(user_input)
     ensure_framework_env()
     cache = PipelineContextCache() if enable_optimizations else None
     compact = enable_optimizations
@@ -126,9 +139,12 @@ def crew_triage(
     enriched_handoff = (
         enrich_handoff_from_cache(seed_handoff, cache) if cache else seed_handoff
     )
+    if enable_security_guard:
+        enriched_handoff = enforce_handoff_safety(enriched_handoff)
     resolver_handoff_json = enriched_handoff.model_dump_json()
     handoff_enriched = _handoff_is_enriched(enriched_handoff)
     compact_manuale = enable_optimizations and handoff_enriched
+    policy_ctx = ToolPolicyContext(cache=cache, handoff=enriched_handoff)
 
     if handoff_enriched:
         log_event(
@@ -148,6 +164,7 @@ def crew_triage(
         cache=cache,
         compact=compact,
         compact_manuale=compact_manuale,
+        policy_ctx=policy_ctx,
     )
     resolver_task = Task(
         description=build_resolver_task_description(user_input, resolver_handoff_json),

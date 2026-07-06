@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Inizializza data/triage_system.db (Lezione 13). Eseguire dopo checkout su branch L13–L16."""
+"""Inizializza data/triage_system.db (Lezione 13+). Eseguire dopo checkout su branch L13–L18."""
 
 from __future__ import annotations
 
@@ -19,11 +19,29 @@ def main() -> int:
         cursor.execute(
             "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_cliente'"
         )
-        if cursor.fetchone():
-            print("[SQLite] Indice idx_cliente su tickets(cliente_nome): OK")
-        else:
+        if not cursor.fetchone():
             print("[SQLite] ATTENZIONE: indice idx_cliente non trovato", file=sys.stderr)
             return 1
+        print("[SQLite] Indice idx_cliente su tickets(cliente_nome): OK")
+
+        cursor.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='security_alerts'"
+        )
+        if not cursor.fetchone():
+            print("[SQLite] ATTENZIONE: tabella security_alerts non trovata", file=sys.stderr)
+            return 1
+        print("[SQLite] Tabella security_alerts (L18): OK")
+
+        cursor.execute(
+            "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_security_alerts_type'"
+        )
+        if not cursor.fetchone():
+            print(
+                "[SQLite] ATTENZIONE: indice idx_security_alerts_type non trovato",
+                file=sys.stderr,
+            )
+            return 1
+        print("[SQLite] Indice idx_security_alerts_type: OK")
 
     return 0
 

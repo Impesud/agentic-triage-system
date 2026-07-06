@@ -1,10 +1,12 @@
 from tools.logger import search_long_term_history_sql
 from tools.office_tools import notify_manager, search_policy
+from tools.security_tools import isolate_account
 
 TOOL_MAP = {
     "notify_manager": notify_manager,
     "search_policy": search_policy,
     "search_long_term_history": search_long_term_history_sql,
+    "isolate_account": isolate_account,
 }
 
 TOOLS_DEFINITION = [
@@ -77,6 +79,30 @@ TOOLS_DEFINITION = [
                     },
                 },
                 "required": ["cliente_nome"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "isolate_account",
+            "description": (
+                "Isola un account Active Directory compromesso o a rischio (SOC). "
+                "Richiede evidenza policy e categoria SECURITY. Stub didattico L18."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "account_name": {
+                        "type": "string",
+                        "description": "Nome account AD da isolare.",
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Motivazione SOC documentata nel CoT.",
+                    },
+                },
+                "required": ["account_name", "reason"],
             },
         },
     },

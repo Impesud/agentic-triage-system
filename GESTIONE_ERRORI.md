@@ -29,7 +29,7 @@ L’abbonamento a Cursor **non è necessario** per questo argomento. Conta molto
 
 ## Stato attuale del progetto
 
-Il codice ha una gestione errori di **livello 1–3**: fail-fast con `ValueError`, boundary in `main.py` (pipeline ticket su branch storici; branch L17: demo L15–L17), parser con `raise ... from e`, loop in `logic.py` (`_run_agent_loop` + `_finalize_with_self_correction` — Lezione 11), memoria, RAG + ChromaDB (Lezione 10/10B), self-correction (Lezione 11), benchmark/log KPI (Lezione 12), **ReAct multi-step + SQLite LTM** (Lezioni 13–14), **modelli multi-agente** (Lezione 15), **orchestrazione CrewAI/AutoGen** (Lezione 16), suite di **~129 test** su branch `lesson-17-multi-agent-performance`. Manca ancora una **gerarchia di eccezioni di dominio** opzionale (`errors.py`, moduli 2–4).
+Il codice ha una gestione errori di **livello 1–3**: fail-fast con `ValueError`, boundary in `main.py` (pipeline ticket su branch storici; branch L18: demo L15–L18), parser con `raise ... from e`, loop in `logic.py` (`_run_agent_loop` + `_finalize_with_self_correction` — Lezione 11), memoria, RAG + ChromaDB (Lezione 10/10B), self-correction (Lezione 11), benchmark/log KPI (Lezione 12), **ReAct multi-step + SQLite LTM** (Lezioni 13–14), **modelli multi-agente** (Lezione 15), **orchestrazione CrewAI/AutoGen** (Lezione 16), **guardrail sicurezza MAS** (Lezione 18) con [`errors.SecurityGuardrailError`](src/errors.py), suite di **~142 test** su branch `lesson-18-multi-agent-security`. La gerarchia `errors.py` è avviata (L18); restano opzionali i Moduli 2–4 completi.
 
 **Indice corso e branch:** [docs/CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md).
 
@@ -120,8 +120,11 @@ flowchart TD
 | 15 | Topologie, hand-off Blackboard (concettuale) | [LEZIONE_15_MULTI_AGENT_COORDINATION.md](docs/LEZIONE_15_MULTI_AGENT_COORDINATION.md) |
 | 16 | CrewAI/AutoGen, fallback `multi_agent_fallback` | [LEZIONE_16_CREW_AUTOGEN.md](docs/LEZIONE_16_CREW_AUTOGEN.md) |
 | 17 | Pruning, cache pipeline, benchmark latenza | [LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](docs/LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) |
+| 18 | Guardrail input, hand-off, tool gate, `security_alerts` | [LEZIONE_18_MULTI_AGENT_SECURITY.md](docs/LEZIONE_18_MULTI_AGENT_SECURITY.md) |
 
 **Lezione 17 — Performance:** eventi `message_pruning_applied`, `embedding_cache_hit`, `pipeline_latency_report` in [`log_kpi.py`](src/analytics/log_kpi.py).
+
+**Lezione 18 — Sicurezza MAS:** eventi `security_input_blocked`, `security_handoff_blocked`, `security_tool_denied`, `handoff_field_redacted`; allerte in tabella SQLite `security_alerts` ([`security_store.py`](src/orchestration/security_store.py)); eccezione [`SecurityGuardrailError`](src/errors.py).
 
 **Lezione 12 — Benchmark e log:** suite in [`src/benchmark.py`](src/benchmark.py), KPI in [`src/analytics/log_kpi.py`](src/analytics/log_kpi.py). Eventi `triage_json_retry`, `emergency_fallback` e (L14) `react_max_steps_fallback` alimentano le metriche.
 
@@ -152,6 +155,22 @@ Eventi audit: `crew_triage_complete`, `autogen_triage_complete`, `multi_agent_fa
 
 Flag `enable_optimizations` su `react_triage` e `multi_agent_triage` attiva pruning + cache.
 
+### Lezione 18 — Sicurezza multi-agente
+
+| Evento | Significato |
+|--------|-------------|
+| `security_input_blocked` | Ticket bloccato da `guard_ticket_input` prima dell'LLM |
+| `security_handoff_blocked` | `SharedHandoffContext` contaminato su campi critici |
+| `security_tool_denied` | Tool critico negato da `tool_policy_gate` |
+| `handoff_field_redacted` | Campo soft del Blackboard ripulito da marker injection |
+| `isolate_account_stub` | Stub didattico isolamento AD (no-op auditabile) |
+
+Persistenza: tabella `security_alerts` in SQLite (`alert_type`, `severity`, `blocked_stage`, `input_excerpt`).
+
+Eccezione: `SecurityGuardrailError` in [`src/errors.py`](src/errors.py) — interrompe la pipeline senza chiamata LLM.
+
+**Demo live Settimana 13:** [docs/SETTIMANA_13_DEMO_LIVE.md](docs/SETTIMANA_13_DEMO_LIVE.md) — `l18a`/`l18b` **non** richiedono API key (distinto da `api_guard` L17).
+
 ### Lezione 15 — Multi-agent (concettuale)
 
 La Lezione 15 **non introduce nuovi errori runtime**: il package `orchestration/` definisce modelli statici (`AgentSpec`, `SharedHandoffContext`) e la demo `l15` simula un hand-off senza chiamate LLM.
@@ -166,7 +185,7 @@ La Lezione 15 **non introduce nuovi errori runtime**: il package `orchestration/
 
 **M1** → ticket `OPEN` su chiarimento. **M2** → long-term SQLite + escalation Marco. **L10** → RAG sinonimica. **L13/L14** → `react_triage` (branch storici). **L15** → topologie senza LLM. **L16** → `multi_agent_triage`. Fallback policy/LTM in `_apply_all_fallbacks` (non sono errori).
 
-**Demo live Settimana 12:** [docs/SETTIMANA_12_DEMO_LIVE.md](docs/SETTIMANA_12_DEMO_LIVE.md) — `main.py` default = solo `l15`; `--scenario all` = sequenza L15→L17; `api_guard` salta LLM senza API key.
+**Demo live Settimana 12–13:** [docs/SETTIMANA_12_DEMO_LIVE.md](docs/SETTIMANA_12_DEMO_LIVE.md), [docs/SETTIMANA_13_DEMO_LIVE.md](docs/SETTIMANA_13_DEMO_LIVE.md) — `main.py` default = solo `l15`; `--scenario all` = sequenza L15→L18; `api_guard` salta LLM senza API key; L18a/L18b sempre eseguiti.
 
 Il fallback **non è un errore**: è una guardia operativa in `_run_agent_loop` dopo la prima risposta LLM; le observation entrano nel contesto della seconda chiamata. Se un tool solleva eccezione, il boundary in `main.py` cattura `ValueError`/`OSError`.
 
@@ -197,7 +216,7 @@ Dettaglio scenari: [README — Demo](README.md#demo-ed-esecuzione), [CORSO_LEZIO
 | `raise ValueError(...)` | `client.py`, `logic.py`, `parser.py`, `enrichment.py`, `router.py`, `schemas/ticket.py` | Messaggi in italiano |
 | `raise ... from e` | `parser.py` — `JSONDecodeError`, `ValidationError` | Catena traceback preservata |
 | Boundary tipizzato | `main.py` — `except (FileNotFoundError, ValueError, OSError)` | Cattura errori da tutta la pipeline |
-| Suite test essenziale | `tests/` — **~129 test** (branch `lesson-17`), alcuni `pytest.raises` | Vedi tabella sotto |
+| Suite test essenziale | `tests/` — **~145 test** (branch `lesson-18`), alcuni `pytest.raises` | Vedi tabella sotto |
 | Percorsi centralizzati | `paths.py` | Manuale, policy, ticket, log, `.env` |
 | Separazione agente / orchestrazione | `logic.py` (`_run_agent_loop`) vs `main.py` | Errori LLM nascono nel nucleo loop, gestiti in `main` |
 | Nessuna eccezione di dominio | — | Obiettivo dei moduli 2–4 |
@@ -548,7 +567,7 @@ Checklist Modulo 0 — aggiornare dopo ogni migrazione.
 
 ## Test e copertura fallimenti
 
-Suite essenziale: **~129 test** su branch `lesson-17-multi-agent-performance` (`pytest tests/ -q`). Nessuna chiamata API reale (mock su LLM e embeddings). Conteggi per branch: [CORSO_LEZIONI](docs/CORSO_LEZIONI.md).
+Suite essenziale: **~142 test** su branch `lesson-18-multi-agent-security` (`pytest tests/ -q`). Nessuna chiamata API reale (mock su LLM e embeddings). Conteggi per branch: [CORSO_LEZIONI](docs/CORSO_LEZIONI.md).
 
 | File test | Cosa copre |
 |-----------|------------|
@@ -568,7 +587,8 @@ Suite essenziale: **~129 test** su branch `lesson-17-multi-agent-performance` (`
 | `test_log_kpi.py` | KPI JSONL (L12) |
 | `test_orchestration.py` | Topologie, hand-off Blackboard (L15) |
 | `test_multi_agent.py` | CrewAI/AutoGen mock (L16) |
-| `test_week12_report.py` / `test_main_report.py` | Report HTML Settimana 12 (L15–L17) |
+| `test_week12_report.py` / `test_main_report.py` | Report HTML Settimana 12–13 (L15–L18) |
+| `test_input_guardrail.py` / `test_security_pipeline.py` | Guardrail L18 |
 | `test_open_html.py` / `test_open_report_script.py` | Apertura report nel browser (WSL) |
 
 Fixture in `tests/conftest.py`: `triaged_ticket`, isolamento `TICKETS_PATH` su file temporaneo.
@@ -623,4 +643,4 @@ Fixture in `tests/conftest.py`: `triaged_ticket`, isolamento `TICKETS_PATH` su f
 - `src/tools/history_tools.py` — `search_long_term_history` (delega a SQLite)
 - `src/memory/` — `SessionManager`, extractors
 - `tests/conftest.py` — fixture condivise
-- `tests/test_*.py` — suite essenziale (~129 test su L17); estendere dopo ogni migrazione errori
+- `tests/test_*.py` — suite essenziale (~142 test su L18); estendere dopo ogni migrazione errori

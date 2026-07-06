@@ -1,4 +1,4 @@
-"""Adapter tool verso CrewAI e AutoGen (Lezione 16–17)."""
+"""Adapter tool verso CrewAI e AutoGen (Lezione 16–18)."""
 
 from __future__ import annotations
 
@@ -9,6 +9,11 @@ from crewai.tools import tool
 
 from orchestration.message_pruning import compact_tool_output
 from orchestration.pipeline_cache import PipelineContextCache
+from orchestration.tool_policy_gate import (
+    ToolPolicyContext,
+    invoke_isolate_account,
+    invoke_notify_manager,
+)
 from tools.registry import TOOL_MAP, TOOLS_DEFINITION
 
 _TOOL_DESCRIPTIONS: dict[str, str] = {
@@ -93,16 +98,30 @@ def _crew_search_policy(cache: PipelineContextCache | None, *, compact: bool) ->
     return search_policy
 
 
-def _crew_notify_manager() -> object:
+def _crew_notify_manager(policy_ctx: ToolPolicyContext) -> object:
     description = _TOOL_DESCRIPTIONS["notify_manager"]
+    base_fn = TOOL_MAP["notify_manager"]
 
     @tool("notify_manager")
     def notify_manager(message: str, priority: int) -> str:
         """Invia escalation al manager di turno."""
-        return TOOL_MAP["notify_manager"](message=message, priority=priority)
+        return invoke_notify_manager(message, priority, base_fn, policy_ctx)
 
     notify_manager.description = description  # type: ignore[attr-defined]
     return notify_manager
+
+
+def _crew_isolate_account(policy_ctx: ToolPolicyContext) -> object:
+    description = _TOOL_DESCRIPTIONS["isolate_account"]
+    base_fn = TOOL_MAP["isolate_account"]
+
+    @tool("isolate_account")
+    def isolate_account(account_name: str, reason: str) -> str:
+        """Isola account AD compromesso (stub SOC L18)."""
+        return invoke_isolate_account(account_name, reason, base_fn, policy_ctx)
+
+    isolate_account.description = description  # type: ignore[attr-defined]
+    return isolate_account
 
 
 def make_crewai_tools(
@@ -110,9 +129,17 @@ def make_crewai_tools(
     *,
     cache: PipelineContextCache | None = None,
     compact_output: bool = True,
+    policy_ctx: ToolPolicyContext | None = None,
 ) -> list[object]:
-    """Crea tool CrewAI che delegano a TOOL_MAP con cache e compattazione opzionali."""
+    """Crea tool CrewAI che delegano a TOOL_MAP con cache, gate e compattazione."""
     _tool_names_for_agent(tool_names)
+    ctx = policy_ctx or ToolPolicyContext(cache=cache)
+    if ctx.cache is None and cache is not None:
+        ctx = ToolPolicyContext(
+            cache=cache,
+            handoff=ctx.handoff,
+            pipeline_categoria=ctx.pipeline_categoria,
+        )
     tools: list[object] = []
     for name in tool_names:
         if name == "search_long_term_history":
@@ -120,7 +147,9 @@ def make_crewai_tools(
         elif name == "search_policy":
             tools.append(_crew_search_policy(cache, compact=compact_output))
         elif name == "notify_manager":
-            tools.append(_crew_notify_manager())
+            tools.append(_crew_notify_manager(ctx))
+        elif name == "isolate_account":
+            tools.append(_crew_isolate_account(ctx))
         else:
             raise ValueError(f"Tool CrewAI non supportato: {name}")
     return tools
@@ -131,8 +160,18 @@ def make_autogen_tools(
     *,
     cache: PipelineContextCache | None = None,
     compact_output: bool = True,
+    policy_ctx: ToolPolicyContext | None = None,
 ) -> list[FunctionTool]:
-    """Crea FunctionTool AutoGen con cache e compattazione opzionali."""
+    """Crea FunctionTool AutoGen con cache, gate e compattazione."""
+    ctx = policy_ctx or ToolPolicyContext(cache=cache)
+    if ctx.cache is None and cache is not None:
+        ctx = ToolPolicyContext(
+            cache=cache,
+            handoff=ctx.handoff,
+            pipeline_categoria=ctx.pipeline_categoria,
+        )
+    base_notify = TOOL_MAP["notify_manager"]
+    base_isolate = TOOL_MAP["isolate_account"]
 
     def policy_fn(query: str) -> str:
         return _invoke_policy(query, cache, compact=compact_output)
@@ -140,10 +179,17 @@ def make_autogen_tools(
     def ltm_fn(cliente_nome: str, hours: int = 24) -> str:
         return _invoke_ltm(cliente_nome, hours, cache, compact=compact_output)
 
+    def notify_fn(message: str, priority: int) -> str:
+        return invoke_notify_manager(message, priority, base_notify, ctx)
+
+    def isolate_fn(account_name: str, reason: str) -> str:
+        return invoke_isolate_account(account_name, reason, base_isolate, ctx)
+
     _autogen_fns = {
         "search_policy": policy_fn,
         "search_long_term_history": ltm_fn,
-        "notify_manager": TOOL_MAP["notify_manager"],
+        "notify_manager": notify_fn,
+        "isolate_account": isolate_fn,
     }
 
     _tool_names_for_agent(tool_names)

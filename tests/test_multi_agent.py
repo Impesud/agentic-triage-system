@@ -114,3 +114,17 @@ def test_triage_message_unchanged_for_benchmark(mock_get_client):
     )
     result = triage_message("help", manuale="Manuale IT")
     assert result.categoria == "IT"
+
+
+@patch("logic.guard_ticket_input")
+@patch("orchestration.crew_pipeline.Crew")
+@patch("orchestration.crew_pipeline.ensure_framework_env")
+def test_multi_agent_guard_runs_once(mock_env, mock_crew_cls, mock_guard):
+    mock_env.return_value = "sk-test"
+    kickoff_result = MagicMock()
+    kickoff_result.raw = _VALID_JSON
+    mock_crew_cls.return_value.kickoff.return_value = kickoff_result
+
+    multi_agent_triage("ticket demo", "Manuale IT", orchestrator="crewai")
+
+    assert mock_guard.call_count == 1
