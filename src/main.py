@@ -101,7 +101,10 @@ def _persist_react_result(user_input: str, result) -> None:
 
 def _write_report(report: Week12ReportBuilder, *, open_browser: bool = True) -> Path:
     path = report.write_html()
-    rel = path.relative_to(REPO_ROOT)
+    try:
+        rel = path.relative_to(REPO_ROOT)
+    except ValueError:
+        rel = path
     print(f"\n[REPORT HTML] Report salvato: {path}", flush=True)
     if open_browser:
         if open_html_in_browser(path):

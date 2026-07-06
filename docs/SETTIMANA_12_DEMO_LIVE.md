@@ -46,7 +46,7 @@ ls -la data/triage_system.db
 ```
 
 3. **Manuale IT** — presente in `data/manuale_it.txt` (caricato da `load_it_manual()`).
-4. **Verifica test** (opzionale): `PYTHONPATH=src pytest tests/ -q` (~106 test).
+4. **Verifica test** (opzionale): `PYTHONPATH=src pytest tests/ -q` (~129 test).
 
 ---
 

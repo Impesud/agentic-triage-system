@@ -89,3 +89,14 @@ def test_full_all_scenario_report_structure():
     for scenario_id, _, _ in LESSON_SCENARIOS:
         assert report.scenario_status(scenario_id) == "Eseguito"
     assert "Eseguito" in html_out
+
+
+def test_week12_report_builder_writes_file(tmp_path):
+    report = Week12ReportBuilder(root_scenario="l15")
+    report.set_l15(ticket="test", topologies=["sequential"], agents=[], handoff={})
+    out = report.write_html(tmp_path / "demo.html")
+    assert out.exists()
+    content = out.read_text(encoding="utf-8")
+    assert "<!DOCTYPE html>" in content
+    assert "Riepilogo scenari" in content
+    assert "test" in content

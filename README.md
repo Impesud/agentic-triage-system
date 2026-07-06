@@ -460,7 +460,7 @@ PYTHONPATH=src python3 scripts/init_triage_db.py
 pytest tests/ -q
 ```
 
-**~106 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
+**~129 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
 
 | File | Verifica |
 |------|----------|
@@ -469,6 +469,8 @@ pytest tests/ -q
 | `test_multi_agent.py` | CrewAI/AutoGen mock, multi_agent_triage (L16) |
 | `test_message_pruning.py` / `test_pipeline_cache.py` | Pruning e cache pipeline (L17) |
 | `test_benchmark_multi_agent.py` | Report benchmark MAS (L17) |
+| `test_week12_report.py` / `test_main_report.py` | Report HTML Settimana 12 (L15–L17) |
+| `test_open_html.py` / `test_open_report_script.py` | Apertura report nel browser (WSL) |
 | `test_logger_sqlite.py` | SQLite init, insert, query indicizzata |
 | `test_policy_semantic.py` | RAG + Chroma, sinonimi, soglia |
 | `test_benchmark.py` | Report benchmark (mock) |

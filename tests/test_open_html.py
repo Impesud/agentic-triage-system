@@ -40,3 +40,17 @@ def test_format_open_fallback_contains_unc(tmp_path):
     text = format_open_fallback(report)
     assert "open_report.py" in text
     assert "http.server" in text
+
+
+def test_resolve_report_path_defaults_to_week12(monkeypatch, tmp_path):
+    report = tmp_path / "week12_demo_report.html"
+    report.write_text("<html></html>", encoding="utf-8")
+    monkeypatch.setattr("reporting.open_html.WEEK12_REPORT_PATH", report)
+    assert resolve_report_path() == report.resolve()
+
+
+def test_resolve_report_path_missing_returns_week12_path(monkeypatch, tmp_path):
+    missing = tmp_path / "missing.html"
+    monkeypatch.setattr("reporting.open_html.WEEK12_REPORT_PATH", missing)
+    monkeypatch.setattr("reporting.open_html.REPO_ROOT", tmp_path)
+    assert resolve_report_path() == missing

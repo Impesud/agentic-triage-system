@@ -188,7 +188,7 @@ Vedi [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md) per la checklist com
 | Hand-off Blackboard | `build_resolver_task_description`, test handoff |
 | JSON finale valido | `finalize_multi_agent_output`, `parse_llm_output` |
 | Dipendenze opzionali | `pip install -e ".[multiagent]"` |
-| Retrocompatibilità | `pytest tests/ -q` (~83), benchmark L12 |
+| Retrocompatibilità | `pytest tests/ -q` (~129), benchmark L12 |
 
 
 ## Per docenti — review Settimana 12 (L17)
@@ -200,7 +200,7 @@ Vedi [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md) per la checklist com
 | CLI solo L15–L17 | `main.WEEK12_SCENARIOS`, `test_cli_scenarios_week12_only` |
 | Demo l17a/l17b | `run_l17a_pruning_demo`, `benchmark_multi_agent.py` |
 | KPI L17 in log | `analytics/log_kpi.performance_metrics` |
-| Retrocompatibilità | `pytest tests/ -q`, benchmark L12 |
+| Retrocompatibilità | `pytest tests/ -q` (~129), benchmark L12 |
 
 Push suggerito:
 

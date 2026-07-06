@@ -89,7 +89,8 @@ PYTHONPATH=src python3 -m analytics.log_kpi
 
 ```bash
 pytest tests/test_message_pruning.py tests/test_pipeline_cache.py tests/test_benchmark_multi_agent.py -q
-pytest tests/ -q
+pytest tests/test_week12_report.py tests/test_main_report.py tests/test_open_html.py -q
+pytest tests/ -q   # ~129 test
 ```
 
 ## Ottimizzazioni aggiuntive (review L17)
