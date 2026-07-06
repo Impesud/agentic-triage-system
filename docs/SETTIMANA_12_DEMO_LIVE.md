@@ -82,7 +82,14 @@ Al termine di ogni esecuzione viene scritto **`logs/week12_demo_report.html`** c
 - **Riepilogo** di tutti e 5 gli scenari (`l15`, `l16a`, `l16b`, `l17a`, `l17b`) e stato (Eseguito / Saltato / Non eseguito)
 - **Sezione per ogni lezione** 15, 16, 17a e 17b (anche come placeholder se non eseguita in quella run)
 
-Disabilitare: `--no-report`
+Disabilitare report: `--no-report` · Disabilitare apertura browser: `--no-open`
+
+Dopo ogni run il report si apre nel browser (su WSL usa il browser Windows). In alternativa:
+
+```bash
+PYTHONPATH=src python3 scripts/open_report.py
+PYTHONPATH=src python3 scripts/open_report.py logs/week12_demo_report.html
+```
 
 ### Attenzione: default ≠ sequenza completa
 

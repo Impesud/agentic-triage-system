@@ -404,7 +404,8 @@ PYTHONPATH=src python3 src/main.py --scenario all
 PYTHONPATH=src python3 src/benchmark.py              # L12 monolitico
 PYTHONPATH=src python3 src/benchmark_multi_agent.py  # L17 multi-pipeline
 PYTHONPATH=src python3 -m analytics.log_kpi
-# Report HTML generato automaticamente: logs/week12_demo_report.html
+# Report HTML generato automaticamente: logs/week12_demo_report.html (si apre nel browser)
+# Riaprire manualmente: PYTHONPATH=src python3 scripts/open_report.py
 ```
 
 **Demo lezioni 9–14** (M1–M3, l10–l14): checkout sul branch indicato in [CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md).

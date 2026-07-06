@@ -12,7 +12,7 @@ Esecuzione:
   PYTHONPATH=src python3 src/main.py --scenario l17b
   PYTHONPATH=src python3 src/main.py --scenario all   # L15 → L16a → L16b → L17a → L17b
 
-Al termine viene scritto logs/week12_demo_report.html
+Al termine viene scritto logs/week12_demo_report.html (aperto nel browser se possibile).
 """
 
 from __future__ import annotations
@@ -32,7 +32,8 @@ from analytics.week12_report import (
 from logic import multi_agent_triage, react_triage
 from memory.extractors import detect_sentiment_label, extract_cliente_nome
 from orchestration.api_guard import skip_llm_block
-from paths import LOG_FILE_PATH, MANUALE_IT_PATH, TRIAGE_DB_PATH, WEEK12_REPORT_PATH
+from paths import LOG_FILE_PATH, MANUALE_IT_PATH, REPO_ROOT, TRIAGE_DB_PATH, WEEK12_REPORT_PATH
+from reporting.open_html import format_open_fallback, open_html_in_browser
 from tools.logger import init_db, log_triage_to_sqlite
 
 L16_TICKET = (
@@ -98,9 +99,17 @@ def _persist_react_result(user_input: str, result) -> None:
     )
 
 
-def _write_report(report: Week12ReportBuilder) -> Path:
+def _write_report(report: Week12ReportBuilder, *, open_browser: bool = True) -> Path:
     path = report.write_html()
+    rel = path.relative_to(REPO_ROOT)
     print(f"\n[REPORT HTML] Report salvato: {path}", flush=True)
+    if open_browser:
+        if open_html_in_browser(path):
+            print("[REPORT HTML] Apertura nel browser richiesta.", flush=True)
+        else:
+            print(format_open_fallback(path), flush=True)
+    else:
+        print(f"[REPORT HTML] Apri con: python3 scripts/open_report.py {rel}", flush=True)
     return path
 
 
@@ -417,6 +426,11 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         help="Non generare il report HTML a fine esecuzione",
     )
+    parser.add_argument(
+        "--no-open",
+        action="store_true",
+        help="Non aprire il report HTML nel browser a fine esecuzione",
+    )
     return parser.parse_args()
 
 
@@ -444,4 +458,4 @@ if __name__ == "__main__":
             _run_scenario_with_report(args.scenario, report)
     finally:
         if not args.no_report:
-            _write_report(report)
+            _write_report(report, open_browser=not args.no_open)
