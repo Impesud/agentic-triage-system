@@ -74,10 +74,15 @@ def test_crew_pipeline_return_metrics(mock_env, mock_crew_cls):
 @patch("orchestration.autogen_team.ensure_framework_env")
 def test_autogen_team_mocked(mock_env, mock_asyncio_run):
     mock_env.return_value = "sk-test"
-    mock_asyncio_run.return_value = (
-        _VALID_JSON,
-        MultiAgentRunMetrics(tokens_est=100),
-    )
+
+    def fake_asyncio_run(coro):
+        coro.close()
+        return (
+            _VALID_JSON,
+            MultiAgentRunMetrics(tokens_est=100),
+        )
+
+    mock_asyncio_run.side_effect = fake_asyncio_run
 
     from orchestration.autogen_team import autogen_triage
 

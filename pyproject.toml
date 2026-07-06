@@ -39,6 +39,12 @@ triage-benchmark = "benchmark:run_triage_benchmark"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+filterwarnings = [
+    # crewai: import side-effect su sottomodulo rag (dipendenza opzionale L16+)
+    "ignore:Cannot set an attribute on 'crewai.rag':ImportWarning",
+    # crewai: deprecazioni interne Agent (non nel nostro codice)
+    "ignore::DeprecationWarning:crewai",
+]
 
 [tool.ruff]
 line-length = 100
