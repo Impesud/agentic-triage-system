@@ -85,6 +85,7 @@ gitGraph
 | 17a — Pruning before/after | `PYTHONPATH=src python3 src/main.py --scenario l17a` |
 | 17b — Benchmark latenza MAS | `PYTHONPATH=src python3 src/main.py --scenario l17b` |
 | Settimana 12 — tutte le demo | `PYTHONPATH=src python3 src/main.py --scenario all` |
+| Report HTML (auto a fine run) | `logs/week12_demo_report.html` |
 | 12 — benchmark monolitico | `PYTHONPATH=src python3 src/benchmark.py` |
 | 17 — benchmark multi-agent | `PYTHONPATH=src python3 src/benchmark_multi_agent.py` |
 | 12/17 — KPI log | `PYTHONPATH=src python3 -m analytics.log_kpi` |

@@ -77,6 +77,8 @@ PYTHONPATH=src python3 src/benchmark_multi_agent.py
 PYTHONPATH=src python3 -m analytics.log_kpi
 ```
 
+Al termine di ogni esecuzione di `main.py` (qualsiasi scenario L15–L17) viene generato un **report HTML** in `logs/week12_demo_report.html` con i risultati raccolti. Per disabilitarlo: `--no-report`.
+
 ### Attenzione: default ≠ sequenza completa
 
 | Comando | Effetto |

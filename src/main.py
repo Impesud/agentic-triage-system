@@ -11,6 +11,8 @@ Esecuzione:
   PYTHONPATH=src python3 src/main.py --scenario l17a
   PYTHONPATH=src python3 src/main.py --scenario l17b
   PYTHONPATH=src python3 src/main.py --scenario all   # L15 → L16a → L16b → L17a → L17b
+
+Al termine viene scritto logs/week12_demo_report.html
 """
 
 from __future__ import annotations
@@ -22,10 +24,15 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Literal
 
+from analytics.week12_report import (
+    BenchmarkRow,
+    L17aRunRow,
+    Week12ReportBuilder,
+)
 from logic import multi_agent_triage, react_triage
 from memory.extractors import detect_sentiment_label, extract_cliente_nome
 from orchestration.api_guard import require_api_key_for_scenario, skip_llm_block
-from paths import LOG_FILE_PATH, MANUALE_IT_PATH, TRIAGE_DB_PATH
+from paths import LOG_FILE_PATH, MANUALE_IT_PATH, TRIAGE_DB_PATH, WEEK12_REPORT_PATH
 from tools.logger import init_db, log_triage_to_sqlite
 
 L16_TICKET = (
@@ -91,7 +98,13 @@ def _persist_react_result(user_input: str, result) -> None:
     )
 
 
-def run_l15_topology_demo() -> None:
+def _write_report(report: Week12ReportBuilder) -> Path:
+    path = report.write_html()
+    print(f"\n[REPORT HTML] Report salvato: {path}", flush=True)
+    return path
+
+
+def run_l15_topology_demo(*, report: Week12ReportBuilder | None = None) -> None:
     """Demo Lezione 15: topologie multi-agente e hand-off Blackboard (senza LLM)."""
     from orchestration.models import CommunicationTopology
     from orchestration.topologies import IMPESUD_AGENT_TEAM, TOPOLOGY_CATALOG, simulate_analyst_handoff
@@ -131,8 +144,30 @@ def run_l15_topology_demo() -> None:
         "per policy RAG, escalation e JSON finale."
     )
 
+    if report is not None:
+        report.set_l15(
+            ticket=L13_TICKET_1,
+            topologies=[info.topology.value for info in TOPOLOGY_CATALOG],
+            agents=[
+                {
+                    "name": a.name,
+                    "role": a.role,
+                    "goal": a.goal,
+                    "tools": list(a.tools),
+                }
+                for a in IMPESUD_AGENT_TEAM
+            ],
+            handoff=handoff.model_dump(),
+        )
 
-def _run_l16_demo(orchestrator: Literal["crewai", "autogen"], title: str) -> None:
+
+def _run_l16_demo(
+    orchestrator: Literal["crewai", "autogen"],
+    title: str,
+    scenario_id: str,
+    *,
+    report: Week12ReportBuilder | None = None,
+) -> None:
     """Demo Lezione 16: orchestrazione multi-agent con CrewAI o AutoGen."""
     print("\n" + "=" * 72)
     print(title)
@@ -141,33 +176,48 @@ def _run_l16_demo(orchestrator: Literal["crewai", "autogen"], title: str) -> Non
     print("-" * 72)
     init_db()
     manuale = load_it_manual()
+    t0 = time.perf_counter()
     result = multi_agent_triage(
         L16_TICKET,
         manuale,
         orchestrator=orchestrator,
         enable_optimizations=True,
     )
+    elapsed_ms = (time.perf_counter() - t0) * 1000
     _persist_react_result(L16_TICKET, result)
     print(f"\n📊 Verdetto Finale Strutturato:\n{result.model_dump_json(indent=2)}")
 
+    if report is not None:
+        report.add_triage_scenario(
+            scenario_id=scenario_id,
+            lesson="16",
+            title=title,
+            wall_ms=elapsed_ms,
+            result=result.model_dump(),
+        )
 
-def run_l16a_crew_demo() -> None:
+
+def run_l16a_crew_demo(*, report: Week12ReportBuilder | None = None) -> None:
     """Demo Lezione 16a: CrewAI Process.sequential (topologia pipeline)."""
     _run_l16_demo(
         "crewai",
         "SCENARIO L16a — Orchestrazione CrewAI (Sequenziale)",
+        "l16a",
+        report=report,
     )
 
 
-def run_l16b_autogen_demo() -> None:
+def run_l16b_autogen_demo(*, report: Week12ReportBuilder | None = None) -> None:
     """Demo Lezione 16b: AutoGen RoundRobinGroupChat (topologia collaborativa)."""
     _run_l16_demo(
         "autogen",
         "SCENARIO L16b — Orchestrazione AutoGen (Collaborativa)",
+        "l16b",
+        report=report,
     )
 
 
-def run_l17a_pruning_demo() -> None:
+def run_l17a_pruning_demo(*, report: Week12ReportBuilder | None = None) -> None:
     """Demo Lezione 17a: confronto ReAct baseline vs compact/cache vs full opt."""
     from logic import ReactRunMetrics, _SHORT_TERM_STORE
 
@@ -180,6 +230,7 @@ def run_l17a_pruning_demo() -> None:
     init_db()
     manuale = load_it_manual()
     runs: list[tuple[str, float, int, ReactRunMetrics | None]] = []
+    report_rows: list[L17aRunRow] = []
 
     configs = [
         ("baseline (no opt)", dict(enable_optimizations=False, session_id="l17a_baseline", return_metrics=True)),
@@ -208,7 +259,7 @@ def run_l17a_pruning_demo() -> None:
         _SHORT_TERM_STORE.pop(kwargs["session_id"], None)
         print(f"\n[RUN] react_triage — {label}")
         t0 = time.perf_counter()
-        outcome = react_triage(L16_TICKET, manuale, return_metrics=True, **kwargs)
+        outcome = react_triage(L16_TICKET, manuale, **kwargs)
         elapsed = (time.perf_counter() - t0) * 1000
         if isinstance(outcome, tuple):
             _result, metrics = outcome
@@ -216,6 +267,18 @@ def run_l17a_pruning_demo() -> None:
             _result, metrics = outcome, None
         tokens = metrics.tokens_est if metrics else 0
         runs.append((label, elapsed, tokens, metrics))
+        report_rows.append(
+            L17aRunRow(
+                label=label,
+                wall_ms=elapsed,
+                tokens_est=tokens,
+                enable_pruning=metrics.enable_pruning if metrics else False,
+                enable_cache=metrics.enable_cache if metrics else False,
+                enable_compact_output=metrics.enable_compact_output if metrics else False,
+                categoria=_result.categoria,
+                priorita=_result.priorita,
+            )
+        )
         flags = ""
         if metrics:
             flags = (
@@ -233,8 +296,11 @@ def run_l17a_pruning_demo() -> None:
         "embedding_cache_hit, handoff_enriched_from_cache (su L16/L17 multi-agent)"
     )
 
+    if report is not None:
+        report.set_l17a_runs(report_rows)
 
-def run_l17b_latency_demo() -> None:
+
+def run_l17b_latency_demo(*, report: Week12ReportBuilder | None = None) -> None:
     """Demo Lezione 17b: benchmark latenza multi-percorso."""
     from benchmark_multi_agent import run_multi_agent_benchmark
 
@@ -242,22 +308,65 @@ def run_l17b_latency_demo() -> None:
     print("SCENARIO L17b — Benchmark Latenza Pipeline Multi-Agente")
     print("=" * 72)
     init_db()
-    run_multi_agent_benchmark()
+    results = run_multi_agent_benchmark()
+
+    if report is not None:
+        report.set_l17b_rows(
+            [
+                BenchmarkRow(
+                    name=r.name,
+                    wall_ms=r.wall_ms,
+                    tokens_est=r.tokens_est,
+                    categoria=r.categoria,
+                )
+                for r in results
+            ]
+        )
 
 
-def run_week12_all() -> None:
+def run_week12_all(*, report: Week12ReportBuilder | None = None) -> None:
     """Sequenza didattica L15 → L16a → L16b → L17a → L17b."""
     init_db()
     print("\nDEMO SETTIMANA 12 — Multi-agente e performance (L15–L17)\n")
-    run_l15_topology_demo()
-    if not skip_llm_block("L16a CrewAI"):
-        run_l16a_crew_demo()
-    if not skip_llm_block("L16b AutoGen"):
-        run_l16b_autogen_demo()
-    if not skip_llm_block("L17a pruning"):
-        run_l17a_pruning_demo()
-    if not skip_llm_block("L17b benchmark"):
-        run_l17b_latency_demo()
+    run_l15_topology_demo(report=report)
+
+    if skip_llm_block("L16a CrewAI"):
+        if report is not None:
+            report.record_skip("l16a", "OPENAI_API_KEY assente")
+            report.add_triage_scenario(
+                scenario_id="l16a",
+                lesson="16",
+                title="CrewAI sequenziale",
+                skipped=True,
+                skip_reason="OPENAI_API_KEY assente",
+            )
+    else:
+        run_l16a_crew_demo(report=report)
+
+    if skip_llm_block("L16b AutoGen"):
+        if report is not None:
+            report.record_skip("l16b", "OPENAI_API_KEY assente")
+            report.add_triage_scenario(
+                scenario_id="l16b",
+                lesson="16",
+                title="AutoGen GroupChat",
+                skipped=True,
+                skip_reason="OPENAI_API_KEY assente",
+            )
+    else:
+        run_l16b_autogen_demo(report=report)
+
+    if skip_llm_block("L17a pruning"):
+        if report is not None:
+            report.record_skip("l17a", "OPENAI_API_KEY assente")
+    else:
+        run_l17a_pruning_demo(report=report)
+
+    if skip_llm_block("L17b benchmark"):
+        if report is not None:
+            report.record_skip("l17b", "OPENAI_API_KEY assente")
+    else:
+        run_l17b_latency_demo(report=report)
 
 
 def _parse_args() -> argparse.Namespace:
@@ -269,6 +378,11 @@ def _parse_args() -> argparse.Namespace:
         choices=list(WEEK12_SCENARIOS),
         default="l15",
         help="Demo L15–L17 (default: l15 senza LLM)",
+    )
+    parser.add_argument(
+        "--no-report",
+        action="store_true",
+        help="Non generare il report HTML a fine esecuzione",
     )
     return parser.parse_args()
 
@@ -291,4 +405,10 @@ if __name__ == "__main__":
     args = _parse_args()
     if args.scenario != "all" and not require_api_key_for_scenario(args.scenario):
         sys.exit(0)
-    _SCENARIO_RUNNERS[args.scenario]()
+
+    report = Week12ReportBuilder(root_scenario=args.scenario)
+    try:
+        _SCENARIO_RUNNERS[args.scenario](report=report)
+    finally:
+        if not args.no_report:
+            _write_report(report)
