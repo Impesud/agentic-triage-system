@@ -23,6 +23,26 @@
 | `l18b` | No | Hand-off avvelenato + `notify_manager` con/senza evidenza policy |
 | `all` | Parziale | Sequenza L15–L18; L18a/L18b sempre eseguiti anche senza API key |
 
+### Cosa fa ogni scenario (in breve)
+
+**`l18a` — Input Guardrail**
+
+Senza LLM. Tre messaggi di prova:
+
+1. Ticket **benigno** → passa
+2. **Injection** (“ignora le istruzioni…”) → bloccato
+3. **SOC weaponized** → bloccato
+
+Le allerte finiscono in SQLite (`security_alerts`). Messaggio chiave: la difesa parte **prima** dell'LLM.
+
+**`l18b` — Hand-off e tool gate**
+
+Senza LLM. Tre prove:
+
+1. Hand-off **avvelenato** tra agenti → bloccato
+2. `notify_manager` priorità alta **senza** evidenza policy → negato
+3. `notify_manager` **con** policy in cache → consentito
+
 ```bash
 PYTHONPATH=src python3 src/main.py --scenario l18a
 PYTHONPATH=src python3 src/main.py --scenario l18b

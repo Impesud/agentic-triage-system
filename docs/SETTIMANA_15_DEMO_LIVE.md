@@ -11,8 +11,12 @@
 1. Checkout branch L20 e venv attivo.
 2. `pip install -e ".[test,multiagent]"`
 3. `PYTHONPATH=src python3 scripts/init_triage_db.py` (verifica colonne telemetry su `tickets`)
-4. **Non serve** `OPENAI_API_KEY` per `l20a`; `l20b` usa mock interno (nessuna API).
+4. **Non serve** `OPENAI_API_KEY` per `l20a`; `l20b` usa mock interno — vedi sotto *Perché senza LLM*.
 5. Leggere la [guida pratica telemetria](LEZIONE_20_STRUCTURED_TELEMETRY.md#come-usare-la-telemetria--guida-pratica).
+
+### Perché le demo L20 sono senza LLM
+
+L'obiettivo è insegnare **formula costo**, eventi JSONL e query SQL con numeri **prevedibili**. Con API reale i costi e le latenze variano per rete e modello. Dopo `l20a`/`l20b`, opzionale: un run `react_triage` con API per confrontare `tokens_est` (L17) e `usage` API (L20).
 
 ---
 

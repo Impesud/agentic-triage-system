@@ -440,10 +440,14 @@ Guida completa: [LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md).
 
 **CLI `main.py`:** scenari `l15` … `l20b`, sequenza `all` (L15 → L20b).
 
+**Guida scenari (spiegazione semplice):** [SETTIMANA_12_DEMO_LIVE.md](docs/SETTIMANA_12_DEMO_LIVE.md#panoramica-rapida--tutti-gli-scenari) — tabella e descrizione di ogni scenario L15–L20.
+
 | Comando | Effetto |
 |---------|---------|
 | `python3 src/main.py` | **Solo L15** (default, senza LLM) |
 | `python3 src/main.py --scenario all` | Sequenza **L15 → … → L20b** |
+| `python3 src/main.py --scenario l19a` | Breakpoint HITL (no LLM) |
+| `python3 src/main.py --scenario l19b` | Approve / reject HITL (no LLM) |
 | `python3 src/main.py --scenario l20a` | Formula costo + mock usage (no LLM) |
 | `python3 src/main.py --scenario l20b` | ReAct mock → SQLite → query per categoria |
 | `PYTHONPATH=src python3 -m analytics.telemetry_report` | Report costo medio per categoria (L20) |

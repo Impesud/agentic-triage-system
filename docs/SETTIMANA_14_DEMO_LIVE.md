@@ -11,8 +11,16 @@
 1. Checkout branch L19 e venv attivo.
 2. `pip install -e ".[test,multiagent]"`
 3. `PYTHONPATH=src python3 scripts/init_triage_db.py` (verifica `ticket_states`)
-4. **Non serve** `OPENAI_API_KEY` per `l19a` e `l19b`.
+4. **Non serve** `OPENAI_API_KEY` per `l19a` e `l19b` — vedi sotto *Perché senza LLM*.
 5. Leggere la [guida breakpoint](LEZIONE_19_HITL_BREAKPOINTS.md#come-usare-i-breakpoint-guida-pratica) prima della demo live.
+
+### Cos'è HITL (in sintesi)
+
+**HITL** = *Human-in-the-Loop* (umano nel ciclo). Per alcune azioni critiche il sistema **non esegue subito**: si ferma, salva lo stato su SQLite (`ticket_states`) e aspetta che un operatore **approvi** o **rifiuti**. È diverso dal tool gate L18, che **nega** in automatico senza coinvolgere una persona.
+
+### Perché le demo L19 sono senza LLM
+
+L'obiettivo è mostrare **regole e stati** (pausa, approve, reject), non la variabilità del modello. Con LLM la demo sarebbe meno ripetibile in aula. Il loop ReAct reale con HITL (`react_triage` + `react_triage_resume`) resta opzionale come esercizio avanzato.
 
 ---
 

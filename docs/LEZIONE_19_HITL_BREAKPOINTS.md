@@ -10,6 +10,10 @@
 
 **Durata:** 2 ore — Breakpoint deterministici, persistenza STM, resume workflow.
 
+### Cos'è HITL
+
+**Human-in-the-Loop** = un operatore umano approva o rifiuta azioni critiche **prima** che vengano eseguite. Il sistema salva lo stato (STM, tool pendente) su `ticket_states` e mostra `[HITL PAUSED]`. Dopo approve, il workflow può riprendere (`react_triage_resume`). Panoramica scenari demo: [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md#cosa-fa-ogni-scenario-in-breve).
+
 ## Obiettivi didattici
 
 1. Spiegare perché le **azioni irreversibili** richiedono approvazione umana oltre al tool gate L18.

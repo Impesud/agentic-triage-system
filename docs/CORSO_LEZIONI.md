@@ -98,7 +98,7 @@ gitGraph
 
 ## Comandi rapidi per lezione
 
-> **Manuale demo live Settimana 12–15:** [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md) (indice L15–L20), [SETTIMANA_14](SETTIMANA_14_DEMO_LIVE.md) (L19), [SETTIMANA_15](SETTIMANA_15_DEMO_LIVE.md) (L20).
+> **Manuale demo live Settimana 12–15:** [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md) — **panoramica e guida semplice** di tutti gli scenari L15–L20; [SETTIMANA_14](SETTIMANA_14_DEMO_LIVE.md) (L19), [SETTIMANA_15](SETTIMANA_15_DEMO_LIVE.md) (L20).
 
 | Lezione | Comando |
 |---------|---------|

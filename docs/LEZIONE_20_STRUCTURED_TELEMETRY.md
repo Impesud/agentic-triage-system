@@ -4,6 +4,8 @@
 
 Telemetria **didattica** ma **strutturata**: usage API reale (`response.usage`), costo in **millesimi di dollaro**, latenza per chiamata LLM, persistenza SQLite e blocco leggibile in `azione_eseguita`.
 
+**Demo live:** `l20a` e `l20b` **senza LLM** (mock controllato) — spiegazione in [SETTIMANA_15_DEMO_LIVE.md](SETTIMANA_15_DEMO_LIVE.md). Panoramica tutti gli scenari: [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md#panoramica-rapida--tutti-gli-scenari).
+
 ---
 
 ## 20.1 Perché telemetria enterprise

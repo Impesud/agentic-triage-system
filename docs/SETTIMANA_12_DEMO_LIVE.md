@@ -16,6 +16,87 @@ Indice corso: [CORSO_LEZIONI.md](CORSO_LEZIONI.md).
 
 ---
 
+## Panoramica rapida — tutti gli scenari
+
+| Scenario | Lezione | API? | In una frase |
+|----------|---------|------|--------------|
+| `l15` | 15 | No | Come collaborano gli agenti (topologie + Blackboard) |
+| `l16a` | 16 | Sì | Triage con CrewAI (Analyst → Resolver) |
+| `l16b` | 16 | Sì | Triage con AutoGen (chat tra agenti) |
+| `l17a` | 17 | Sì | ReAct con/senza ottimizzazioni (pruning, cache) |
+| `l17b` | 17 | Sì | Confronto velocità tra pipeline diverse |
+| `l18a` | 18 | No | Blocca input malevoli **prima** dell'LLM |
+| `l18b` | 18 | No | Protegge dati tra agenti e tool critici |
+| `l19a` | 19 | No | Mostra **quando** scatta la pausa umana (HITL) |
+| `l19b` | 19 | No | Mostra **approve / reject** dell'operatore |
+| `l20a` | 20 | No | Formula costo token + eventi telemetria mock |
+| `l20b` | 20 | No | Salva costi su SQLite e query per categoria |
+| `all` | 15–20 | Parziale | Tutta la sequenza (L16/L17 saltati senza API key) |
+
+Comando: `PYTHONPATH=src python3 src/main.py --scenario <nome>`
+
+---
+
+## Cosa fa ogni scenario (in breve)
+
+### Settimana 12 — Multi-agente e performance (L15–L17)
+
+**`l15`** — Senza LLM. Mostra topologie di comunicazione e il foglio condiviso (`SharedHandoffContext`) con cui un agente passa dati all'altro. Base concettuale prima di CrewAI/AutoGen.
+
+**`l16a`** — Con LLM. Due agenti in fila (CrewAI): Analyst analizza il ticket, Resolver produce il JSON. Ticket tipico: Marco Rossi, budget 15k€ → di solito `SALES` / `HIGH`.
+
+**`l16b`** — Con LLM. Stesso obiettivo di `l16a`, ma gli agenti collaborano in una GroupChat AutoGen.
+
+**`l17a`** — Con LLM. Tre run ReAct sullo stesso ticket: (1) baseline senza ottimizzazioni, (2) output compatti + cache embedding, (3) anche pruning messaggi. Si confrontano ms e token stimati.
+
+**`l17b`** — Con LLM. Tabella benchmark: `triage_message` vs `react_triage` vs `multi_agent_triage` (CrewAI/AutoGen).
+
+### Settimana 13 — Sicurezza (L18)
+
+**`l18a`** — Senza LLM. Tre messaggi: benigno (passa), injection (bloccato), tentativo SOC weaponized (bloccato). Allerte in `security_alerts`. La difesa parte **prima** che l'LLM veda il testo.
+
+**`l18b`** — Senza LLM. Tre prove: hand-off avvelenato (bloccato), `notify_manager` senza policy (negato), `notify_manager` con policy in cache (consentito).
+
+Dettaglio: [SETTIMANA_13_DEMO_LIVE.md](SETTIMANA_13_DEMO_LIVE.md).
+
+### Settimana 14 — HITL (L19)
+
+**HITL** = *Human-in-the-Loop*: il sistema **si ferma** e chiede conferma a un operatore prima di azioni critiche (diverso dal tool gate L18 che nega in automatico).
+
+**`l19a`** — Senza LLM. `notify_manager` p3 → esecuzione immediata; `isolate_account` → pausa con `PENDING_APPROVAL` su `ticket_states`.
+
+**`l19b`** — Senza LLM. Due pause di prova: approve → tool eseguito (`RESUMED`); reject → tool non parte (`REJECTED`). CLI: `hitl_cli list | approve | reject`.
+
+Dettaglio: [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md).
+
+### Settimana 15 — Telemetria (L20)
+
+**`l20a`** — Senza LLM. Tariffe, formula `cost_usd_milli`, due chiamate mock con `usage`, eventi JSONL, blocco `TELEMETRY` in `azione_eseguita`, confronto con stima L17.
+
+**`l20b`** — Senza LLM (ReAct mock). Due ticket IT e SALES → SQLite con colonne L20 → query costo medio per `categoria`.
+
+Dettaglio: [SETTIMANA_15_DEMO_LIVE.md](SETTIMANA_15_DEMO_LIVE.md).
+
+### Perché L18, L19 e L20 sono senza LLM in demo
+
+| Lezione | Focus | Perché senza LLM |
+|---------|--------|------------------|
+| L18 | Sicurezza deterministica | Comportamento ripetibile: stesso input → stesso blocco |
+| L19 | Workflow operatore | La pausa deve scattare sempre, non dipendere dal modello |
+| L20 | Misura e costo | Numeri controllati per insegnare formula e query SQL |
+
+Un passo **opzionale con API** (homework): un `react_triage` reale con HITL + telemetria `usage` per collegare demo e produzione.
+
+### Filo logico ultime tre settimane
+
+```
+L18 → blocca/permetti in automatico (sicurezza)
+L19 → fermati e chiedi all'umano (governance)
+L20 → misura costo, token e latenza (osservabilità)
+```
+
+---
+
 ## Cosa fa `main.py` su questo branch
 
 Su `lesson-20-structured-telemetry`, [`src/main.py`](../src/main.py) espone la Settimana 12–15:
@@ -182,13 +263,29 @@ Tre run ReAct con tabella `Run | ms | tokens`:
 
 Tabella benchmark: `triage_message`, `react_triage`, `multi_agent_triage` (CrewAI/AutoGen).
 
+### `l18a` (~20 min, senza API)
+
+Vedi [SETTIMANA_13](SETTIMANA_13_DEMO_LIVE.md): tre ticket, guardrail, `security_alerts`.
+
+### `l18b` (~15 min, senza API)
+
+Hand-off avvelenato + tool gate su `notify_manager`.
+
+### `l19a` / `l19b` (~25 min, senza API)
+
+Vedi [SETTIMANA_14](SETTIMANA_14_DEMO_LIVE.md): breakpoint HITL e approve/reject.
+
+### `l20a` / `l20b` (~20 min, senza API)
+
+Vedi [SETTIMANA_15](SETTIMANA_15_DEMO_LIVE.md): formula costo e query SQLite per categoria.
+
 ### `all` (~90–120 min)
 
 Ordine: `L15 → L16a → L16b → L17a → L17b → L18a → L18b → L19a → L19b → L20a → L20b` (vedi `run_week12_all()`).
 
 ---
 
-## Timeline suggerita (3 sessioni da 2 ore)
+## Timeline suggerita (5 sessioni da 2 ore)
 
 | Sessione | Demo |
 |----------|------|
