@@ -1,8 +1,8 @@
 """
-Demo didattiche Settimana 12–14 — Lezioni 15–19 (multi-agente, performance, sicurezza, HITL).
+Demo didattiche Settimana 12–15 — Lezioni 15–20 (multi-agente, performance, sicurezza, HITL, telemetria).
 
 Documentazione demo live: docs/SETTIMANA_12_DEMO_LIVE.md, docs/SETTIMANA_13_DEMO_LIVE.md,
-docs/SETTIMANA_14_DEMO_LIVE.md
+docs/SETTIMANA_14_DEMO_LIVE.md, docs/SETTIMANA_15_DEMO_LIVE.md
 
 Esecuzione:
   PYTHONPATH=src python3 src/main.py              # default: solo l15 (senza LLM)
@@ -15,7 +15,9 @@ Esecuzione:
   PYTHONPATH=src python3 src/main.py --scenario l18b
   PYTHONPATH=src python3 src/main.py --scenario l19a
   PYTHONPATH=src python3 src/main.py --scenario l19b
-  PYTHONPATH=src python3 src/main.py --scenario all   # L15 → L19
+  PYTHONPATH=src python3 src/main.py --scenario l20a
+  PYTHONPATH=src python3 src/main.py --scenario l20b
+  PYTHONPATH=src python3 src/main.py --scenario all   # L15 → L20
 
 Al termine vengono scritti logs/week12_demo_report.html e .json (aperto nel browser se possibile).
 """
@@ -28,7 +30,9 @@ import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Literal
+from unittest.mock import MagicMock, patch
 
+from analytics.telemetry_report import format_telemetry_report, query_cost_by_categoria
 from analytics.week12_report import (
     BenchmarkRow,
     L17aRunRow,
@@ -37,14 +41,23 @@ from analytics.week12_report import (
     L18bGateRow,
     L19aBreakpointRow,
     L19bResumeRow,
+    L20aTelemetryRow,
+    L20bSqliteRow,
     Week12ReportBuilder,
 )
 from logic import multi_agent_triage, react_triage
 from memory.extractors import detect_sentiment_label, extract_cliente_nome
 from orchestration.api_guard import skip_llm_block
+from orchestration.message_pruning import estimate_tokens
+from orchestration.telemetry import (
+    TelemetryCollector,
+    compute_cost_usd_milli,
+    enrich_azione_eseguita,
+    load_model_pricing,
+)
 from paths import LOG_FILE_PATH, MANUALE_IT_PATH, REPO_ROOT, TRIAGE_DB_PATH, WEEK12_REPORT_PATH
 from reporting.open_html import format_open_fallback, open_html_in_browser
-from tools.logger import init_db, log_triage_to_sqlite
+from tools.logger import init_db, log_event, log_triage_to_sqlite
 
 L16_TICKET = (
     "Sono Marco Rossi. Ho un budget di 15.000€ per un progetto AI "
@@ -66,9 +79,20 @@ L19_TICKET_SOC = (
 )
 
 WEEK12_SCENARIOS = (
-    "l15", "l16a", "l16b", "l17a", "l17b", "l18a", "l18b", "l19a", "l19b", "all"
+    "l15",
+    "l16a",
+    "l16b",
+    "l17a",
+    "l17b",
+    "l18a",
+    "l18b",
+    "l19a",
+    "l19b",
+    "l20a",
+    "l20b",
+    "all",
 )
-_NO_LLM_SCENARIOS = frozenset({"l15", "l18a", "l18b", "l19a", "l19b"})
+_NO_LLM_SCENARIOS = frozenset({"l15", "l18a", "l18b", "l19a", "l19b", "l20a", "l20b"})
 
 
 def load_it_manual() -> str:
@@ -109,19 +133,33 @@ def seed_marco_angry_history(
     return path
 
 
-def _persist_react_result(user_input: str, result) -> None:
+def _persist_react_result(
+    user_input: str,
+    result,
+    *,
+    pipeline: str = "react_triage",
+    telemetry: dict | None = None,
+) -> None:
+    from orchestration.telemetry import parse_telemetry_from_azione
+
     cliente = extract_cliente_nome(user_input) or "Anonimo"
-    log_triage_to_sqlite(
-        {
-            "cliente_nome": cliente,
-            "categoria": result.categoria,
-            "priorita": result.priorita,
-            "sentiment": detect_sentiment_label(user_input),
-            "riassunto_breve": result.riassunto_breve,
-            "lingua": "Italiano",
-            "azione_eseguita": result.azione_eseguita or "Nessuna",
-        }
-    )
+    payload = {
+        "cliente_nome": cliente,
+        "categoria": result.categoria,
+        "priorita": result.priorita,
+        "sentiment": detect_sentiment_label(user_input),
+        "riassunto_breve": result.riassunto_breve,
+        "lingua": "Italiano",
+        "azione_eseguita": result.azione_eseguita or "Nessuna",
+    }
+    if telemetry:
+        payload.update(telemetry)
+    else:
+        parsed = parse_telemetry_from_azione(result.azione_eseguita)
+        payload.update(parsed)
+    if payload.get("pipeline") is None:
+        payload["pipeline"] = pipeline
+    log_triage_to_sqlite(payload)
 
 
 def _write_report(report: Week12ReportBuilder, *, open_browser: bool = True) -> Path:
@@ -763,10 +801,156 @@ def run_l19b_hitl_resume_demo(*, report: Week12ReportBuilder | None = None) -> N
         report.set_l19b_rows(resume_rows)
 
 
+def run_l20a_telemetry_formula_demo(*, report: Week12ReportBuilder | None = None) -> None:
+    """
+  l20a — Formula costo (millesimi USD), due chiamate mock con usage API,
+  confronto stima L17 (tiktoken/len) vs usage reale, eventi JSONL.
+    """
+    print("\n=== L20a — Telemetria: formula costo e usage API (senza LLM) ===\n")
+    pricing = load_model_pricing()
+    print(
+        f"Tariffe gpt-4.1-mini: input ${pricing.input_usd_per_million_tokens}/M, "
+        f"output ${pricing.output_usd_per_million_tokens}/M"
+    )
+    print(
+        "Formula: cost_usd = prompt×rate_in + completion×rate_out; "
+        "cost_usd_milli = round(cost_usd × 1000)\n"
+    )
+
+    collector = TelemetryCollector(pipeline="l20a_demo")
+    mock_calls = (
+        ("tool_turn", 1200, 340, 450),
+        ("final_json", 800, 120, 440),
+    )
+    rows: list[L20aTelemetryRow] = []
+    for kind, prompt_t, completion_t, latency in mock_calls:
+        record = collector.record_call(
+            prompt_tokens=prompt_t,
+            completion_tokens=completion_t,
+            latency_ms=latency,
+            call_kind=kind,  # type: ignore[arg-type]
+            source="api",
+        )
+        cost_milli = compute_cost_usd_milli(prompt_t, completion_t, pricing=pricing)
+        log_event(
+            "llm_call_telemetry",
+            {
+                "pipeline": "l20a_demo",
+                "call_kind": kind,
+                "prompt_tokens": prompt_t,
+                "completion_tokens": completion_t,
+                "latency_ms": latency,
+                "source": "api",
+                "cost_usd_milli": cost_milli,
+            },
+        )
+        sample_text = "x" * (prompt_t + completion_t)
+        tokens_est = estimate_tokens(sample_text)
+        rows.append(
+            L20aTelemetryRow(
+                call_kind=kind,
+                prompt_tokens=prompt_t,
+                completion_tokens=completion_t,
+                cost_usd_milli=cost_milli,
+                latency_ms=latency,
+                tokens_est=tokens_est,
+                source="api",
+            )
+        )
+        print(
+            f"  [{kind}] usage in={prompt_t} out={completion_t} "
+            f"cost_milli={cost_milli} latency_ms={latency} | stima L17≈{tokens_est}"
+        )
+
+    summary = collector.summary(pricing)
+    log_event("triage_telemetry_complete", summary)
+    azione = enrich_azione_eseguita("notify_manager", collector)
+    print(f"\n  azione_eseguita arricchita: {azione}")
+    print(f"  Run totale: cost_milli={summary['cost_usd_milli']} llm_calls={summary['llm_calls']}")
+    print("\n  Eventi JSONL: llm_call_telemetry, triage_telemetry_complete")
+
+    if report is not None:
+        report.set_l20a_rows(rows)
+
+
+def _l20b_mock_react_with_usage(manuale: str, user_input: str, *, categoria: str):
+    """ReAct mock con response.usage per demo SQLite L20."""
+    priorita = "HIGH" if categoria == "IT" else "MEDIUM"
+    riassunto = "Incidente db" if categoria == "IT" else "Budget AI manager"
+    json_out = (
+        f'{{"analisi_problema":"1. P. 2. C. 3. {categoria}. 4. {priorita}.",'
+        f'"categoria":"{categoria}","priorita":"{priorita}","riassunto_breve":"{riassunto}",'
+        f'"messaggio_originale":"{user_input[:80]}"}}'
+    )
+    usage = MagicMock(prompt_tokens=900, completion_tokens=180, total_tokens=1080)
+
+    def _completion(content=None, tool_calls=None):
+        msg = MagicMock(tool_calls=tool_calls, content=content)
+        resp = MagicMock()
+        resp.choices = [MagicMock(message=msg)]
+        resp.usage = usage
+        return resp
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create.return_value = _completion(content=json_out)
+
+    with patch("logic.get_client", return_value=mock_client):
+        return react_triage(user_input, manuale, return_metrics=True)
+
+
+def run_l20b_telemetry_sqlite_demo(*, report: Week12ReportBuilder | None = None) -> None:
+    """
+  l20b — ReAct instrumentato (mock) → persistenza SQLite colonne L20 → query costo medio per categoria.
+    """
+    print("\n=== L20b — Telemetria: SQLite + query aggregata per categoria ===\n")
+    manuale = load_it_manual()
+    tickets = (
+        ("Sono Marco. Il cluster db-primary è down da 2 ore.", "IT"),
+        (
+            "Buongiorno, sono Laura Bianchi. Budget 20k per progetto AI, "
+            "vorrei parlare con un manager.",
+            "SALES",
+        ),
+    )
+
+    sqlite_rows: list[L20bSqliteRow] = []
+    for user_input, expected_cat in tickets:
+        outcome = _l20b_mock_react_with_usage(manuale, user_input, categoria=expected_cat)
+        result, metrics = outcome
+        _persist_react_result(user_input, result, pipeline="react_triage")
+        sqlite_rows.append(
+            L20bSqliteRow(
+                ticket_excerpt=user_input[:60],
+                categoria=result.categoria,
+                expected_categoria=expected_cat,
+                cost_usd_milli=metrics.cost_usd_milli,
+                prompt_tokens=metrics.prompt_tokens,
+                completion_tokens=metrics.completion_tokens,
+                latency_ms=metrics.latency_ms,
+                llm_calls=metrics.llm_calls,
+            )
+        )
+        print(
+            f"  Ticket → {result.categoria} | cost_milli={metrics.cost_usd_milli} "
+            f"tokens={metrics.prompt_tokens}+{metrics.completion_tokens} "
+            f"latency_ms={metrics.latency_ms}"
+        )
+
+    agg = query_cost_by_categoria(TRIAGE_DB_PATH)
+    print("\n" + format_telemetry_report(agg))
+    print(
+        "\n  Query SQL didattica: SELECT categoria, ROUND(AVG(cost_usd_milli)/1000.0,4) "
+        "FROM tickets WHERE cost_usd_milli IS NOT NULL GROUP BY categoria;"
+    )
+
+    if report is not None:
+        report.set_l20b_rows(sqlite_rows, aggregate=agg)
+
+
 def run_week12_all(*, report: Week12ReportBuilder | None = None) -> None:
-    """Sequenza didattica L15 → L16a → L16b → L17a → L17b → L18a → L18b → L19a → L19b."""
+    """Sequenza didattica L15 → L16a → … → L20b."""
     init_db()
-    print("\nDEMO SETTIMANA 12–14 — Multi-agente, performance, sicurezza e HITL (L15–L19)\n")
+    print("\nDEMO SETTIMANA 12–15 — Multi-agente, performance, sicurezza, HITL e telemetria (L15–L20)\n")
     run_l15_topology_demo(report=report)
 
     if skip_llm_block("L16a CrewAI"):
@@ -811,6 +995,8 @@ def run_week12_all(*, report: Week12ReportBuilder | None = None) -> None:
     run_l18b_handoff_tool_gate_demo(report=report)
     run_l19a_hitl_breakpoint_demo(report=report)
     run_l19b_hitl_resume_demo(report=report)
+    run_l20a_telemetry_formula_demo(report=report)
+    run_l20b_telemetry_sqlite_demo(report=report)
 
 
 def _run_scenario_with_report(scenario: str, report: Week12ReportBuilder) -> bool:
@@ -830,13 +1016,13 @@ def _run_scenario_with_report(scenario: str, report: Week12ReportBuilder) -> boo
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Demo Settimana 12–14 — Lezioni 15–19 (multi-agente, performance, sicurezza, HITL)",
+        description="Demo Settimana 12–15 — Lezioni 15–20 (multi-agente, performance, sicurezza, HITL, telemetria)",
     )
     parser.add_argument(
         "--scenario",
         choices=list(WEEK12_SCENARIOS),
         default="l15",
-        help="Demo L15–L19 (default: l15 senza LLM)",
+        help="Demo L15–L20 (default: l15 senza LLM)",
     )
     parser.add_argument(
         "--no-report",
@@ -861,6 +1047,8 @@ _SCENARIO_RUNNERS = {
     "l18b": run_l18b_handoff_tool_gate_demo,
     "l19a": run_l19a_hitl_breakpoint_demo,
     "l19b": run_l19b_hitl_resume_demo,
+    "l20a": run_l20a_telemetry_formula_demo,
+    "l20b": run_l20b_telemetry_sqlite_demo,
     "all": run_week12_all,
 }
 

@@ -29,7 +29,7 @@ L’abbonamento a Cursor **non è necessario** per questo argomento. Conta molto
 
 ## Stato attuale del progetto
 
-Il codice ha una gestione errori di **livello 1–3**: fail-fast con `ValueError`, boundary in `main.py` (pipeline ticket su branch storici; branch L19: demo L15–L19), parser con `raise ... from e`, loop in `logic.py` (`_run_agent_loop` + `_finalize_with_self_correction` — Lezione 11), memoria, RAG + ChromaDB (Lezione 10/10B), self-correction (Lezione 11), benchmark/log KPI (Lezione 12), **ReAct multi-step + SQLite LTM** (Lezioni 13–14), **modelli multi-agente** (Lezione 15), **orchestrazione CrewAI/AutoGen** (Lezione 16), **guardrail sicurezza MAS** (Lezione 18) con [`errors.SecurityGuardrailError`](src/errors.py), **HITL breakpoint** (Lezione 19) con [`errors.HitlApprovalRequired`](src/errors.py); **174 test** su branch `lesson-19-hitl-breakpoints` (percorso lezioni 9–19 **completo**). La gerarchia `errors.py` è avviata (L18–L19); restano opzionali i Moduli 2–4 completi.
+Il codice ha una gestione errori di **livello 1–3**: fail-fast con `ValueError`, boundary in `main.py` (pipeline ticket su branch storici; branch L20: demo L15–L20), parser con `raise ... from e`, loop in `logic.py` (`_run_agent_loop` + `_finalize_with_self_correction` — Lezione 11), memoria, RAG + ChromaDB (Lezione 10/10B), self-correction (Lezione 11), benchmark/log KPI (Lezione 12), **ReAct multi-step + SQLite LTM** (Lezioni 13–14), **modelli multi-agente** (Lezione 15), **orchestrazione CrewAI/AutoGen** (Lezione 16), **guardrail sicurezza MAS** (Lezione 18) con [`errors.SecurityGuardrailError`](src/errors.py), **HITL breakpoint** (Lezione 19) con [`errors.HitlApprovalRequired`](src/errors.py), **telemetria strutturata LLM** (Lezione 20) con eventi `llm_call_telemetry` / `triage_telemetry_complete`; **184 test** su branch `lesson-20-structured-telemetry` (percorso lezioni 9–20 **completo**). La gerarchia `errors.py` è avviata (L18–L19); restano opzionali i Moduli 2–4 completi.
 
 **Indice corso e branch:** [docs/CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md).
 
@@ -188,6 +188,15 @@ Eccezione: `HitlApprovalRequired` in [`src/errors.py`](src/errors.py) — pausa 
 
 **Demo live Settimana 14:** [docs/SETTIMANA_14_DEMO_LIVE.md](docs/SETTIMANA_14_DEMO_LIVE.md) — `l19a`/`l19b` **non** richiedono API key; CLI `orchestration.hitl_cli`.
 
+**Lezione 20 — Telemetria:** eventi `llm_call_telemetry` (per completion), `triage_telemetry_complete` (fine run); colonne nullable su `tickets` (`prompt_tokens`, `completion_tokens`, `cost_usd_milli`, `latency_ms`, `llm_calls`, `pipeline`); blocco `| TELEMETRY …` in `azione_eseguita`; CLI `analytics.telemetry_report`.
+
+| event_type | Significato |
+|------------|-------------|
+| `llm_call_telemetry` | Singola completion: token, latenza, `call_kind`, `source` (`api` \| `estimated`) |
+| `triage_telemetry_complete` | Totali run: `cost_usd_milli`, `llm_calls`, breakdown chiamate |
+
+**Demo live Settimana 15:** [docs/SETTIMANA_15_DEMO_LIVE.md](docs/SETTIMANA_15_DEMO_LIVE.md) — `l20a`/`l20b` senza API key (mock in `l20b`).
+
 ### Lezione 15 — Multi-agent (concettuale)
 
 La Lezione 15 **non introduce nuovi errori runtime**: il package `orchestration/` definisce modelli statici (`AgentSpec`, `SharedHandoffContext`) e la demo `l15` simula un hand-off senza chiamate LLM.
@@ -233,7 +242,7 @@ Dettaglio scenari: [README — Demo](README.md#demo-ed-esecuzione), [CORSO_LEZIO
 | `raise ValueError(...)` | `client.py`, `logic.py`, `parser.py`, `enrichment.py`, `router.py`, `schemas/ticket.py` | Messaggi in italiano |
 | `raise ... from e` | `parser.py` — `JSONDecodeError`, `ValidationError` | Catena traceback preservata |
 | Boundary tipizzato | `main.py` — `except (FileNotFoundError, ValueError, OSError)` | Cattura errori da tutta la pipeline |
-| Suite test essenziale | `tests/` — **174 test** (branch `lesson-19`), alcuni `pytest.raises` | Vedi tabella sotto |
+| Suite test essenziale | `tests/` — **184 test** (branch `lesson-20`), alcuni `pytest.raises` | Vedi tabella sotto |
 | Percorsi centralizzati | `paths.py` | Manuale, policy, ticket, log, `.env` |
 | Separazione agente / orchestrazione | `logic.py` (`_run_agent_loop`) vs `main.py` | Errori LLM nascono nel nucleo loop, gestiti in `main` |
 | Nessuna eccezione di dominio | — | Obiettivo dei moduli 2–4 |
@@ -584,7 +593,7 @@ Checklist Modulo 0 — aggiornare dopo ogni migrazione.
 
 ## Test e copertura fallimenti
 
-Suite essenziale: **174 test** su branch `lesson-19-hitl-breakpoints` (`pytest tests/ -q`). Nessuna chiamata API reale (mock su LLM e embeddings). Conteggi per branch: [CORSO_LEZIONI](docs/CORSO_LEZIONI.md).
+Suite essenziale: **184 test** su branch `lesson-20-structured-telemetry` (`pytest tests/ -q`). Nessuna chiamata API reale (mock su LLM e embeddings). Conteggi per branch: [CORSO_LEZIONI](docs/CORSO_LEZIONI.md).
 
 | File test | Cosa copre |
 |-----------|------------|
@@ -599,12 +608,13 @@ Suite essenziale: **174 test** su branch `lesson-19-hitl-breakpoints` (`pytest t
 | `test_extractors.py` | `cliente_nome`, sentiment |
 | `test_history_tools.py` | Long-term memory (SQLite) |
 | `test_logger_sqlite.py` | Init DB, insert, query indicizzata (L13) |
-| `test_main.py` | Scenari demo M1–M3; CLI L15–L19 |
+| `test_main.py` | Scenari demo M1–M3; CLI L15–L20 |
 | `test_benchmark.py` | Report benchmark (L12) |
-| `test_log_kpi.py` | KPI JSONL (L12–L19, incluso HITL) |
+| `test_log_kpi.py` | KPI JSONL (L12–L20, incluso HITL e telemetria) |
+| `test_telemetry.py` | Collector, pricing, migrazione SQLite L20 |
 | `test_orchestration.py` | Topologie, hand-off Blackboard (L15) |
 | `test_multi_agent.py` | CrewAI/AutoGen mock (L16) |
-| `test_week12_report.py` / `test_main_report.py` | Report HTML Settimana 12–14 (L15–L19) |
+| `test_week12_report.py` / `test_main_report.py` | Report HTML Settimana 12–15 (L15–L20) |
 | `test_input_guardrail.py` / `test_security_pipeline.py` | Guardrail L18 |
 | `test_hitl_breakpoints.py` / `test_hitl_store.py` / `test_hitl_pipeline.py` / `test_hitl_cli.py` | Breakpoint, SQLite, resume ReAct, CLI (L19) |
 | `test_open_html.py` / `test_open_report_script.py` | Apertura report nel browser (WSL) |

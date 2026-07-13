@@ -1,6 +1,6 @@
 # Settimana 12–14 — Guida alla demo live (Lezioni 15–19)
 
-Manuale operativo per docenti e studenti: **come eseguire le demo L15–L19** dal branch `lesson-19-hitl-breakpoints`.
+Manuale operativo per docenti e studenti: **come eseguire le demo L15–L19** (branch storico `lesson-19-hitl-breakpoints`). Su **`lesson-20-structured-telemetry`** la sequenza `all` arriva fino a L20 — vedi [SETTIMANA_15_DEMO_LIVE.md](SETTIMANA_15_DEMO_LIVE.md).
 
 > **Branch `lesson-19-hitl-breakpoints` (corso completo):** include lezioni **15–19**. Demo L18 (`l18a`/`l18b`) e L19 (`l19a`/`l19b`) in [SETTIMANA_13](SETTIMANA_13_DEMO_LIVE.md) e [SETTIMANA_14](SETTIMANA_14_DEMO_LIVE.md). Con `--scenario all` vengono eseguiti **sempre** L18a/L18b e L19a/L19b anche senza API key.
 

@@ -68,6 +68,9 @@ def init_db(db_path: str | None = None) -> None:
         cursor.execute(
             "CREATE INDEX IF NOT EXISTS idx_cliente ON tickets(cliente_nome)"
         )
+        from orchestration.telemetry import migrate_tickets_telemetry_columns
+
+        migrate_tickets_telemetry_columns(conn)
         conn.commit()
 
     from orchestration.hitl_store import init_hitl_tables
@@ -87,9 +90,11 @@ def log_triage_to_sqlite(ticket_data: dict[str, Any], db_path: str | None = None
             """
             INSERT INTO tickets (
                 cliente_nome, categoria, priorita, sentiment,
-                riassunto_breve, lingua, azione_eseguita
+                riassunto_breve, lingua, azione_eseguita,
+                prompt_tokens, completion_tokens, cost_usd_milli,
+                latency_ms, llm_calls, pipeline
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 ticket_data.get("cliente_nome", "Anonimo"),
@@ -99,6 +104,12 @@ def log_triage_to_sqlite(ticket_data: dict[str, Any], db_path: str | None = None
                 ticket_data.get("riassunto_breve", ""),
                 ticket_data.get("lingua", "Italiano"),
                 ticket_data.get("azione_eseguita", "Nessuna"),
+                ticket_data.get("prompt_tokens"),
+                ticket_data.get("completion_tokens"),
+                ticket_data.get("cost_usd_milli"),
+                ticket_data.get("latency_ms"),
+                ticket_data.get("llm_calls"),
+                ticket_data.get("pipeline"),
             ),
         )
         conn.commit()

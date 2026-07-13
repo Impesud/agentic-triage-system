@@ -40,6 +40,23 @@ def test_format_kpi_report_contains_sections():
     assert "emergency_fallback" in report
 
 
+def test_format_kpi_report_contains_telemetry_section():
+    events = [
+        {
+            "event_type": "llm_call_telemetry",
+            "payload": {"prompt_tokens": 100, "completion_tokens": 50, "latency_ms": 200},
+        },
+        {
+            "event_type": "triage_telemetry_complete",
+            "payload": {"cost_usd_milli": 12, "llm_calls": 1},
+        },
+    ]
+    report = format_kpi_report(events)
+    assert "Telemetria strutturata (L20)" in report
+    assert "llm_call_telemetry" in report
+    assert "cost_usd_milli" in report
+
+
 def test_format_kpi_report_contains_hitl_section():
     events = [
         {"event_type": "hitl_breakpoint_reached", "payload": {}},

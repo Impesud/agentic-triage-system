@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 
 from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.conditions import MaxMessageTermination, TextMentionTermination
@@ -20,6 +21,7 @@ from orchestration.security_pipeline import guard_ticket_input
 from orchestration.tool_policy_gate import ToolPolicyContext
 from orchestration.prompt_compression import compact_manuale_for_resolver
 from orchestration.result_parser import extract_json_candidate_from_messages, finalize_multi_agent_output
+from orchestration.telemetry import apply_multi_agent_telemetry
 from orchestration.tool_adapters import make_autogen_tools
 from orchestration.topologies import SECURITY_RESOLVER, TRIAGE_ANALYST, simulate_analyst_handoff
 from prompts.agents.triage_analyst import build_analyst_system_message
@@ -173,6 +175,7 @@ def autogen_triage(
     if enable_security_guard:
         guard_ticket_input(user_input)
     print("\n🎬 [AutoGen] Avvio pipeline Analyst → Resolver...", flush=True)
+    t0 = time.perf_counter()
     raw, metrics = asyncio.run(
         _run_autogen_team(
             user_input,
@@ -192,6 +195,26 @@ def autogen_triage(
         },
     )
     result = finalize_multi_agent_output(raw, user_input)
+    latency_ms = int((time.perf_counter() - t0) * 1000)
+    result, telemetry_collector = apply_multi_agent_telemetry(
+        result,
+        pipeline="autogen",
+        tokens_est=metrics.tokens_est,
+        latency_ms=latency_ms,
+    )
+    tel = telemetry_collector.sqlite_fields()
     if return_metrics:
-        return result, metrics
+        return result, MultiAgentRunMetrics(
+            tokens_est=metrics.tokens_est,
+            handoff_enriched=metrics.handoff_enriched,
+            cache_policy_hits=metrics.cache_policy_hits,
+            cache_ltm_hits=metrics.cache_ltm_hits,
+            compact_manuale_resolver=metrics.compact_manuale_resolver,
+            prompt_tokens=tel["prompt_tokens"],
+            completion_tokens=tel["completion_tokens"],
+            cost_usd_milli=tel["cost_usd_milli"],
+            latency_ms=tel["latency_ms"],
+            llm_calls=tel["llm_calls"],
+            pipeline="autogen",
+        )
     return result

@@ -101,6 +101,41 @@ def performance_metrics(events: list[dict[str, Any]]) -> dict[str, int]:
     }
 
 
+def telemetry_metrics(events: list[dict[str, Any]]) -> dict[str, int | float]:
+    """Metriche Lezione 20: usage API, costo millesimi, latenza LLM."""
+    types = event_type_counts(events)
+    llm_calls = 0
+    total_cost_milli = 0
+    total_prompt = 0
+    total_completion = 0
+    latency_sum = 0
+    complete_runs = 0
+
+    for event in events:
+        if event.get("event_type") == "llm_call_telemetry":
+            llm_calls += 1
+            payload = event.get("payload", {})
+            total_prompt += int(payload.get("prompt_tokens", 0) or 0)
+            total_completion += int(payload.get("completion_tokens", 0) or 0)
+            latency_sum += int(payload.get("latency_ms", 0) or 0)
+        if event.get("event_type") == "triage_telemetry_complete":
+            complete_runs += 1
+            payload = event.get("payload", {})
+            total_cost_milli += int(payload.get("cost_usd_milli", 0) or 0)
+
+    avg_latency = (latency_sum / llm_calls) if llm_calls else 0.0
+    return {
+        "llm_call_telemetry": types.get("llm_call_telemetry", 0),
+        "triage_telemetry_complete": types.get("triage_telemetry_complete", 0),
+        "telemetry_llm_calls": llm_calls,
+        "telemetry_cost_usd_milli": total_cost_milli,
+        "telemetry_prompt_tokens": total_prompt,
+        "telemetry_completion_tokens": total_completion,
+        "telemetry_avg_latency_ms": round(avg_latency, 1),
+        "telemetry_complete_runs": complete_runs,
+    }
+
+
 def format_kpi_report(events: list[dict[str, Any]]) -> str:
     """Report testuale per terminale."""
     types = event_type_counts(events)
@@ -109,6 +144,7 @@ def format_kpi_report(events: list[dict[str, Any]]) -> str:
     performance = performance_metrics(events)
     security = security_metrics(events)
     hitl = hitl_metrics(events)
+    telemetry = telemetry_metrics(events)
     lines = [
         "=== KPI DA activity.jsonl ===",
         f"Eventi totali: {len(events)}",
@@ -151,6 +187,14 @@ def format_kpi_report(events: list[dict[str, Any]]) -> str:
             f"  hitl_session_approved: {hitl['hitl_session_approved']}",
             f"  hitl_session_rejected: {hitl['hitl_session_rejected']}",
             f"  hitl_session_resumed: {hitl['hitl_session_resumed']}",
+            "",
+            "Telemetria strutturata (L20):",
+            f"  llm_call_telemetry: {telemetry['llm_call_telemetry']}",
+            f"  triage_telemetry_complete: {telemetry['triage_telemetry_complete']}",
+            f"  cost_usd_milli (somma run): {telemetry['telemetry_cost_usd_milli']}",
+            f"  prompt_tokens (somma chiamate): {telemetry['telemetry_prompt_tokens']}",
+            f"  completion_tokens (somma chiamate): {telemetry['telemetry_completion_tokens']}",
+            f"  latenza media per chiamata (ms): {telemetry['telemetry_avg_latency_ms']}",
             "==================================",
         ]
     )

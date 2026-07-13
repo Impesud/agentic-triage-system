@@ -11,6 +11,8 @@ from analytics.week12_report import (
     L18bGateRow,
     L19aBreakpointRow,
     L19bResumeRow,
+    L20aTelemetryRow,
+    L20bSqliteRow,
     Week12ReportBuilder,
     render_week12_html,
 )
@@ -198,6 +200,33 @@ def test_full_all_scenario_report_structure():
     )
     report.set_l19b_rows(
         [L19bResumeRow(action="approve", session_id="hitl-x", final_status="RESUMED", detail="ok")]
+    )
+    report.set_l20a_rows(
+        [
+            L20aTelemetryRow(
+                call_kind="tool_turn",
+                prompt_tokens=100,
+                completion_tokens=50,
+                cost_usd_milli=1,
+                latency_ms=100,
+                tokens_est=120,
+            )
+        ]
+    )
+    report.set_l20b_rows(
+        [
+            L20bSqliteRow(
+                ticket_excerpt="ticket IT",
+                categoria="IT",
+                expected_categoria="IT",
+                cost_usd_milli=2,
+                prompt_tokens=100,
+                completion_tokens=50,
+                latency_ms=200,
+                llm_calls=1,
+            )
+        ],
+        aggregate=[{"categoria": "IT", "avg_cost_usd": 0.002, "avg_latency_ms": 200.0, "n": 1}],
     )
     html_out = render_week12_html(report)
     for scenario_id, _, _ in LESSON_SCENARIOS:

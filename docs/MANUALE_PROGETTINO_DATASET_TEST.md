@@ -6,7 +6,7 @@
 
 > **Nota (branch `lesson-18-multi-agent-security`):** le [Lezioni 15–18](LEZIONE_15_MULTI_AGENT_COORDINATION.md) coprono multi-agente, orchestrazione CrewAI/AutoGen, ottimizzazione performance e **sicurezza MAS** ([L18](LEZIONE_18_MULTI_AGENT_SECURITY.md)).
 >
-> **Nota (branch `lesson-19-hitl-breakpoints` — corso completo 9–19):** la [Lezione 19](LEZIONE_19_HITL_BREAKPOINTS.md) aggiunge breakpoint HITL su tool critici, persistenza `ticket_states` e resume ReAct. Per scenari SOC con azioni irreversibili, valutare `enable_hitl=True` su `react_triage` e il workflow operatore in [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md).
+> **Nota (branch `lesson-20-structured-telemetry` — corso completo 9–20):** la [Lezione 19](LEZIONE_19_HITL_BREAKPOINTS.md) aggiunge breakpoint HITL; la [Lezione 20](LEZIONE_20_STRUCTURED_TELEMETRY.md) aggiunge telemetria costo/token su SQLite. Per scenari SOC con azioni irreversibili, valutare `enable_hitl=True` su `react_triage` e il workflow in [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md).
 >
 > Il progettino SOC resta ancorato alle competenze **L9–L14**; le lezioni 15–19 sono il percorso avanzato multi-agente (opzionale, branch `lesson-19-hitl-breakpoints` o fork `progetto-2`).
 

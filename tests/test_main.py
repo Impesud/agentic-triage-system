@@ -3,7 +3,18 @@ from main import L16_TICKET, WEEK12_SCENARIOS, seed_marco_angry_history
 
 def test_cli_scenarios_week12_only():
     assert WEEK12_SCENARIOS == (
-        "l15", "l16a", "l16b", "l17a", "l17b", "l18a", "l18b", "l19a", "l19b", "all"
+        "l15",
+        "l16a",
+        "l16b",
+        "l17a",
+        "l17b",
+        "l18a",
+        "l18b",
+        "l19a",
+        "l19b",
+        "l20a",
+        "l20b",
+        "all",
     )
 
 

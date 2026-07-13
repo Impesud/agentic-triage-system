@@ -3,7 +3,7 @@
 Indice delle **lezioni**, **branch Git** e documentazione di riferimento.  
 Ogni branch contiene il codice **cumulativo** fino alla lezione indicata; le lezioni successive vivono sui branch successivi.
 
-> **Stato corso (luglio 2026):** il percorso **lezioni 9–19** è **completo** sul branch [`lesson-19-hitl-breakpoints`](.) — ultima lezione: HITL, breakpoint e resume ReAct. Per il progettino SOC (L9–L14) resta valido il branch `lesson-14-planning-loops` o il fork `progetto-2`.
+> **Stato corso (luglio 2026):** il percorso **lezioni 9–20** è **completo** sul branch [`lesson-20-structured-telemetry`](.) — ultima lezione: telemetria strutturata, costo USD e tracciabilità LLM. Per il progettino SOC (L9–L14) resta valido il branch `lesson-14-planning-loops` o il fork `progetto-2`.
 
 ## Mappa branch ↔ lezioni
 
@@ -19,7 +19,8 @@ Ogni branch contiene il codice **cumulativo** fino alla lezione indicata; le lez
 | [`lesson-16-crew-autogen-orchestration`](.) | **Lezione 16** — CrewAI & AutoGen | `git checkout lesson-16-crew-autogen-orchestration` | ~83 |
 | [`lesson-17-multi-agent-performance`](.) | **Lezione 17** — Performance MAS | `git checkout lesson-17-multi-agent-performance` | ~106 |
 | [`lesson-18-multi-agent-security`](.) | **Lezione 18** — Sicurezza MAS | `git checkout lesson-18-multi-agent-security` | ~150 |
-| [`lesson-19-hitl-breakpoints`](.) | **Lezione 19** — HITL e resume | `git checkout lesson-19-hitl-breakpoints` | ~174 (**ultimo branch**) |
+| [`lesson-19-hitl-breakpoints`](.) | **Lezione 19** — HITL e resume | `git checkout lesson-19-hitl-breakpoints` | ~174 |
+| [`lesson-20-structured-telemetry`](.) | **Lezione 20** — Telemetria strutturata | `git checkout lesson-20-structured-telemetry` | ~184 (**ultimo branch**) |
 
 ```mermaid
 gitGraph
@@ -54,6 +55,9 @@ gitGraph
   branch lesson-19-hitl-breakpoints
   checkout lesson-19-hitl-breakpoints
   commit id: "L19-hitl"
+  branch lesson-20-structured-telemetry
+  checkout lesson-20-structured-telemetry
+  commit id: "L20-telemetry"
 ```
 
 **Settimana 8 (lezioni 11–12):** resilienza, error recovery, benchmarking — vedi [LEZIONE_11_RESILIENZA.md](LEZIONE_11_RESILIENZA.md) e [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md).
@@ -65,6 +69,8 @@ gitGraph
 **Settimana 13 (lezione 18):** sicurezza MAS — guardrail, hand-off, tool gate — manuale demo live: **[SETTIMANA_13_DEMO_LIVE.md](SETTIMANA_13_DEMO_LIVE.md)**; teoria: [LEZIONE_18](LEZIONE_18_MULTI_AGENT_SECURITY.md).
 
 **Settimana 14 (lezione 19):** HITL, breakpoint, resume workflow — guida uso breakpoint: [LEZIONE_19 § guida pratica](LEZIONE_19_HITL_BREAKPOINTS.md#come-usare-i-breakpoint-guida-pratica); demo live: **[SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md)**; teoria completa: [LEZIONE_19](LEZIONE_19_HITL_BREAKPOINTS.md).
+
+**Settimana 15 (lezione 20):** telemetria strutturata, costo USD, usage API — guida pratica: [LEZIONE_20 § guida](LEZIONE_20_STRUCTURED_TELEMETRY.md#come-usare-la-telemetria--guida-pratica); demo live: **[SETTIMANA_15_DEMO_LIVE.md](SETTIMANA_15_DEMO_LIVE.md)**; teoria: [LEZIONE_20](LEZIONE_20_STRUCTURED_TELEMETRY.md).
 
 ---
 
@@ -86,6 +92,7 @@ gitGraph
 | **17** | Pruning, cache pipeline, benchmark MAS | `message_pruning`, `pipeline_cache`, `benchmark_multi_agent` | [LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) |
 | **18** | Guardrail input, hand-off sanitizer, tool gate | `input_guardrail`, `handoff_sanitizer`, `tool_policy_gate`, `security_alerts` | [LEZIONE_18_MULTI_AGENT_SECURITY.md](LEZIONE_18_MULTI_AGENT_SECURITY.md) |
 | **19** | HITL breakpoint, `ticket_states`, resume CLI | `hitl_breakpoints`, `hitl_store`, `hitl_pipeline`, `hitl_cli` | [LEZIONE_19_HITL_BREAKPOINTS.md](LEZIONE_19_HITL_BREAKPOINTS.md) |
+| **20** | Telemetria LLM, costo USD, usage API | `orchestration/telemetry.py`, colonne L20 su `tickets`, `telemetry_report` | [LEZIONE_20_STRUCTURED_TELEMETRY.md](LEZIONE_20_STRUCTURED_TELEMETRY.md) |
 
 ---
 
@@ -104,8 +111,11 @@ gitGraph
 | 18b — Hand-off + tool gate | `PYTHONPATH=src python3 src/main.py --scenario l18b` |
 | 19a — Breakpoint HITL | `… --scenario l19a` — notify p3 subito, isolate in pausa su SQLite |
 | 19b — Approve / reject | `… --scenario l19b` — operatore approva o rifiuta il tool in sospeso |
+| 20a — Formula costo + usage mock | `… --scenario l20a` — senza LLM |
+| 20b — SQLite telemetry + query | `… --scenario l20b` — ReAct mock, no API key |
+| Report telemetria SQLite | `PYTHONPATH=src python3 -m analytics.telemetry_report` |
 | CLI operatore HITL | `PYTHONPATH=src python3 -m orchestration.hitl_cli list` |
-| Settimana 12–14 — tutte le demo | `PYTHONPATH=src python3 src/main.py --scenario all` |
+| Settimana 12–15 — tutte le demo | `PYTHONPATH=src python3 src/main.py --scenario all` |
 | Report HTML (auto a fine run) | `logs/week12_demo_report.html` |
 | 12 — benchmark monolitico | `PYTHONPATH=src python3 src/benchmark.py` |
 | 17 — benchmark multi-agent | `PYTHONPATH=src python3 src/benchmark_multi_agent.py` |
@@ -129,6 +139,7 @@ gitGraph
 | **Settimana 12** | Multi-agent, orchestrazione, performance MAS | `lesson-15-*` → `lesson-17-*` |
 | **Settimana 13** | Sicurezza MAS: guardrail, hand-off, tool gate | `lesson-18-*` |
 | **Settimana 14** | HITL: breakpoint, ticket_states, resume | `lesson-19-*` |
+| **Settimana 15** | Telemetria: usage API, costo USD, SQLite L20 | `lesson-20-*` |
 
 ---
 
@@ -137,7 +148,7 @@ gitGraph
 | File | Contenuto |
 |------|-----------|
 | [README.md](../README.md) | Architettura, setup, demo, struttura repo (allineato al branch corrente) |
-| [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) | Manuale errori, moduli 0–5, collegamento L11–L19 |
+| [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) | Manuale errori, moduli 0–5, collegamento L11–L20 |
 | [LEZIONE_10B_CHROMADB.md](LEZIONE_10B_CHROMADB.md) | Laboratorio ChromaDB |
 | [LEZIONE_11_RESILIENZA.md](LEZIONE_11_RESILIENZA.md) | Hard vs soft error, self-correction, fallback |
 | [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md) | Benchmark, analytics, triage_v2 |
@@ -148,10 +159,12 @@ gitGraph
 | [LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) | Pruning, cache pipeline, benchmark MAS |
 | [LEZIONE_18_MULTI_AGENT_SECURITY.md](LEZIONE_18_MULTI_AGENT_SECURITY.md) | Guardrail, hand-off sanitizer, tool gate |
 | [LEZIONE_19_HITL_BREAKPOINTS.md](LEZIONE_19_HITL_BREAKPOINTS.md) | Breakpoint HITL, `ticket_states`, resume ReAct |
-| [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md) | **Manuale operativo demo live L15–L17** (su L19: esteso a L18–L19) |
+| [LEZIONE_20_STRUCTURED_TELEMETRY.md](LEZIONE_20_STRUCTURED_TELEMETRY.md) | Telemetria LLM, costo millesimi USD, query SQLite |
+| [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md) | **Manuale operativo demo live L15–L17** |
 | [SETTIMANA_13_DEMO_LIVE.md](SETTIMANA_13_DEMO_LIVE.md) | **Manuale operativo demo live L18** |
 | [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md) | **Manuale operativo demo live L19** |
-| [MANUALE_PROGETTINO_DATASET_TEST.md](MANUALE_PROGETTINO_DATASET_TEST.md) | Progettino SOC (L9–L14; note L15–L19 opzionali) |
+| [SETTIMANA_15_DEMO_LIVE.md](SETTIMANA_15_DEMO_LIVE.md) | **Manuale operativo demo live L20** |
+| [MANUALE_PROGETTINO_DATASET_TEST.md](MANUALE_PROGETTINO_DATASET_TEST.md) | Progettino SOC (L9–L14; note L15–L20 opzionali) |
 
 ---
 
@@ -225,7 +238,7 @@ Vedi [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md) per la checklist com
 |----------|-----------------|
 | Message pruning | `orchestration/message_pruning.py`, `test_message_pruning.py` |
 | Cache pipeline | `pipeline_cache.py`, `test_pipeline_cache.py` |
-| CLI L15–L19 | `main.WEEK12_SCENARIOS`, `test_cli_scenarios_week12_only` |
+| CLI L15–L20 | `main.WEEK12_SCENARIOS`, `test_cli_scenarios_week12_only` |
 | Demo l17a/l17b | `run_l17a_pruning_demo`, `benchmark_multi_agent.py` |
 | KPI L17 in log | `analytics/log_kpi.performance_metrics` |
 | Retrocompatibilità | `pytest tests/ -q` (~106), benchmark L12 |
@@ -270,4 +283,22 @@ Push suggerito:
 
 ```bash
 git push -u origin lesson-19-hitl-breakpoints
+```
+
+## Per docenti — review Settimana 15 (L20)
+
+| Criterio | Dove verificare |
+|----------|-----------------|
+| Modulo telemetria | `orchestration/telemetry.py`, `test_telemetry.py` |
+| Hook LLM | `logic._call_llm_with_tools`, `_request_final_json` |
+| Colonne SQLite | `data/schema/triage_system.sql`, `migrate_tickets_telemetry_columns` |
+| KPI JSONL | `analytics/log_kpi.telemetry_metrics` |
+| Report SQLite | `analytics/telemetry_report.py` |
+| Demo l20a/l20b | `main.run_l20a_*`, `run_l20b_*` |
+| Retrocompatibilità | `pytest tests/ -q` (~184), `tokens_est` L17 invariato |
+
+Push suggerito:
+
+```bash
+git push -u origin lesson-20-structured-telemetry
 ```

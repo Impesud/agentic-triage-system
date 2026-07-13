@@ -33,7 +33,7 @@ Report post-run (revisione studenti):
 
 | File | Ruolo |
 |------|--------|
-| `logs/week12_demo_report.html` | Sintesi + `<details>` per L15–L19 (incl. guardrail L18, HITL L19) |
+| `logs/week12_demo_report.html` | Sintesi + `<details>` per L15–L20 (su branch L20; L15–L19 su branch L19) |
 | `logs/week12_demo_report.json` | Stessi dati strutturati (diff tra run) |
 | `logs/activity.jsonl` | Trace completo (`security_input_blocked`, `security_tool_denied`, …) |
 
@@ -103,7 +103,7 @@ La [Lezione 19](LEZIONE_19_HITL_BREAKPOINTS.md) è disponibile sul branch `lesso
 |---------|------|
 | Teoria e guida breakpoint | [LEZIONE_19_HITL_BREAKPOINTS.md](LEZIONE_19_HITL_BREAKPOINTS.md) |
 | Demo live `l19a` / `l19b` | [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md) |
-| Sequenza completa L15–L19 | `PYTHONPATH=src python3 src/main.py --scenario all` |
+| Sequenza completa L15–L20 (branch L20) | `PYTHONPATH=src python3 src/main.py --scenario all` |
 
 ```bash
 git checkout lesson-19-hitl-breakpoints

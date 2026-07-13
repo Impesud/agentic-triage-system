@@ -2,7 +2,7 @@
 
 **Human-in-the-Loop e breakpoint workflow** — complementa [SETTIMANA_13_DEMO_LIVE.md](SETTIMANA_13_DEMO_LIVE.md) e [LEZIONE_19_HITL_BREAKPOINTS.md](LEZIONE_19_HITL_BREAKPOINTS.md) (guida completa: [come usare i breakpoint](LEZIONE_19_HITL_BREAKPOINTS.md#come-usare-i-breakpoint-guida-pratica)).
 
-**Branch:** `lesson-19-hitl-breakpoints` (**ultimo branch** del percorso lezioni 9–19)
+**Branch:** `lesson-19-hitl-breakpoints` (checkpoint Settimana 14). Su **`lesson-20-structured-telemetry`** la sequenza `all` include anche L20 — vedi [SETTIMANA_15_DEMO_LIVE.md](SETTIMANA_15_DEMO_LIVE.md).
 
 ---
 
@@ -22,7 +22,7 @@
 |----------|-----|-----------|
 | `l19a` | No | Breakpoint HITL: notify p3 immediato, isolate_account → PENDING_APPROVAL |
 | `l19b` | No | Approve → RESUMED + esecuzione tool; Reject → REJECTED |
-| `all` | Parziale | Sequenza L15–L19; L19a/L19b sempre eseguiti anche senza API key |
+| `all` | Parziale | Su branch L19: L15–L19. Su branch L20: L15–L20 (`l20a`/`l20b` senza API key) |
 
 ### Cosa fa ogni scenario (in breve)
 
@@ -115,4 +115,4 @@ Session ID HITL nel loop ReAct: `hitl-{react_session_id}` (distinto dalla sessio
 - [ ] `approve` / `reject` dimostrati in `l19b`
 - [ ] Spiegata differenza demo tool-only vs resume ReAct in `react_triage`
 - [ ] `python3 -m analytics.log_kpi` mostra sezione HITL L19
-- [ ] `pytest tests/ -q` verde (174 test)
+- [ ] `pytest tests/ -q` verde (174 su branch L19; ~184 su L20)

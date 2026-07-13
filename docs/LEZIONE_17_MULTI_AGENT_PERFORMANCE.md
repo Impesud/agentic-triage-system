@@ -151,6 +151,6 @@ Quando il Blackboard è arricchito post-Analyst (`policy_excerpt`, `ltm_digest`)
 - [README.md](../README.md) — architettura cumulativa
 - [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) — eventi audit L17
 
-## Nota branch L19 (corso completo)
+## Nota branch L20 (corso completo)
 
-Su `lesson-19-hitl-breakpoints`, `main.py` include anche `l19a`/`l19b` e la sequenza `all` estesa L15→L19. Vedi [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md) e [LEZIONE_19_HITL_BREAKPOINTS.md](LEZIONE_19_HITL_BREAKPOINTS.md).
+Su `lesson-20-structured-telemetry`, `main.py` include `l19a`/`l19b`, `l20a`/`l20b` e la sequenza `all` estesa L15→L20. Vedi [SETTIMANA_15_DEMO_LIVE.md](SETTIMANA_15_DEMO_LIVE.md) e [LEZIONE_20_STRUCTURED_TELEMETRY.md](LEZIONE_20_STRUCTURED_TELEMETRY.md). Checkpoint precedente L19: [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md).

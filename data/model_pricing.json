@@ -1,0 +1,7 @@
+{
+  "gpt-4.1-mini": {
+    "input_usd_per_million_tokens": 0.40,
+    "output_usd_per_million_tokens": 1.60,
+    "notes": "Tariffe didattiche Impesud — aggiornare da listino OpenAI ufficiale"
+  }
+}

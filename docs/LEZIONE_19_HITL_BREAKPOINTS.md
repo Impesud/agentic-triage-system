@@ -2,11 +2,11 @@
 
 **Settimana 14** — complementa [LEZIONE_18_MULTI_AGENT_SECURITY.md](LEZIONE_18_MULTI_AGENT_SECURITY.md) e [CORSO_LEZIONI.md](CORSO_LEZIONI.md).
 
-**Stato:** lezione **completata** — branch `lesson-19-hitl-breakpoints` pubblicato; **ultima lezione** del percorso didattico 9–19.
+**Stato:** lezione **completata** — branch `lesson-19-hitl-breakpoints` (checkpoint storico). Il corso prosegue con la [Lezione 20](LEZIONE_20_STRUCTURED_TELEMETRY.md) su `lesson-20-structured-telemetry`.
 
-**Demo live:** [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md) — sezioni `l19a`, `l19b` e sequenza `all`.
+**Demo live:** [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md) — sezioni `l19a`, `l19b` (su branch L20, `all` include anche L20: [SETTIMANA_15_DEMO_LIVE.md](SETTIMANA_15_DEMO_LIVE.md)).
 
-**Branch:** `lesson-19-hitl-breakpoints` (include lezioni 9–19; **ultimo branch del corso**).
+**Branch didattico L19:** `lesson-19-hitl-breakpoints` (include lezioni 9–19).
 
 **Durata:** 2 ore — Breakpoint deterministici, persistenza STM, resume workflow.
 
@@ -272,7 +272,7 @@ PYTHONPATH=src python3 -m analytics.log_kpi
 pytest tests/test_hitl_breakpoints.py tests/test_hitl_store.py \
        tests/test_hitl_pipeline.py tests/test_hitl_cli.py \
        tests/test_logic.py -k "hitl or react_triage_resume" -q
-pytest tests/ -q   # 174 test
+pytest tests/ -q   # 174 test su questo branch; ~184 su `lesson-20-structured-telemetry`
 ```
 
 ## File chiave
@@ -295,9 +295,11 @@ pytest tests/ -q   # 174 test
 - [ ] Eventi `hitl_breakpoint_reached`, `hitl_session_resumed` in `activity.jsonl`
 - [ ] `pytest tests/ -q` verde
 
-## Fine percorso lezioni 9–19
+## Fine Settimana 14 (lezione 19)
 
-Con la Lezione 19 il corso **Agentic Customer Care Triage System** copre l'intero arco didattico:
+Con la Lezione 19 si completa la Settimana 14 (HITL). **Prossimo passo:** [LEZIONE_20_STRUCTURED_TELEMETRY.md](LEZIONE_20_STRUCTURED_TELEMETRY.md) — telemetria strutturata, costo USD e query SQLite (branch `lesson-20-structured-telemetry`).
+
+Riepilogo Settimana 14:
 
 | Settimana | Lezioni | Competenza chiave |
 |-----------|---------|-------------------|
@@ -307,7 +309,7 @@ Con la Lezione 19 il corso **Agentic Customer Care Triage System** copre l'inter
 | 13 | 18 | Sicurezza MAS (guardrail, tool gate) |
 | 14 | 19 | HITL, breakpoint, resume operatore |
 
-**Branch di riferimento completo:** `lesson-19-hitl-breakpoints` — `174 test`, demo `l15` … `l19b`, CLI `hitl_cli`.
+**Branch di riferimento L19:** `lesson-19-hitl-breakpoints` — `174 test`, demo `l15` … `l19b`, CLI `hitl_cli`. **Corso completo 9–20:** `lesson-20-structured-telemetry` — vedi [LEZIONE_20](LEZIONE_20_STRUCTURED_TELEMETRY.md).
 
 Percorsi paralleli: [MANUALE_PROGETTINO_DATASET_TEST.md](MANUALE_PROGETTINO_DATASET_TEST.md) (progettino SOC L9–L14); fork avanzato `progetto-2`.
 
@@ -319,6 +321,7 @@ Percorsi paralleli: [MANUALE_PROGETTINO_DATASET_TEST.md](MANUALE_PROGETTINO_DATA
 
 - [LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) — latenza pipeline
 - [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md) — manuale operativo
+- [LEZIONE_20_STRUCTURED_TELEMETRY.md](LEZIONE_20_STRUCTURED_TELEMETRY.md) — telemetria e costo LLM (prossimo passo)
 - [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) — eventi audit L19
 
 ## Documentazione correlata

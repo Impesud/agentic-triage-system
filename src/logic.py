@@ -4,16 +4,19 @@ Lezione 11: self-correction su soft error e emergency fallback;
 Lezione 13: loop ReAct multi-step; Lezione 14: max_steps, STM, self-correction in-loop;
 Lezione 16: orchestrazione multi-agent; Lezione 17: pruning e cache pipeline;
 Lezione 18: input guardrail e tool policy gate;
-Lezione 19: breakpoint HITL e resume workflow.
+Lezione 19: breakpoint HITL e resume workflow;
+Lezione 20: telemetria strutturata (usage API, costo, latenza).
 """
 
 from __future__ import annotations
 
 import json
 import re
+import time
 import uuid
+from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Iterator, Literal
 
 from client import MODEL, get_client
 from memory.extractors import detect_sentiment_label, extract_cliente_nome
@@ -32,6 +35,14 @@ from orchestration.message_pruning import (
 )
 from orchestration.pipeline_cache import PipelineContextCache
 from orchestration.security_pipeline import guard_ticket_input
+from orchestration.telemetry import (
+    TelemetryCollector,
+    enrich_azione_eseguita,
+    extract_usage_from_response,
+    get_active_collector,
+    reset_telemetry_collector,
+    start_telemetry_collector,
+)
 from orchestration.tool_policy_gate import ToolPolicyContext
 from tools.registry import TOOL_MAP, TOOLS_DEFINITION
 
@@ -78,19 +89,29 @@ class TriageStats:
 
 @dataclass(frozen=True)
 class TriageRunMetrics:
-    """Metriche run triage_message per benchmark L17."""
+    """Metriche run triage_message per benchmark L17/L20."""
 
     tokens_est: int
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    cost_usd_milli: int = 0
+    latency_ms: int = 0
+    llm_calls: int = 0
 
 
 @dataclass(frozen=True)
 class ReactRunMetrics:
-    """Metriche run ReAct per benchmark L17."""
+    """Metriche run ReAct per benchmark L17/L20."""
 
     tokens_est: int
     enable_pruning: bool
     enable_cache: bool
     enable_compact_output: bool
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    cost_usd_milli: int = 0
+    latency_ms: int = 0
+    llm_calls: int = 0
 
 
 class ClarificationNeeded(Exception):
@@ -153,7 +174,75 @@ def _looks_like_json(content: str) -> bool:
     return content.strip().startswith("{")
 
 
+@contextmanager
+def _telemetry_run(pipeline: str) -> Iterator[TelemetryCollector]:
+    collector, token = start_telemetry_collector(pipeline)
+    try:
+        yield collector
+    finally:
+        reset_telemetry_collector(token)
+
+
+def _log_llm_call_telemetry(
+    collector: TelemetryCollector,
+    record: Any,
+    *,
+    call_kind: Literal["tool_turn", "final_json"],
+) -> None:
+    log_event(
+        "llm_call_telemetry",
+        {
+            "pipeline": collector.pipeline,
+            "call_kind": call_kind,
+            "prompt_tokens": record.prompt_tokens,
+            "completion_tokens": record.completion_tokens,
+            "latency_ms": record.latency_ms,
+            "source": record.source,
+            "model": record.model,
+        },
+    )
+
+
+def _apply_telemetry_to_result(result: TriageResult) -> TriageResult:
+    collector = get_active_collector()
+    if collector is None or collector.llm_calls == 0:
+        return result
+    enriched = enrich_azione_eseguita(result.azione_eseguita, collector)
+    log_event("triage_telemetry_complete", collector.summary())
+    return result.model_copy(update={"azione_eseguita": enriched})
+
+
+def _metrics_from_collector(
+    collector: TelemetryCollector | None,
+    *,
+    tokens_est: int,
+    enable_pruning: bool = False,
+    enable_cache: bool = False,
+    enable_compact_output: bool = False,
+) -> ReactRunMetrics:
+    if collector is None:
+        return ReactRunMetrics(
+            tokens_est=tokens_est,
+            enable_pruning=enable_pruning,
+            enable_cache=enable_cache,
+            enable_compact_output=enable_compact_output,
+        )
+    return ReactRunMetrics(
+        tokens_est=tokens_est,
+        enable_pruning=enable_pruning,
+        enable_cache=enable_cache,
+        enable_compact_output=enable_compact_output,
+        prompt_tokens=collector.prompt_tokens,
+        completion_tokens=collector.completion_tokens,
+        cost_usd_milli=collector.cost_usd_milli(),
+        latency_ms=collector.latency_ms,
+        llm_calls=collector.llm_calls,
+    )
+
+
 def _call_llm_with_tools(client: Any, messages: list[dict[str, Any]]) -> Any:
+    collector = get_active_collector()
+    t0 = time.perf_counter()
     response = client.chat.completions.create(
         model=MODEL,
         temperature=0,
@@ -161,6 +250,21 @@ def _call_llm_with_tools(client: Any, messages: list[dict[str, Any]]) -> Any:
         tools=TOOLS_DEFINITION,
         tool_choice="auto",
     )
+    latency_ms = int((time.perf_counter() - t0) * 1000)
+    if collector is not None:
+        prompt_tokens, completion_tokens, source = extract_usage_from_response(
+            response,
+            messages,
+            call_kind="tool_turn",
+        )
+        record = collector.record_call(
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            latency_ms=latency_ms,
+            call_kind="tool_turn",
+            source=source,
+        )
+        _log_llm_call_telemetry(collector, record, call_kind="tool_turn")
     return response.choices[0].message
 
 
@@ -417,12 +521,29 @@ def _apply_all_fallbacks(
 
 
 def _request_final_json(client: Any, conversation: list[Any]) -> str:
+    collector = get_active_collector()
+    t0 = time.perf_counter()
     response = client.chat.completions.create(
         model=MODEL,
         temperature=0,
         messages=conversation,
         response_format={"type": "json_object"},
     )
+    latency_ms = int((time.perf_counter() - t0) * 1000)
+    if collector is not None:
+        prompt_tokens, completion_tokens, source = extract_usage_from_response(
+            response,
+            conversation,
+            call_kind="final_json",
+        )
+        record = collector.record_call(
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            latency_ms=latency_ms,
+            call_kind="final_json",
+            source=source,
+        )
+        _log_llm_call_telemetry(collector, record, call_kind="final_json")
     content = response.choices[0].message.content
     if not content:
         raise ValueError("Risposta vuota dal modello")
@@ -478,7 +599,8 @@ def _finalize_with_self_correction(
         )
 
         try:
-            return parse_llm_output(raw_content), stats
+            result = parse_llm_output(raw_content)
+            return _apply_telemetry_to_result(result), stats
         except ValueError as exc:
             print(
                 f"   ⚠️ Tentativo {attempt}/{max_retries} fallito. "
@@ -510,7 +632,7 @@ def _finalize_with_self_correction(
                         "priorita": fallback.priorita,
                     },
                 )
-                return fallback, TriageStats(
+                return _apply_telemetry_to_result(fallback), TriageStats(
                     attempts=attempt,
                     used_self_correction=stats.used_self_correction,
                     used_emergency_fallback=True,
@@ -600,31 +722,41 @@ def triage_message(
 ) -> TriageResult | tuple[TriageResult, TriageStats] | tuple[TriageResult, TriageRunMetrics]:
     if enable_security_guard:
         guard_ticket_input(user_input)
-    context_text = _build_context_text(user_input, history)
-    messages = build_chat_messages(user_input, manuale, history=history)
-    cache = PipelineContextCache() if enable_optimizations else None
-    compact_output = enable_optimizations
-    client, conversation, initial_raw = _run_agent_loop(
-        messages,
-        user_input,
-        context_text,
-        cache=cache,
-        compact_output=compact_output,
-    )
-    result, stats = _finalize_with_self_correction(
-        client,
-        conversation,
-        user_input,
-        initial_raw,
-        max_retries=max_json_retries,
-    )
-    if return_stats:
-        return result, stats
-    if return_metrics:
-        return result, TriageRunMetrics(
-            tokens_est=estimate_conversation_tokens(conversation),
+    with _telemetry_run("triage_message"):
+        context_text = _build_context_text(user_input, history)
+        messages = build_chat_messages(user_input, manuale, history=history)
+        cache = PipelineContextCache() if enable_optimizations else None
+        compact_output = enable_optimizations
+        client, conversation, initial_raw = _run_agent_loop(
+            messages,
+            user_input,
+            context_text,
+            cache=cache,
+            compact_output=compact_output,
         )
-    return result
+        result, stats = _finalize_with_self_correction(
+            client,
+            conversation,
+            user_input,
+            initial_raw,
+            max_retries=max_json_retries,
+        )
+        collector = get_active_collector()
+        if return_stats:
+            return result, stats
+        if return_metrics:
+            tokens_est = estimate_conversation_tokens(conversation)
+            if collector is None:
+                return result, TriageRunMetrics(tokens_est=tokens_est)
+            return result, TriageRunMetrics(
+                tokens_est=tokens_est,
+                prompt_tokens=collector.prompt_tokens,
+                completion_tokens=collector.completion_tokens,
+                cost_usd_milli=collector.cost_usd_milli(),
+                latency_ms=collector.latency_ms,
+                llm_calls=collector.llm_calls,
+            )
+        return result
 
 
 
@@ -651,7 +783,9 @@ def _react_run_metrics(
     enable_cache: bool,
     enable_compact_output: bool,
 ) -> ReactRunMetrics:
-    return ReactRunMetrics(
+    collector = get_active_collector()
+    return _metrics_from_collector(
+        collector,
         tokens_est=estimate_conversation_tokens(conversation),
         enable_pruning=enable_pruning,
         enable_cache=enable_cache,
@@ -668,6 +802,7 @@ def _react_finish(
     use_cache: bool,
     compact_output: bool,
 ) -> TriageResult | tuple[TriageResult, ReactRunMetrics]:
+    result = _apply_telemetry_to_result(result)
     if return_metrics:
         return result, _react_run_metrics(
             conversation,
@@ -969,25 +1104,26 @@ def react_triage_resume(
         f"\n▶️ [ReAct Resume] Ripresa sessione {session_id} da step {from_step + 1}/{max_steps}",
         flush=True,
     )
-    return _react_triage_loop(
-        client,
-        conversation,
-        user_input=user_input,
-        session_id=session_id,
-        start_step=from_step + 1,
-        max_steps=max_steps,
-        use_pruning=use_pruning,
-        use_cache=use_cache,
-        compact_output=compact_output,
-        cache=cache,
-        return_metrics=return_metrics,
-        enable_hitl=enable_hitl,
-        manuale=manuale,
-        enable_optimizations=enable_optimizations,
-        enable_pruning=enable_pruning,
-        enable_cache=enable_cache,
-        enable_compact_output=enable_compact_output,
-    )
+    with _telemetry_run("react_triage"):
+        return _react_triage_loop(
+            client,
+            conversation,
+            user_input=user_input,
+            session_id=session_id,
+            start_step=from_step + 1,
+            max_steps=max_steps,
+            use_pruning=use_pruning,
+            use_cache=use_cache,
+            compact_output=compact_output,
+            cache=cache,
+            return_metrics=return_metrics,
+            enable_hitl=enable_hitl,
+            manuale=manuale,
+            enable_optimizations=enable_optimizations,
+            enable_pruning=enable_pruning,
+            enable_cache=enable_cache,
+            enable_compact_output=enable_compact_output,
+        )
 
 
 def react_triage(
@@ -1037,25 +1173,26 @@ def react_triage(
         flush=True,
     )
 
-    return _react_triage_loop(
-        client,
-        conversation,
-        user_input=user_input,
-        session_id=session_id,
-        start_step=1,
-        max_steps=max_steps,
-        use_pruning=use_pruning,
-        use_cache=use_cache,
-        compact_output=compact_output,
-        cache=cache,
-        return_metrics=return_metrics,
-        enable_hitl=enable_hitl,
-        manuale=manuale,
-        enable_optimizations=enable_optimizations,
-        enable_pruning=enable_pruning,
-        enable_cache=enable_cache,
-        enable_compact_output=enable_compact_output,
-    )
+    with _telemetry_run("react_triage"):
+        return _react_triage_loop(
+            client,
+            conversation,
+            user_input=user_input,
+            session_id=session_id,
+            start_step=1,
+            max_steps=max_steps,
+            use_pruning=use_pruning,
+            use_cache=use_cache,
+            compact_output=compact_output,
+            cache=cache,
+            return_metrics=return_metrics,
+            enable_hitl=enable_hitl,
+            manuale=manuale,
+            enable_optimizations=enable_optimizations,
+            enable_pruning=enable_pruning,
+            enable_cache=enable_cache,
+            enable_compact_output=enable_compact_output,
+        )
 
 
 _MULTIAGENT_INSTALL_HINT = 'pip install -e ".[multiagent]"'

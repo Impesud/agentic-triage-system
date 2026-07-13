@@ -1,4 +1,4 @@
-"""Report HTML demo Settimana 12–14 (Lezioni 15–19)."""
+"""Report HTML demo Settimana 12–15 (Lezioni 15–20)."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from typing import Any
 
 from paths import WEEK12_REPORT_JSON_PATH, WEEK12_REPORT_PATH
 
-# Scenari demo Lezioni 15–19 (Settimana 12–14)
+# Scenari demo Lezioni 15–20 (Settimana 12–15)
 LESSON_SCENARIOS: tuple[tuple[str, str, str], ...] = (
     ("l15", "15", "Topologie e Blackboard"),
     ("l16a", "16", "CrewAI sequenziale"),
@@ -22,6 +22,8 @@ LESSON_SCENARIOS: tuple[tuple[str, str, str], ...] = (
     ("l18b", "18", "Hand-off sanitizer + tool gate"),
     ("l19a", "19", "Breakpoint HITL + ticket_states"),
     ("l19b", "19", "Approve / reject + resume"),
+    ("l20a", "20", "Formula costo + usage API mock"),
+    ("l20b", "20", "SQLite telemetry + query categoria"),
 )
 
 
@@ -126,8 +128,31 @@ class L19bResumeRow:
 
 
 @dataclass
+class L20aTelemetryRow:
+    call_kind: str
+    prompt_tokens: int
+    completion_tokens: int
+    cost_usd_milli: int
+    latency_ms: int
+    tokens_est: int
+    source: str = "api"
+
+
+@dataclass
+class L20bSqliteRow:
+    ticket_excerpt: str
+    categoria: str
+    expected_categoria: str
+    cost_usd_milli: int
+    prompt_tokens: int
+    completion_tokens: int
+    latency_ms: int
+    llm_calls: int
+
+
+@dataclass
 class Week12ReportBuilder:
-    """Accumula risultati demo L15–L19 e genera HTML."""
+    """Accumula risultati demo L15–L20 e genera HTML."""
 
     root_scenario: str
     started_at: datetime = field(default_factory=lambda: datetime.now(UTC))
@@ -140,6 +165,9 @@ class Week12ReportBuilder:
     l18a_alerts: list[L18aAlertSummary] = field(default_factory=list)
     l19a_rows: list[L19aBreakpointRow] = field(default_factory=list)
     l19b_rows: list[L19bResumeRow] = field(default_factory=list)
+    l20a_rows: list[L20aTelemetryRow] = field(default_factory=list)
+    l20b_rows: list[L20bSqliteRow] = field(default_factory=list)
+    l20b_aggregate: list[dict[str, Any]] = field(default_factory=list)
     l17_ticket: str | None = None
     skipped: list[SkippedScenario] = field(default_factory=list)
 
@@ -212,6 +240,19 @@ class Week12ReportBuilder:
     def set_l19b_rows(self, rows: list[L19bResumeRow]) -> None:
         self.l19b_rows = rows
 
+    def set_l20a_rows(self, rows: list[L20aTelemetryRow]) -> None:
+        self.l20a_rows = rows
+
+    def set_l20b_rows(
+        self,
+        rows: list[L20bSqliteRow],
+        *,
+        aggregate: list[dict[str, Any]] | None = None,
+    ) -> None:
+        self.l20b_rows = rows
+        if aggregate is not None:
+            self.l20b_aggregate = aggregate
+
     def scenario_status(self, scenario_id: str) -> str:
         """Stato scenario per riepilogo HTML: Eseguito | Saltato | Non eseguito."""
         if any(s.scenario_id == scenario_id for s in self.skipped):
@@ -233,6 +274,10 @@ class Week12ReportBuilder:
         if scenario_id == "l19a" and self.l19a_rows:
             return "Eseguito"
         if scenario_id == "l19b" and self.l19b_rows:
+            return "Eseguito"
+        if scenario_id == "l20a" and self.l20a_rows:
+            return "Eseguito"
+        if scenario_id == "l20b" and self.l20b_rows:
             return "Eseguito"
         return "Non eseguito"
 
@@ -412,6 +457,33 @@ def _l19b_row_detail_body(row: L19bResumeRow) -> str:
         "Session ID": row.session_id,
         "Status finale": row.final_status,
         "Dettaglio": row.detail,
+    }
+    return _render_kv_table(fields)
+
+
+def _l20a_row_detail_body(row: L20aTelemetryRow) -> str:
+    fields = {
+        "call_kind": row.call_kind,
+        "prompt_tokens": row.prompt_tokens,
+        "completion_tokens": row.completion_tokens,
+        "cost_usd_milli": row.cost_usd_milli,
+        "latency_ms": row.latency_ms,
+        "tokens_est (L17)": row.tokens_est,
+        "source": row.source,
+    }
+    return _render_kv_table(fields)
+
+
+def _l20b_row_detail_body(row: L20bSqliteRow) -> str:
+    fields = {
+        "Ticket": row.ticket_excerpt,
+        "categoria": row.categoria,
+        "attesa didattica": row.expected_categoria,
+        "cost_usd_milli": row.cost_usd_milli,
+        "prompt_tokens": row.prompt_tokens,
+        "completion_tokens": row.completion_tokens,
+        "latency_ms": row.latency_ms,
+        "llm_calls": row.llm_calls,
     }
     return _render_kv_table(fields)
 
@@ -764,6 +836,76 @@ def render_week12_html(report: Week12ReportBuilder) -> str:
     else:
         sections.append(_placeholder_section("Lezione 19b — Approve / Reject", "Non eseguito in questa run"))
 
+    if report.l20a_rows:
+        rows = "".join(
+            f"<tr><td>{_esc(r.call_kind)}</td><td>{r.prompt_tokens}</td>"
+            f"<td>{r.completion_tokens}</td><td>{r.cost_usd_milli}</td>"
+            f"<td>{r.latency_ms}</td><td>{r.tokens_est}</td></tr>"
+            for r in report.l20a_rows
+        )
+        detail_blocks = "".join(
+            _render_details_block(f"Chiamata — {r.call_kind}", _l20a_row_detail_body(r))
+            for r in report.l20a_rows
+        )
+        sections.append(
+            f"""
+        <section>
+          <h2>Lezione 20a — Formula costo e usage API</h2>
+          <table>
+            <thead>
+              <tr><th>call_kind</th><th>in</th><th>out</th><th>cost_milli</th><th>ms</th><th>stima L17</th></tr>
+            </thead>
+            <tbody>{rows}</tbody>
+          </table>
+          {detail_blocks}
+        </section>"""
+        )
+    else:
+        sections.append(_placeholder_section("Lezione 20a — Telemetria formula", "Non eseguito in questa run"))
+
+    if report.l20b_rows:
+        rows = "".join(
+            f"<tr><td>{_esc(r.ticket_excerpt[:50])}</td><td>{_esc(r.categoria)}</td>"
+            f"<td>{r.cost_usd_milli}</td><td>{r.prompt_tokens}+{r.completion_tokens}</td>"
+            f"<td>{r.latency_ms}</td></tr>"
+            for r in report.l20b_rows
+        )
+        agg_rows = "".join(
+            f"<tr><td>{_esc(a.get('categoria', ''))}</td>"
+            f"<td>{a.get('avg_cost_usd', '—')}</td>"
+            f"<td>{a.get('avg_latency_ms', '—')}</td>"
+            f"<td>{a.get('n', '—')}</td></tr>"
+            for a in report.l20b_aggregate
+        )
+        detail_blocks = "".join(
+            _render_details_block(f"Ticket — {r.categoria}", _l20b_row_detail_body(r))
+            for r in report.l20b_rows
+        )
+        agg_table = ""
+        if agg_rows:
+            agg_table = f"""
+          <h4>Aggregato SQLite per categoria</h4>
+          <table>
+            <thead><tr><th>Categoria</th><th>Avg USD</th><th>Avg ms</th><th>N</th></tr></thead>
+            <tbody>{agg_rows}</tbody>
+          </table>"""
+        sections.append(
+            f"""
+        <section>
+          <h2>Lezione 20b — Persistenza SQLite e query</h2>
+          <table>
+            <thead>
+              <tr><th>Ticket</th><th>Categoria</th><th>cost_milli</th><th>token</th><th>ms</th></tr>
+            </thead>
+            <tbody>{rows}</tbody>
+          </table>
+          {agg_table}
+          {detail_blocks}
+        </section>"""
+        )
+    else:
+        sections.append(_placeholder_section("Lezione 20b — SQLite telemetry", "Non eseguito in questa run"))
+
     body = "\n".join(sections) if sections else "<p>Nessun risultato registrato.</p>"
 
     return f"""<!DOCTYPE html>
@@ -837,7 +979,7 @@ def render_week12_html(report: Week12ReportBuilder) -> str:
 <body>
   <div class="container">
     <header>
-      <h1>Report Demo — Settimana 12–14 (L15–L19)</h1>
+      <h1>Report Demo — Settimana 12–15 (L15–L20)</h1>
       <p class="meta">
         Scenario CLI: <code>{_esc(report.root_scenario)}</code> ·
         Generato: {generated}

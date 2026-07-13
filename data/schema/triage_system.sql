@@ -11,10 +11,17 @@ CREATE TABLE IF NOT EXISTS tickets (
     riassunto_breve TEXT NOT NULL,
     lingua TEXT NOT NULL,
     azione_eseguita TEXT,
+    prompt_tokens INTEGER,
+    completion_tokens INTEGER,
+    cost_usd_milli INTEGER,
+    latency_ms INTEGER,
+    llm_calls INTEGER,
+    pipeline TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_cliente ON tickets(cliente_nome);
+CREATE INDEX IF NOT EXISTS idx_tickets_categoria_cost ON tickets(categoria, cost_usd_milli);
 
 -- Lezione 18: allerte guardrail sicurezza
 CREATE TABLE IF NOT EXISTS security_alerts (

@@ -9,6 +9,48 @@ from tools.logger import (
 )
 
 
+def test_log_triage_telemetry_columns(tmp_path, monkeypatch):
+    db_file = tmp_path / "test.db"
+    monkeypatch.setattr(paths, "TRIAGE_DB_PATH", db_file)
+
+    log_triage_to_sqlite(
+        {
+            "cliente_nome": "Marco",
+            "categoria": "IT",
+            "priorita": "HIGH",
+            "sentiment": "NEUTRALE",
+            "riassunto_breve": "test telemetry",
+            "lingua": "Italiano",
+            "azione_eseguita": "notify_manager | TELEMETRY cost_milli=45 tokens_in=1200 tokens_out=340 latency_ms=890 llm_calls=2",
+            "prompt_tokens": 1200,
+            "completion_tokens": 340,
+            "cost_usd_milli": 45,
+            "latency_ms": 890,
+            "llm_calls": 2,
+            "pipeline": "react_triage",
+        }
+    )
+
+    with sqlite3.connect(str(db_file)) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT prompt_tokens, cost_usd_milli, pipeline FROM tickets WHERE cliente_nome='Marco'"
+        )
+        row = cursor.fetchone()
+        assert row == (1200, 45, "react_triage")
+
+
+def test_init_db_creates_telemetry_columns(tmp_path, monkeypatch):
+    db_file = tmp_path / "test.db"
+    monkeypatch.setattr(paths, "TRIAGE_DB_PATH", db_file)
+
+    init_db()
+
+    from orchestration.telemetry import tickets_has_telemetry_columns
+
+    assert tickets_has_telemetry_columns(db_file)
+
+
 def test_init_db_creates_table_and_index(tmp_path, monkeypatch):
     db_file = tmp_path / "test.db"
     monkeypatch.setattr(paths, "TRIAGE_DB_PATH", db_file)

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time
+
 from crewai import Agent, Crew, Process, Task
 
 from orchestration.framework_env import ensure_framework_env
@@ -14,6 +16,7 @@ from orchestration.prompt_compression import compact_manuale_for_resolver
 from orchestration.security_pipeline import guard_ticket_input
 from orchestration.tool_policy_gate import ToolPolicyContext
 from orchestration.result_parser import finalize_multi_agent_output
+from orchestration.telemetry import apply_multi_agent_telemetry
 from orchestration.tool_adapters import make_crewai_tools
 from orchestration.topologies import SECURITY_RESOLVER, TRIAGE_ANALYST, simulate_analyst_handoff
 from prompts.agents.triage_analyst import build_analyst_system_message
@@ -98,6 +101,7 @@ def crew_triage(
     if enable_security_guard:
         guard_ticket_input(user_input)
     ensure_framework_env()
+    t0 = time.perf_counter()
     cache = PipelineContextCache() if enable_optimizations else None
     compact = enable_optimizations
 
@@ -203,6 +207,14 @@ def crew_triage(
         },
     )
     result = finalize_multi_agent_output(raw, user_input)
+    latency_ms = int((time.perf_counter() - t0) * 1000)
+    result, telemetry_collector = apply_multi_agent_telemetry(
+        result,
+        pipeline="crewai",
+        tokens_est=tokens_est,
+        latency_ms=latency_ms,
+    )
+    tel = telemetry_collector.sqlite_fields()
     if return_metrics:
         return result, MultiAgentRunMetrics(
             tokens_est=tokens_est,
@@ -210,5 +222,11 @@ def crew_triage(
             cache_policy_hits=cache.policy_hits if cache else 0,
             cache_ltm_hits=cache.ltm_hits if cache else 0,
             compact_manuale_resolver=compact_manuale,
+            prompt_tokens=tel["prompt_tokens"],
+            completion_tokens=tel["completion_tokens"],
+            cost_usd_milli=tel["cost_usd_milli"],
+            latency_ms=tel["latency_ms"],
+            llm_calls=tel["llm_calls"],
+            pipeline="crewai",
         )
     return result

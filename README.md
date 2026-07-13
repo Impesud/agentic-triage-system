@@ -2,7 +2,7 @@
 
 Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSON), tool locali, **memoria short/long-term** (Lezione 9), **RAG semantica su policy con ChromaDB** (Lezione 10/10B), **self-correction e emergency fallback** (Lezione 11), **benchmark e log analytics** (Lezione 12), **loop ReAct e SQLite LTM** (Lezione 13), **planning multi-step con controllo loop** (Lezione 14), **modelli multi-agente con topologie di comunicazione** (Lezione 15), **orchestrazione CrewAI/AutoGen** (Lezione 16), **ottimizzazione performance multi-agente** (Lezione 17), **ingegneria della sicurezza MAS** (Lezione 18) e **breakpoint Human-in-the-Loop con resume ReAct** (Lezione 19).
 
-**Branch corrente (corso completo):** `lesson-19-hitl-breakpoints` — include le **lezioni 9–19** (ultima lezione del percorso didattico).
+**Branch corrente (corso completo):** `lesson-20-structured-telemetry` — include le **lezioni 9–20** (ultima lezione del percorso didattico).
 
 ## Percorso didattico e branch Git
 
@@ -20,7 +20,8 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 | `lesson-16-crew-autogen-orchestration` | 16 — CrewAI/AutoGen | + `multi_agent_triage`, demo `l16a`/`l16b` |
 | `lesson-17-multi-agent-performance` | 17 — Performance MAS | + pruning, cache pipeline, demo `l17a`/`l17b` |
 | `lesson-18-multi-agent-security` | **18 — Sicurezza MAS** | + guardrail, hand-off sanitizer, tool gate, demo `l18a`/`l18b` |
-| `lesson-19-hitl-breakpoints` | **19 — HITL e resume** | + breakpoint, `ticket_states`, CLI operatore, demo `l19a`/`l19b` (**branch più recente**) |
+| `lesson-19-hitl-breakpoints` | **19 — HITL e resume** | + breakpoint, `ticket_states`, CLI operatore, demo `l19a`/`l19b` |
+| `lesson-20-structured-telemetry` | **20 — Telemetria strutturata** | + `response.usage`, costo USD milli, colonne SQLite L20, demo `l20a`/`l20b` (**branch più recente**) |
 
 | Guida | File |
 |-------|------|
@@ -44,9 +45,9 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 
 | Modulo | Ruolo |
 |--------|--------|
-| [`main.py`](src/main.py) | Demo Settimana 12–14 (L15–L19); pipeline ticket su branch storici |
-| [`orchestration/`](src/orchestration/) | L15–L19: topologie, CrewAI/AutoGen, pruning, cache, sicurezza, HITL (`hitl_*`) |
-| [`logic.py`](src/logic.py) | `triage_message`, `react_triage`, `multi_agent_triage` + L17/L18/L19 |
+| [`main.py`](src/main.py) | Demo Settimana 12–15 (L15–L20); pipeline ticket su branch storici |
+| [`orchestration/`](src/orchestration/) | L15–L20: topologie, CrewAI/AutoGen, pruning, cache, sicurezza, HITL, telemetria |
+| [`logic.py`](src/logic.py) | `triage_message`, `react_triage`, `multi_agent_triage` + L17/L18/L19/L20 |
 | [`benchmark.py`](src/benchmark.py) | Suite benchmark 5 ticket (Lezione 12) |
 | [`benchmark_multi_agent.py`](src/benchmark_multi_agent.py) | Confronto latenza pipeline (Lezione 17) |
 | [`client.py`](src/client.py) | Client OpenAI (`OPENAI_API_KEY` solo nel file `.env`, non dalla shell) |
@@ -62,12 +63,14 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 | [`tools/registry.py`](src/tools/registry.py) | `TOOL_MAP` e schema OpenAI |
 | [`prompts/triage_v1.py`](src/prompts/triage_v1.py) | System prompt, few-shot, `build_chat_messages(history=…)` |
 | [`prompts/agents/`](src/prompts/agents/) | System prompt TriageAnalyst / SecurityResolver (Lezione 16) |
-| [`analytics/log_kpi.py`](src/analytics/log_kpi.py) | KPI da `activity.jsonl` (L12 + L17 + L18 + L19) |
+| [`analytics/log_kpi.py`](src/analytics/log_kpi.py) | KPI da `activity.jsonl` (L12 + L17 + L18 + L19 + L20) |
+| [`analytics/telemetry_report.py`](src/analytics/telemetry_report.py) | Aggregati costo/latenza per categoria da SQLite (L20) |
+| [`orchestration/telemetry.py`](src/orchestration/telemetry.py) | Collector, pricing, enrich `azione_eseguita` (L20) |
 | [`paths.py`](src/paths.py) | Percorsi repo (`TRIAGE_DB_PATH`, `LOG_FILE_PATH`, `DEMO_M2_DB_PATH`, …) |
 
 ```mermaid
 flowchart TB
-    subgraph main_py [main.py — branch L19]
+    subgraph main_py [main.py — branch L20]
         CLI["--scenario l15..l17b"]
         L15[run_l15_topology_demo]
         L16[run_l16a / run_l16b]
@@ -131,7 +134,7 @@ flowchart TB
     end
 ```
 
-### API principali (`main.py` — branch L19)
+### API principali (`main.py` — branch L20)
 
 | Funzione | Uso |
 |----------|-----|
@@ -146,7 +149,7 @@ flowchart TB
 | `run_week12_all()` | Sequenza `l15 → … → l19b` |
 | `seed_marco_angry_history(…)` | Fixture test JSONL (legacy) |
 
-**Pipeline ticket classica** (`process_ticket`, `continue_ticket`, demo M1–M3, L10–L14): disponibili sui branch `main` … `lesson-14-*`. Su L19 il focus didattico è **Settimana 12–14** (multi-agente, performance, sicurezza, HITL).
+**Pipeline ticket classica** (`process_ticket`, `continue_ticket`, demo M1–M3, L10–L14): disponibili sui branch `main` … `lesson-14-*`. Su L20 il focus didattico è **Settimana 12–15** (multi-agente, performance, sicurezza, HITL, telemetria).
 
 ## Memoria (Lezione 9)
 
@@ -362,7 +365,7 @@ PYTHONPATH=src python3 src/main.py --scenario l17a
 PYTHONPATH=src python3 src/benchmark_multi_agent.py
 ```
 
-**CLI `main.py` (branch L19):** scenari Settimana 12–14 — `l15` … `l19b`, `all`.
+**CLI `main.py` (branch L20):** scenari Settimana 12–15 — `l15` … `l20b`, `all`.
 
 
 ## Sicurezza Multi-Agente (Lezione 18)
@@ -413,16 +416,19 @@ ls -la data/triage_system.db
 
 Guida completa: [LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md).
 
-## Demo ed esecuzione (branch L19 — corso completo)
+## Demo ed esecuzione (branch L20 — corso completo)
 
-**Manuali demo live:** [SETTIMANA_12](docs/SETTIMANA_12_DEMO_LIVE.md) (L15–L17), [SETTIMANA_13](docs/SETTIMANA_13_DEMO_LIVE.md) (L18), [SETTIMANA_14](docs/SETTIMANA_14_DEMO_LIVE.md) (L19).
+**Manuali demo live:** [SETTIMANA_12](docs/SETTIMANA_12_DEMO_LIVE.md) (L15–L17), [SETTIMANA_13](docs/SETTIMANA_13_DEMO_LIVE.md) (L18), [SETTIMANA_14](docs/SETTIMANA_14_DEMO_LIVE.md) (L19), [SETTIMANA_15](docs/SETTIMANA_15_DEMO_LIVE.md) (L20).
 
-**CLI `main.py`:** scenari `l15` … `l19b`, sequenza `all` (L15 → L19b).
+**CLI `main.py`:** scenari `l15` … `l20b`, sequenza `all` (L15 → L20b).
 
 | Comando | Effetto |
 |---------|---------|
 | `python3 src/main.py` | **Solo L15** (default, senza LLM) |
-| `python3 src/main.py --scenario all` | Sequenza **L15 → … → L19b** |
+| `python3 src/main.py --scenario all` | Sequenza **L15 → … → L20b** |
+| `python3 src/main.py --scenario l20a` | Formula costo + mock usage (no LLM) |
+| `python3 src/main.py --scenario l20b` | ReAct mock → SQLite → query per categoria |
+| `PYTHONPATH=src python3 -m analytics.telemetry_report` | Report costo medio per categoria (L20) |
 
 | Scenario | Focus | LLM |
 |----------|--------|-----|
@@ -516,7 +522,7 @@ PYTHONPATH=src python3 scripts/init_triage_db.py
 pytest tests/ -q
 ```
 
-**174 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
+**184 test** su branch `lesson-20-structured-telemetry` ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
 
 | File | Verifica |
 |------|----------|
@@ -527,8 +533,9 @@ pytest tests/ -q
 | `test_benchmark_multi_agent.py` | Report benchmark MAS (L17) |
 | `test_input_guardrail.py` / `test_handoff_sanitizer.py` | Guardrail e hand-off (L18) |
 | `test_tool_policy_gate.py` / `test_security_store.py` | Tool gate e SQLite alert (L18) |
+| `test_telemetry.py` | Formula costo, collector, enrich azione, migrazione SQLite (L20) |
 | `test_hitl_breakpoints.py` / `test_hitl_store.py` / `test_hitl_pipeline.py` / `test_hitl_cli.py` | Breakpoint, SQLite, resume ReAct e CLI HITL (L19) |
-| `test_week12_report.py` / `test_main_report.py` | Report HTML Settimana 12–14 (L15–L19) |
+| `test_week12_report.py` / `test_main_report.py` | Report HTML Settimana 12–15 (L15–L20) |
 | `test_open_html.py` / `test_open_report_script.py` | Apertura report nel browser (WSL) |
 | `test_logger_sqlite.py` | SQLite init, insert, query indicizzata |
 | `test_policy_semantic.py` | RAG + Chroma, sinonimi, soglia |

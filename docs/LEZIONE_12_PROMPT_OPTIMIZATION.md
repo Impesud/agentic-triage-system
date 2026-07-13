@@ -30,6 +30,7 @@ KPI disponibili:
 | Performance (L17) | `message_pruning_applied`, `embedding_cache_hit`, `pipeline_latency_report` |
 | Sicurezza (L18) | `security_input_blocked`, `security_handoff_blocked`, `security_tool_denied` |
 | HITL (L19) | `hitl_breakpoint_reached`, `hitl_session_approved`, `hitl_session_resumed`, `hitl_session_rejected` |
+| Telemetria (L20) | `llm_call_telemetry`, `triage_telemetry_complete` |
 | Tool usage (proxy) | stringhe `search_policy`, `notify_manager`, … nei payload |
 
 Se `triage_json_retry` è alto → problema **sintassi JSON** (prompt o self-correction).
@@ -103,5 +104,6 @@ Dopo l’aggiunta, il benchmark con ticket budget 12k€ / tono aggressivo dovre
 - [Lezione 17 — Performance MAS](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) — pruning, cache, benchmark multi-agent
 - [Lezione 18 — Sicurezza MAS](LEZIONE_18_MULTI_AGENT_SECURITY.md) — guardrail, hand-off, tool gate
 - [Lezione 19 — HITL](LEZIONE_19_HITL_BREAKPOINTS.md) — eventi `hitl_*` in KPI (branch `lesson-19-hitl-breakpoints`)
+- [Lezione 20 — Telemetria](LEZIONE_20_STRUCTURED_TELEMETRY.md) — costo USD e usage API (branch `lesson-20-structured-telemetry`)
 - [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md)
 - [LEZIONE_10B_CHROMADB.md](LEZIONE_10B_CHROMADB.md)

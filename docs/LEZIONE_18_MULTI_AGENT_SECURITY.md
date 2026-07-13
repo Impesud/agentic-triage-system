@@ -133,7 +133,7 @@ Su `lesson-18-multi-agent-security`, `main.py` espone anche `l18a`/`l18b` e la s
 
 ## Lezione successiva — 19 (completata)
 
-[LEZIONE_19_HITL_BREAKPOINTS.md](LEZIONE_19_HITL_BREAKPOINTS.md) — branch `lesson-19-hitl-breakpoints` (ultimo branch del corso 9–19). Demo: [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md).
+[LEZIONE_19_HITL_BREAKPOINTS.md](LEZIONE_19_HITL_BREAKPOINTS.md) — branch `lesson-19-hitl-breakpoints`. [LEZIONE_20_STRUCTURED_TELEMETRY.md](LEZIONE_20_STRUCTURED_TELEMETRY.md) — branch `lesson-20-structured-telemetry` (**corso completo 9–20**). Demo: [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md), [SETTIMANA_15_DEMO_LIVE.md](SETTIMANA_15_DEMO_LIVE.md).
 
 ## Documentazione correlata
 

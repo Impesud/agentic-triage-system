@@ -22,10 +22,12 @@ from schemas.ticket import TriageResult
 from prompts.triage_v1 import build_chat_messages
 
 
-def _completion(content=None, tool_calls=None):
+def _completion(content=None, tool_calls=None, *, usage=None):
     msg = MagicMock(tool_calls=tool_calls, content=content)
     resp = MagicMock()
     resp.choices = [MagicMock(message=msg)]
+    if usage is not None:
+        resp.usage = usage
     return resp
 
 
@@ -62,7 +64,10 @@ def test_triage_message_return_metrics(mock_get_client):
         '"categoria":"IT","priorita":"LOW","riassunto_breve":"test ok",'
         '"messaggio_originale":"help"}'
     )
-    mock_client.chat.completions.create.return_value = _completion(content=json_out)
+    mock_client.chat.completions.create.return_value = _completion(
+        content=json_out,
+        usage=MagicMock(prompt_tokens=100, completion_tokens=50, total_tokens=150),
+    )
 
     outcome = triage_message("help", manuale="Manuale IT", return_metrics=True)
     assert isinstance(outcome, tuple)
@@ -70,6 +75,11 @@ def test_triage_message_return_metrics(mock_get_client):
     assert result.categoria == "IT"
     assert isinstance(metrics, TriageRunMetrics)
     assert metrics.tokens_est > 0
+    assert metrics.prompt_tokens == 100
+    assert metrics.completion_tokens == 50
+    assert metrics.llm_calls == 1
+    assert metrics.cost_usd_milli >= 0
+    assert "| TELEMETRY" in result.azione_eseguita
 
 
 @patch("logic.get_client")
@@ -401,7 +411,10 @@ def test_react_triage_return_metrics(mock_get_client):
         '"categoria":"IT","priorita":"LOW","riassunto_breve":"test ok",'
         '"messaggio_originale":"help"}'
     )
-    mock_client.chat.completions.create.return_value = _completion(content=final)
+    mock_client.chat.completions.create.return_value = _completion(
+        content=final,
+        usage=MagicMock(prompt_tokens=200, completion_tokens=80, total_tokens=280),
+    )
 
     outcome = react_triage("help", manuale="Manuale IT", return_metrics=True)
     assert isinstance(outcome, tuple)
@@ -409,6 +422,8 @@ def test_react_triage_return_metrics(mock_get_client):
     assert result.categoria == "IT"
     assert isinstance(metrics, ReactRunMetrics)
     assert metrics.tokens_est > 0
+    assert metrics.prompt_tokens == 200
+    assert metrics.llm_calls == 1
 
 
 @patch("logic.get_client")

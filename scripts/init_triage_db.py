@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Inizializza data/triage_system.db (Lezione 13+). Eseguire dopo checkout su branch L13–L19."""
+"""Inizializza data/triage_system.db (Lezione 13+). Eseguire dopo checkout su branch L13–L20."""
 
 from __future__ import annotations
 
@@ -61,6 +61,16 @@ def main() -> int:
             )
             return 1
         print("[SQLite] Indice idx_ticket_states_status: OK")
+
+        from orchestration.telemetry import tickets_has_telemetry_columns
+
+        if not tickets_has_telemetry_columns(TRIAGE_DB_PATH):
+            print(
+                "[SQLite] ATTENZIONE: colonne telemetry L20 mancanti su tickets",
+                file=sys.stderr,
+            )
+            return 1
+        print("[SQLite] Colonne telemetry tickets (L20): OK")
 
     return 0
 

@@ -51,10 +51,16 @@ class SharedHandoffContext(BaseModel):
 
 @dataclass(frozen=True)
 class MultiAgentRunMetrics:
-    """Metriche run multi-agent per benchmark L17."""
+    """Metriche run multi-agent per benchmark L17/L20."""
 
     tokens_est: int
     handoff_enriched: bool = False
     cache_policy_hits: int = 0
     cache_ltm_hits: int = 0
     compact_manuale_resolver: bool = False
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    cost_usd_milli: int = 0
+    latency_ms: int = 0
+    llm_calls: int = 0
+    pipeline: str = ""
