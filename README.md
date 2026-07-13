@@ -401,8 +401,26 @@ PYTHONPATH=src python3 src/main.py --scenario l19b   # no LLM
 PYTHONPATH=src python3 -m orchestration.hitl_cli list
 ```
 
+## Telemetria strutturata (Lezione 20)
 
-**Dopo checkout su `lesson-13-*` … `lesson-19-*`:**
+Usage API, costo in millesimi USD, latenza per completion e persistenza SQLite:
+
+- **`TelemetryCollector`** — hook su `_call_llm_with_tools` e `_request_final_json`
+- **Colonne L20** su `tickets` — `prompt_tokens`, `cost_usd_milli`, `pipeline`, ecc.
+- **Blocco `TELEMETRY`** in `azione_eseguita` — audit leggibile + query aggregate
+- **`telemetry_report`** — costo medio per `categoria` (IT vs SALES)
+
+Guida pratica: [LEZIONE_20_STRUCTURED_TELEMETRY.md](docs/LEZIONE_20_STRUCTURED_TELEMETRY.md#come-usare-la-telemetria--guida-pratica). Demo live: [SETTIMANA_15_DEMO_LIVE.md](docs/SETTIMANA_15_DEMO_LIVE.md).
+
+```bash
+PYTHONPATH=src python3 src/main.py --scenario l20a   # no LLM
+PYTHONPATH=src python3 src/main.py --scenario l20b   # mock ReAct, no API
+PYTHONPATH=src python3 -m analytics.telemetry_report
+PYTHONPATH=src python3 -m analytics.log_kpi
+```
+
+
+**Dopo checkout su `lesson-13-*` … `lesson-20-*`:**
 
 ```bash
 # Opzione A — script dedicato (senza chiamate LLM)

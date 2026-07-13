@@ -114,5 +114,15 @@ Session ID HITL nel loop ReAct: `hitl-{react_session_id}` (distinto dalla sessio
 - [ ] Almeno una riga `PENDING_APPROVAL` visibile in `l19a`
 - [ ] `approve` / `reject` dimostrati in `l19b`
 - [ ] Spiegata differenza demo tool-only vs resume ReAct in `react_triage`
-- [ ] `python3 -m analytics.log_kpi` mostra sezione HITL L19
-- [ ] `pytest tests/ -q` verde (174 su branch L19; ~184 su L20)
+- [ ] `python3 -m analytics.log_kpi` mostra sezione HITL L19 e telemetria L20 (su branch L20)
+- [ ] `pytest tests/ -q` verde (174 su branch L19; **184** su L20)
+
+---
+
+## Documentazione correlata
+
+- [LEZIONE_19_HITL_BREAKPOINTS.md](LEZIONE_19_HITL_BREAKPOINTS.md)
+- [LEZIONE_20_STRUCTURED_TELEMETRY.md](LEZIONE_20_STRUCTURED_TELEMETRY.md) — lezione successiva (Settimana 15)
+- [SETTIMANA_15_DEMO_LIVE.md](SETTIMANA_15_DEMO_LIVE.md)
+- [CORSO_LEZIONI.md](CORSO_LEZIONI.md)
+- [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md)

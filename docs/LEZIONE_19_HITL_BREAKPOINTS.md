@@ -321,7 +321,7 @@ Percorsi paralleli: [MANUALE_PROGETTINO_DATASET_TEST.md](MANUALE_PROGETTINO_DATA
 
 - [LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) — latenza pipeline
 - [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md) — manuale operativo
-- [LEZIONE_20_STRUCTURED_TELEMETRY.md](LEZIONE_20_STRUCTURED_TELEMETRY.md) — telemetria e costo LLM (prossimo passo)
+- [LEZIONE_20_STRUCTURED_TELEMETRY.md](LEZIONE_20_STRUCTURED_TELEMETRY.md) — telemetria e costo LLM (lezione successiva, branch `lesson-20-structured-telemetry`)
 - [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) — eventi audit L19
 
 ## Documentazione correlata

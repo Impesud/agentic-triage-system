@@ -8,7 +8,7 @@
 >
 > **Nota (branch `lesson-20-structured-telemetry` — corso completo 9–20):** la [Lezione 19](LEZIONE_19_HITL_BREAKPOINTS.md) aggiunge breakpoint HITL; la [Lezione 20](LEZIONE_20_STRUCTURED_TELEMETRY.md) aggiunge telemetria costo/token su SQLite. Per scenari SOC con azioni irreversibili, valutare `enable_hitl=True` su `react_triage` e il workflow in [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md).
 >
-> Il progettino SOC resta ancorato alle competenze **L9–L14**; le lezioni 15–19 sono il percorso avanzato multi-agente (opzionale, branch `lesson-19-hitl-breakpoints` o fork `progetto-2`).
+> Il progettino SOC resta ancorato alle competenze **L9–L14**; le lezioni 15–20 sono il percorso avanzato multi-agente (opzionale, branch `lesson-20-structured-telemetry` o fork `progetto-2`).
 
 
 **Motore obbligatorio:** `react_triage` (ReAct multi-step, max 4 step, self-correction in-loop)
@@ -774,7 +774,8 @@ I testi integrali sono nella sezione 5.
 | [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md) | Prompt injection |
 | [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) | ReAct e SQLite |
 | [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md) | max_steps e STM |
-| [LEZIONE_19_HITL_BREAKPOINTS.md](LEZIONE_19_HITL_BREAKPOINTS.md) | Breakpoint HITL e resume ReAct (L19, percorso avanzato) |
+| [LEZIONE_19_HITL_BREAKPOINTS.md](LEZIONE_19_HITL_BREAKPOINTS.md) | Breakpoint HITL e resume ReAct (L19) |
+| [LEZIONE_20_STRUCTURED_TELEMETRY.md](LEZIONE_20_STRUCTURED_TELEMETRY.md) | Telemetria LLM e costo USD (L20) |
 | [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) | Manuale errori |
 
 ### File del repo rilevanti
@@ -784,6 +785,7 @@ I testi integrali sono nella sezione 5.
 | [`src/logic.py`](../src/logic.py) | `react_triage`, `react_triage_resume`, fallback, self-correction |
 | [`src/orchestration/hitl_pipeline.py`](../src/orchestration/hitl_pipeline.py) | Pause / approve / reject HITL (L19) |
 | [`src/orchestration/hitl_store.py`](../src/orchestration/hitl_store.py) | SQLite `ticket_states` (L19) |
+| [`src/orchestration/telemetry.py`](../src/orchestration/telemetry.py) | Collector telemetria LLM (L20) |
 | [`src/tools/registry.py`](../src/tools/registry.py) | Definizione e mappa tool |
 | [`src/schemas/ticket.py`](../src/schemas/ticket.py) | Modello `TriageResult` |
 | [`src/parsing/parser.py`](../src/parsing/parser.py) | Estrazione e validazione JSON |
@@ -793,4 +795,4 @@ I testi integrali sono nella sezione 5.
 
 ---
 
-*Ultimo aggiornamento: Giugno 2026 — Impesud AI Agency, corso Agentic Triage*
+*Ultimo aggiornamento: Luglio 2026 — Impesud AI Agency, corso Agentic Triage (L9–L20)*

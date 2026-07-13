@@ -19,7 +19,7 @@ Al termine della sotto-lezione lo studente sa:
 5. Collegare il flusso al tool `search_policy` e alla demo `--scenario l10`.
 
 
-**Branch storico demo:** `lesson-10-rag-semantica`. Su `lesson-19-hitl-breakpoints` (e branch successivi a L10), `main.py` non espone più la demo CLI di questa lezione — fare checkout su `lesson-10-rag-semantica`.
+**Branch storico demo:** `lesson-10-rag-semantica`. Su `lesson-20-structured-telemetry` (e branch successivi a L10), `main.py` non espone più la demo CLI di questa lezione — fare checkout su `lesson-10-rag-semantica`.
 ---
 
 ## Prerequisiti

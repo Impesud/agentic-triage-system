@@ -89,6 +89,23 @@ Categoria       Avg USD     Avg ms      N
 
 ---
 
+## Interazione con HITL (L19)
+
+Le **pause HITL** non generano completion LLM: `llm_calls` in telemetria conta solo step con risposta API. Un run ReAct interrotto da `HitlApprovalRequired` non emette `triage_telemetry_complete` finché non ci sono completion registrate (vedi [LEZIONE_19](LEZIONE_19_HITL_BREAKPOINTS.md)).
+
+---
+
+## Troubleshooting
+
+| Problema | Soluzione |
+|----------|-----------|
+| Colonne telemetry assenti su `tickets` | `PYTHONPATH=src python3 scripts/init_triage_db.py` |
+| `l20b` saltato senza API key | Su branch L20 è in `_NO_LLM_SCENARIOS`; aggiornare `main.py` se manca |
+| Query aggregata con una sola categoria | Normale se DB contiene solo ticket di una categoria; `l20b` inserisce IT + SALES |
+| `cost_usd_milli` = 0 o 1 con pochi token | Arrotondamento formula didattica; aumentare token in demo o usare API reale |
+
+---
+
 ## Checklist fine demo
 
 - [ ] `activity.jsonl` contiene `llm_call_telemetry`
@@ -98,6 +115,7 @@ Categoria       Avg USD     Avg ms      N
 
 ## Documentazione correlata
 
+- [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md) — prerequisito HITL (L19)
 - [LEZIONE_20_STRUCTURED_TELEMETRY.md](LEZIONE_20_STRUCTURED_TELEMETRY.md)
 - [CORSO_LEZIONI.md](CORSO_LEZIONI.md)
 - [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md)

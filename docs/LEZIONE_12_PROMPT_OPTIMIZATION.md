@@ -103,7 +103,7 @@ Dopo l’aggiunta, il benchmark con ticket budget 12k€ / tono aggressivo dovre
 - [Lezione 16 — CrewAI/AutoGen](LEZIONE_16_CREW_AUTOGEN.md) — eventi `crew_triage_complete`, `autogen_triage_complete`
 - [Lezione 17 — Performance MAS](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) — pruning, cache, benchmark multi-agent
 - [Lezione 18 — Sicurezza MAS](LEZIONE_18_MULTI_AGENT_SECURITY.md) — guardrail, hand-off, tool gate
-- [Lezione 19 — HITL](LEZIONE_19_HITL_BREAKPOINTS.md) — eventi `hitl_*` in KPI (branch `lesson-19-hitl-breakpoints`)
-- [Lezione 20 — Telemetria](LEZIONE_20_STRUCTURED_TELEMETRY.md) — costo USD e usage API (branch `lesson-20-structured-telemetry`)
+- [Lezione 19 — HITL](LEZIONE_19_HITL_BREAKPOINTS.md) — eventi `hitl_*` in KPI
+- [Lezione 20 — Telemetria](LEZIONE_20_STRUCTURED_TELEMETRY.md) — eventi `llm_call_telemetry` / `triage_telemetry_complete` (branch `lesson-20-structured-telemetry`)
 - [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md)
 - [LEZIONE_10B_CHROMADB.md](LEZIONE_10B_CHROMADB.md)

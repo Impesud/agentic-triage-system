@@ -97,16 +97,22 @@ SOC weaponized         BLOCKED   Input bloccato dal guardrail ...
 
 ## Lezione 19 — completata (Settimana 14)
 
-La [Lezione 19](LEZIONE_19_HITL_BREAKPOINTS.md) è disponibile sul branch `lesson-19-hitl-breakpoints` (pubblicato su `origin`). Estende L18 con breakpoint operatore su azioni irreversibili, tabella `ticket_states` e resume ReAct.
+La [Lezione 19](LEZIONE_19_HITL_BREAKPOINTS.md) estende L18 con breakpoint operatore, tabella `ticket_states` e resume ReAct (branch `lesson-19-hitl-breakpoints`).
+
+## Lezione 20 — completata (Settimana 15)
+
+La [Lezione 20](LEZIONE_20_STRUCTURED_TELEMETRY.md) aggiunge telemetria strutturata, costo USD e colonne L20 su `tickets` (branch **`lesson-20-structured-telemetry`** — corso completo 9–20).
 
 | Risorsa | Link |
 |---------|------|
-| Teoria e guida breakpoint | [LEZIONE_19_HITL_BREAKPOINTS.md](LEZIONE_19_HITL_BREAKPOINTS.md) |
+| Teoria L19 + guida breakpoint | [LEZIONE_19_HITL_BREAKPOINTS.md](LEZIONE_19_HITL_BREAKPOINTS.md) |
 | Demo live `l19a` / `l19b` | [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md) |
-| Sequenza completa L15–L20 (branch L20) | `PYTHONPATH=src python3 src/main.py --scenario all` |
+| Teoria L20 + guida telemetria | [LEZIONE_20_STRUCTURED_TELEMETRY.md](LEZIONE_20_STRUCTURED_TELEMETRY.md) |
+| Demo live `l20a` / `l20b` | [SETTIMANA_15_DEMO_LIVE.md](SETTIMANA_15_DEMO_LIVE.md) |
+| Sequenza completa L15–L20 | `PYTHONPATH=src python3 src/main.py --scenario all` |
 
 ```bash
-git checkout lesson-19-hitl-breakpoints
+git checkout lesson-20-structured-telemetry
 PYTHONPATH=src python3 src/main.py --scenario l19a
-PYTHONPATH=src python3 src/main.py --scenario l19b
+PYTHONPATH=src python3 src/main.py --scenario l20a
 ```

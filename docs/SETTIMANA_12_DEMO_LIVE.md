@@ -1,14 +1,16 @@
-# Settimana 12–14 — Guida alla demo live (Lezioni 15–19)
+# Settimana 12–15 — Guida alla demo live (Lezioni 15–20)
 
-Manuale operativo per docenti e studenti: **come eseguire le demo L15–L19** (branch storico `lesson-19-hitl-breakpoints`). Su **`lesson-20-structured-telemetry`** la sequenza `all` arriva fino a L20 — vedi [SETTIMANA_15_DEMO_LIVE.md](SETTIMANA_15_DEMO_LIVE.md).
+Manuale operativo per docenti e studenti: **come eseguire le demo L15–L20** sul branch corrente **`lesson-20-structured-telemetry`**. Checkpoint storico L19: `lesson-19-hitl-breakpoints` (senza `l20a`/`l20b`).
 
-> **Branch `lesson-19-hitl-breakpoints` (corso completo):** include lezioni **15–19**. Demo L18 (`l18a`/`l18b`) e L19 (`l19a`/`l19b`) in [SETTIMANA_13](SETTIMANA_13_DEMO_LIVE.md) e [SETTIMANA_14](SETTIMANA_14_DEMO_LIVE.md). Con `--scenario all` vengono eseguiti **sempre** L18a/L18b e L19a/L19b anche senza API key.
+> **Branch `lesson-20-structured-telemetry` (corso completo 9–20):** include lezioni **15–20**. Demo L18 in [SETTIMANA_13](SETTIMANA_13_DEMO_LIVE.md), L19 in [SETTIMANA_14](SETTIMANA_14_DEMO_LIVE.md), L20 in [SETTIMANA_15](SETTIMANA_15_DEMO_LIVE.md). Con `--scenario all` vengono eseguiti **sempre** L18a/L18b, L19a/L19b e L20a/L20b anche senza API key.
 
 Guide teoriche per singola lezione:
 
 - [LEZIONE_15_MULTI_AGENT_COORDINATION.md](LEZIONE_15_MULTI_AGENT_COORDINATION.md) — topologie e Blackboard
 - [LEZIONE_16_CREW_AUTOGEN.md](LEZIONE_16_CREW_AUTOGEN.md) — CrewAI e AutoGen
 - [LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) — pruning, cache, benchmark
+- [LEZIONE_19_HITL_BREAKPOINTS.md](LEZIONE_19_HITL_BREAKPOINTS.md) — HITL (dettaglio: [SETTIMANA_14](SETTIMANA_14_DEMO_LIVE.md))
+- [LEZIONE_20_STRUCTURED_TELEMETRY.md](LEZIONE_20_STRUCTURED_TELEMETRY.md) — telemetria (dettaglio: [SETTIMANA_15](SETTIMANA_15_DEMO_LIVE.md))
 
 Indice corso: [CORSO_LEZIONI.md](CORSO_LEZIONI.md).
 
@@ -16,7 +18,7 @@ Indice corso: [CORSO_LEZIONI.md](CORSO_LEZIONI.md).
 
 ## Cosa fa `main.py` su questo branch
 
-Su `lesson-19-hitl-breakpoints`, [`src/main.py`](../src/main.py) espone la Settimana 12–14:
+Su `lesson-20-structured-telemetry`, [`src/main.py`](../src/main.py) espone la Settimana 12–15:
 
 | Scenario | Lezione | Funzione | API OpenAI |
 |----------|---------|----------|------------|
@@ -29,9 +31,11 @@ Su `lesson-19-hitl-breakpoints`, [`src/main.py`](../src/main.py) espone la Setti
 | `l18b` | 18 | Hand-off avvelenato + tool gate | **No** |
 | `l19a` | 19 | Breakpoint HITL + `ticket_states` | **No** |
 | `l19b` | 19 | Approve / reject workflow | **No** |
-| `all` | 15→19 | Sequenza completa (L16/L17 saltati senza API key; L18/L19 sempre eseguiti) | misto |
+| `l20a` | 20 | Formula costo + mock `usage` API | **No** |
+| `l20b` | 20 | ReAct mock → SQLite telemetry → query | **No** |
+| `all` | 15→20 | Sequenza completa (L16/L17 saltati senza API; L18–L20 sempre) | misto |
 
-Su **`lesson-18-multi-agent-security`**: `all` esteso fino a L18. Su **`lesson-19-hitl-breakpoints`** (branch corrente): `all` include anche L19a/L19b.
+Su **`lesson-19-hitl-breakpoints`**: stessi scenari fino a `l19b` (`all` → L19). Su **`lesson-18-multi-agent-security`**: `all` fino a L18.
 
 **Demo storiche** (M1–M3, `l10`–`l14`, `process_ticket`): disponibili sui branch `main` … `lesson-14-*`, non su questo branch.
 
@@ -40,7 +44,7 @@ Su **`lesson-18-multi-agent-security`**: `all` esteso fino a L18. Su **`lesson-1
 ## Prerequisiti (prima di entrare in aula)
 
 ```bash
-git checkout lesson-19-hitl-breakpoints
+git checkout lesson-20-structured-telemetry
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[test,multiagent]"
 ```
@@ -54,7 +58,7 @@ ls -la data/triage_system.db
 ```
 
 3. **Manuale IT** — presente in `data/manuale_it.txt` (caricato da `load_it_manual()`).
-4. **Verifica test** (opzionale): `PYTHONPATH=src pytest tests/ -q` (~106 su L17, ~150 su L18, **174** su L19).
+4. **Verifica test** (opzionale): `PYTHONPATH=src pytest tests/ -q` (**184** su L20; ~174 su L19).
 
 ---
 
@@ -75,7 +79,11 @@ PYTHONPATH=src python3 src/main.py --scenario l16b
 PYTHONPATH=src python3 src/main.py --scenario l17a
 PYTHONPATH=src python3 src/main.py --scenario l17b
 
-# Intera Settimana 12 in sequenza
+# Lezione 19–20 (no API key)
+PYTHONPATH=src python3 src/main.py --scenario l19a
+PYTHONPATH=src python3 src/main.py --scenario l20a
+
+# Intera Settimana 12–15 in sequenza
 PYTHONPATH=src python3 src/main.py --scenario all
 
 # Benchmark standalone (stesso ticket di l17b)
@@ -95,7 +103,7 @@ Al termine di ogni esecuzione vengono scritti:
 
 Contenuto HTML/JSON:
 
-- **Riepilogo** di tutti gli scenari L15–L18 e stato (Eseguito / Saltato / Non eseguito)
+- **Riepilogo** di tutti gli scenari L15–L20 e stato (Eseguito / Saltato / Non eseguito)
 - **Sezione per ogni lezione** con tabella sintetica + `<details>` espandibili (ticket, `TriageResult`, metriche ReAct, guardrail)
 - Placeholder per scenari non eseguiti in quella run
 
@@ -115,7 +123,7 @@ PYTHONPATH=src python3 scripts/open_report.py logs/week12_demo_report.html
 | Comando | Effetto |
 |---------|---------|
 | `python3 src/main.py` | Esegue **solo `l15`** (topologie, senza LLM) |
-| `python3 src/main.py --scenario all` | Esegue **L15 → L16a → L16b → L17a → L17b** |
+| `python3 src/main.py --scenario all` | Esegue **L15 → … → L20b** (vedi `run_week12_all()`) |
 
 Per la demo live dell'intera settimana usare esplicitamente `--scenario all`.
 
@@ -129,8 +137,8 @@ Se `OPENAI_API_KEY` manca in `.env`:
 |----------|---------------|
 | `l15` | Funziona normalmente |
 | `l16a`, `l16b`, `l17a`, `l17b` | Messaggio `[SKIP]`, exit 0 |
-| `l18a`, `l18b` | Funzionano **senza** API key |
-| `all` | Esegue `l15`, poi salta blocchi LLM con `[SKIP]`; su L18 esegue sempre `l18a`/`l18b` |
+| `l18a`, `l18b`, `l19a`, `l19b`, `l20a`, `l20b` | Funzionano **senza** API key |
+| `all` | Esegue `l15`, salta blocchi LLM con `[SKIP]`; L18–L20 sempre eseguiti |
 
 Modulo: [`src/orchestration/api_guard.py`](../src/orchestration/api_guard.py).
 
@@ -174,9 +182,9 @@ Tre run ReAct con tabella `Run | ms | tokens`:
 
 Tabella benchmark: `triage_message`, `react_triage`, `multi_agent_triage` (CrewAI/AutoGen).
 
-### `all` (~60–90 min)
+### `all` (~90–120 min)
 
-Ordine: `L15 → L16a → L16b → L17a → L17b` (vedi `run_week12_all()`).
+Ordine: `L15 → L16a → L16b → L17a → L17b → L18a → L18b → L19a → L19b → L20a → L20b` (vedi `run_week12_all()`).
 
 ---
 
@@ -187,6 +195,8 @@ Ordine: `L15 → L16a → L16b → L17a → L17b` (vedi `run_week12_all()`).
 | 1 — L15 | `--scenario l15` |
 | 2 — L16 | `l16a` + `l16b` |
 | 3 — L17 | `l17a` + `l17b` |
+| 4 — L18–L19 | `l18a` + `l18b` + `l19a` + `l19b` |
+| 5 — L20 | `l20a` + `l20b` |
 
 Recap: `--scenario all`.
 
@@ -202,6 +212,9 @@ Recap: `--scenario all`.
 | `embedding_cache_hit` | L17 |
 | `message_pruning_applied` | L17 |
 | `pipeline_latency_report` | L17b |
+| `hitl_breakpoint_reached` | L19 |
+| `llm_call_telemetry` | L20 |
+| `triage_telemetry_complete` | L20 |
 
 ---
 
