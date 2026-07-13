@@ -160,9 +160,13 @@ PYTHONPATH=src python3 src/main.py --scenario l16b
 PYTHONPATH=src python3 src/main.py --scenario l17a
 PYTHONPATH=src python3 src/main.py --scenario l17b
 
-# Lezione 19–20 (no API key)
+# Lezione 18–20 (no API key)
+PYTHONPATH=src python3 src/main.py --scenario l18a
+PYTHONPATH=src python3 src/main.py --scenario l18b
 PYTHONPATH=src python3 src/main.py --scenario l19a
+PYTHONPATH=src python3 src/main.py --scenario l19b
 PYTHONPATH=src python3 src/main.py --scenario l20a
+PYTHONPATH=src python3 src/main.py --scenario l20b
 
 # Intera Settimana 12–15 in sequenza
 PYTHONPATH=src python3 src/main.py --scenario all

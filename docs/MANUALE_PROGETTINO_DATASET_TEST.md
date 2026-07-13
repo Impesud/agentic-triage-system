@@ -107,7 +107,7 @@ Il repository delle lezioni 9–14 **non include** tutto ciò che serve al proge
 
 ### 2.3 Esecuzione demo
 
-Per ogni scenario si consiglia di invocare `react_triage` con un `session_id` univoco. Su branch `lesson-14-*` era disponibile il wrapper `process_ticket_react` in [`src/main.py`](../src/main.py); sul branch L17 usare `react_triage` direttamente da [`logic.py`](../src/logic.py).
+Per ogni scenario si consiglia di invocare `react_triage` con un `session_id` univoco. Su branch `lesson-14-*` era disponibile il wrapper `process_ticket_react` in [`src/main.py`](../src/main.py); su branch `lesson-17-*` … `lesson-20-structured-telemetry` usare `react_triage` direttamente da [`logic.py`](../src/logic.py).
 
 **Suggerimento operativo:** usare un `session_id` diverso per ciascuno dei dieci messaggi (es. `progettino-scenario-01`, …, `progettino-scenario-10`), così la Short-Term Memory ReAct non mescola contesti tra scenari distinti.
 

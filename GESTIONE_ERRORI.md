@@ -299,11 +299,12 @@ flowchart LR
         T4 -->|catturato| T5["log_event + print\nreturn None"]
         T4 -->|ok| T6[Ticket con team]
     end
-    subgraph l17 [Boundary L17 — main.py --scenario]
+    subgraph l20 [Boundary L20 — main.py --scenario]
         direction TB
-        S1[--scenario l15..l17b] --> S2{api_guard}
-        S2 -->|no API key| S3["[SKIP] messaggio"]
-        S2 -->|ok| S4[demo L15/L16/L17]
+        S1[--scenario l15..l20b] --> S2{api_guard / _NO_LLM}
+        S2 -->|no API key, scenario LLM| S3["[SKIP] messaggio"]
+        S2 -->|l15/l18/l19/l20| S4[demo senza LLM]
+        S2 -->|ok| S5[demo L16/L17]
     end
     subgraph target [Obiettivo — handler dedicati]
         direction TB

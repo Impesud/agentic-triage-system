@@ -202,7 +202,7 @@ git push -u origin lesson-16-crew-autogen-orchestration
 
 ## Per docenti — review Settimana 12 (panoramica)
 
-Vedi [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md) per la checklist completa e la timeline delle 3 sessioni.
+Vedi [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md) per la checklist completa e la timeline delle **5 sessioni** (L15–L20).
 
 | Verifica rapida | Comando |
 |-----------------|---------|

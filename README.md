@@ -71,12 +71,18 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 ```mermaid
 flowchart TB
     subgraph main_py [main.py — branch L20]
-        CLI["--scenario l15..l17b"]
+        CLI["--scenario l15..l20b"]
         L15[run_l15_topology_demo]
         L16[run_l16a / run_l16b]
         L17[run_l17a / run_l17b]
+        L18[run_l18a / run_l18b]
+        L19[run_l19a / run_l19b]
+        L20[run_l20a / run_l20b]
         AG[api_guard]
         CLI --> L15
+        CLI --> L18
+        CLI --> L19
+        CLI --> L20
         CLI --> AG
         AG --> L16
         AG --> L17
@@ -146,7 +152,9 @@ flowchart TB
 | `run_l18b_handoff_tool_gate_demo()` | Hand-off sanitizer + tool gate (no LLM) |
 | `run_l19a_hitl_breakpoint_demo()` | Breakpoint HITL + `ticket_states` (no LLM) |
 | `run_l19b_hitl_resume_demo()` | Approve / reject workflow (no LLM) |
-| `run_week12_all()` | Sequenza `l15 → … → l19b` |
+| `run_l20a_telemetry_formula_demo()` | Formula costo + mock `usage` API (no LLM) |
+| `run_l20b_telemetry_sqlite_demo()` | ReAct mock → SQLite telemetry → query (no LLM) |
+| `run_week12_all()` | Sequenza `l15 → … → l20b` |
 | `seed_marco_angry_history(…)` | Fixture test JSONL (legacy) |
 
 **Pipeline ticket classica** (`process_ticket`, `continue_ticket`, demo M1–M3, L10–L14): disponibili sui branch `main` … `lesson-14-*`. Su L20 il focus didattico è **Settimana 12–15** (multi-agente, performance, sicurezza, HITL, telemetria).
@@ -463,6 +471,8 @@ Guida completa: [LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md).
 | **l18b** | Hand-off + tool gate | No |
 | **l19a** | Quando scatta la pausa HITL: notify p3 immediato, isolate → `PENDING_APPROVAL` | No |
 | **l19b** | Operatore approve (tool eseguito) o reject (tool bloccato) | No |
+| **l20a** | Formula `cost_usd_milli` + eventi telemetria mock | No |
+| **l20b** | Ticket IT/SALES su SQLite con colonne L20 + query costo medio | No (mock) |
 
 ```bash
 source .venv/bin/activate
@@ -479,6 +489,8 @@ PYTHONPATH=src python3 src/main.py --scenario l18a
 PYTHONPATH=src python3 src/main.py --scenario l18b
 PYTHONPATH=src python3 src/main.py --scenario l19a
 PYTHONPATH=src python3 src/main.py --scenario l19b
+PYTHONPATH=src python3 src/main.py --scenario l20a
+PYTHONPATH=src python3 src/main.py --scenario l20b
 PYTHONPATH=src python3 src/main.py --scenario all
 
 PYTHONPATH=src python3 src/benchmark.py              # L12 monolitico

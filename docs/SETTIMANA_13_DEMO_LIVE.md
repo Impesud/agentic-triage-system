@@ -2,7 +2,7 @@
 
 **Sicurezza nei sistemi multi-agente** — complementa [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md) e [LEZIONE_18_MULTI_AGENT_SECURITY.md](LEZIONE_18_MULTI_AGENT_SECURITY.md).
 
-**Branch:** `lesson-18-multi-agent-security`
+**Branch:** `lesson-18-multi-agent-security` (checkpoint L18). Gli scenari `l18a`/`l18b` sono disponibili anche su **`lesson-20-structured-telemetry`** (corso completo 9–20).
 
 ---
 
@@ -111,7 +111,7 @@ SOC weaponized         BLOCKED   Input bloccato dal guardrail ...
 - [ ] Studente spiega differenza guardrail deterministico vs prompt hardening L12
 - [ ] Studente legge allerta SQLite e evento JSONL correlato
 - [ ] Studente descrive perché `notify_manager` priority 4 richiede evidenza policy
-- [ ] `pytest tests/ -q` verde sul branch L18
+- [ ] `pytest tests/ -q` verde sul branch L18 (~150 test); **184** su `lesson-20-structured-telemetry`
 
 ---
 

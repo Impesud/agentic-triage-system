@@ -261,7 +261,7 @@ PYTHONPATH=src python3 scripts/init_triage_db.py
 ```bash
 PYTHONPATH=src python3 src/main.py --scenario l19a   # breakpoint (no LLM)
 PYTHONPATH=src python3 src/main.py --scenario l19b   # approve/reject (no LLM)
-PYTHONPATH=src python3 src/main.py --scenario all    # L15 → L19
+PYTHONPATH=src python3 src/main.py --scenario all    # L15 → L19 su branch L19; L15 → L20 su branch L20
 ```
 
 KPI HITL:

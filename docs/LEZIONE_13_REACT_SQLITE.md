@@ -140,7 +140,7 @@ pytest tests/ -q   # ~66 su questo branch
 | [`tools/history_tools.py`](../src/tools/history_tools.py) | Delega a SQLite (`log_path` deprecato) |
 | [`tools/registry.py`](../src/tools/registry.py) | Tool map → `search_long_term_history_sql` |
 | [`logic.py`](../src/logic.py) | `react_triage()` |
-| [`main.py`](../src/main.py) | Su branch L13: dual-write, demo `l13`; su L17: solo scenari L15–L17 (vedi nota in testa) |
+| [`main.py`](../src/main.py) | Su branch L13: dual-write, demo `l13`; su `lesson-20-structured-telemetry`: scenari L15–L20 (vedi [SETTIMANA_12](SETTIMANA_12_DEMO_LIVE.md)) |
 | [`scripts/init_triage_db.py`](../scripts/init_triage_db.py) | Setup SQLite post-clone |
 | [`data/schema/triage_system.sql`](../data/schema/triage_system.sql) | DDL versionato |
 

@@ -146,3 +146,9 @@ pytest tests/ -q   # ~83 su questo branch
 ## Prossimo passo (Lezione 17)
 
 [LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) — branch `lesson-17-multi-agent-performance`.
+
+## Collegamenti avanzati (L18–L20)
+
+- [LEZIONE_18_MULTI_AGENT_SECURITY.md](LEZIONE_18_MULTI_AGENT_SECURITY.md) — guardrail e tool gate
+- [LEZIONE_19_HITL_BREAKPOINTS.md](LEZIONE_19_HITL_BREAKPOINTS.md) — HITL e resume
+- [LEZIONE_20_STRUCTURED_TELEMETRY.md](LEZIONE_20_STRUCTURED_TELEMETRY.md) — telemetria e costo (branch `lesson-20-structured-telemetry`)

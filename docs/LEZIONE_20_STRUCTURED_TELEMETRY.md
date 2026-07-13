@@ -134,7 +134,7 @@ Il blocco è pensato per log umani e audit; le colonne SQLite restano la fonte p
 | Scenario | LLM | Contenuto |
 |----------|-----|-----------|
 | `l20a` | No | Formula, 2 mock `usage`, eventi JSONL |
-| `l20b` | Mock | ReAct → SQLite → query per `categoria` |
+| `l20b` | No (mock) | ReAct → SQLite → query per `categoria` |
 
 ```bash
 PYTHONPATH=src python3 src/main.py --scenario l20a

@@ -110,7 +110,7 @@ pytest tests/ -q   # ~69 su questo branch
 | File | Modifica L14 |
 |------|----------------|
 | [`logic.py`](../src/logic.py) | `session_id`, `_SHORT_TERM_STORE`, in-loop self-correction, `max_steps=4` |
-| [`main.py`](../src/main.py) | Su branch L14: `run_l14_planning_demo`; su L17: demo L15–L17 in `logic.react_triage` |
+| [`main.py`](../src/main.py) | Su branch L14: `run_l14_planning_demo`; su `lesson-20-structured-telemetry`: scenari L15–L20 |
 | [`scripts/init_triage_db.py`](../scripts/init_triage_db.py) | Setup SQLite post-clone (eredita da L13) |
 
 ## Checklist docente
