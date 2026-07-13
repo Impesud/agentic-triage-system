@@ -1,4 +1,4 @@
-"""Report HTML demo Settimana 12–13 (Lezioni 15–18)."""
+"""Report HTML demo Settimana 12–14 (Lezioni 15–19)."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from typing import Any
 
 from paths import WEEK12_REPORT_JSON_PATH, WEEK12_REPORT_PATH
 
-# Scenari demo Lezioni 15–18 (Settimana 12–13)
+# Scenari demo Lezioni 15–19 (Settimana 12–14)
 LESSON_SCENARIOS: tuple[tuple[str, str, str], ...] = (
     ("l15", "15", "Topologie e Blackboard"),
     ("l16a", "16", "CrewAI sequenziale"),
@@ -20,6 +20,8 @@ LESSON_SCENARIOS: tuple[tuple[str, str, str], ...] = (
     ("l17b", "17", "Benchmark multi-pipeline"),
     ("l18a", "18", "Input Guardrail + SQLite"),
     ("l18b", "18", "Hand-off sanitizer + tool gate"),
+    ("l19a", "19", "Breakpoint HITL + ticket_states"),
+    ("l19b", "19", "Approve / reject + resume"),
 )
 
 
@@ -106,8 +108,26 @@ class L18bGateRow:
 
 
 @dataclass
+class L19aBreakpointRow:
+    label: str
+    tool: str
+    paused: bool
+    session_id: str = ""
+    status: str = ""
+    detail: str = ""
+
+
+@dataclass
+class L19bResumeRow:
+    action: str
+    session_id: str
+    final_status: str
+    detail: str = ""
+
+
+@dataclass
 class Week12ReportBuilder:
-    """Accumula risultati demo L15–L18 e genera HTML."""
+    """Accumula risultati demo L15–L19 e genera HTML."""
 
     root_scenario: str
     started_at: datetime = field(default_factory=lambda: datetime.now(UTC))
@@ -118,6 +138,8 @@ class Week12ReportBuilder:
     l18a_rows: list[L18aGuardrailRow] = field(default_factory=list)
     l18b_rows: list[L18bGateRow] = field(default_factory=list)
     l18a_alerts: list[L18aAlertSummary] = field(default_factory=list)
+    l19a_rows: list[L19aBreakpointRow] = field(default_factory=list)
+    l19b_rows: list[L19bResumeRow] = field(default_factory=list)
     l17_ticket: str | None = None
     skipped: list[SkippedScenario] = field(default_factory=list)
 
@@ -184,6 +206,12 @@ class Week12ReportBuilder:
     def set_l18b_rows(self, rows: list[L18bGateRow]) -> None:
         self.l18b_rows = rows
 
+    def set_l19a_rows(self, rows: list[L19aBreakpointRow]) -> None:
+        self.l19a_rows = rows
+
+    def set_l19b_rows(self, rows: list[L19bResumeRow]) -> None:
+        self.l19b_rows = rows
+
     def scenario_status(self, scenario_id: str) -> str:
         """Stato scenario per riepilogo HTML: Eseguito | Saltato | Non eseguito."""
         if any(s.scenario_id == scenario_id for s in self.skipped):
@@ -201,6 +229,10 @@ class Week12ReportBuilder:
         if scenario_id == "l18a" and self.l18a_rows:
             return "Eseguito"
         if scenario_id == "l18b" and self.l18b_rows:
+            return "Eseguito"
+        if scenario_id == "l19a" and self.l19a_rows:
+            return "Eseguito"
+        if scenario_id == "l19b" and self.l19b_rows:
             return "Eseguito"
         return "Non eseguito"
 
@@ -362,6 +394,28 @@ def _l18b_row_detail_body(row: L18bGateRow) -> str:
     return _render_kv_table(fields)
 
 
+def _l19a_row_detail_body(row: L19aBreakpointRow) -> str:
+    fields = {
+        "Etichetta": row.label,
+        "Tool": row.tool,
+        "Pausa HITL": "Sì" if row.paused else "No",
+        "Session ID": row.session_id,
+        "Status SQLite": row.status,
+        "Dettaglio": row.detail,
+    }
+    return _render_kv_table(fields)
+
+
+def _l19b_row_detail_body(row: L19bResumeRow) -> str:
+    fields = {
+        "Azione": row.action,
+        "Session ID": row.session_id,
+        "Status finale": row.final_status,
+        "Dettaglio": row.detail,
+    }
+    return _render_kv_table(fields)
+
+
 def _render_l16_section(report: Week12ReportBuilder) -> str:
     rows_html = []
     detail_blocks: list[str] = []
@@ -429,7 +483,7 @@ def render_week12_html(report: Week12ReportBuilder) -> str:
     sections.append(
         f"""
         <section>
-          <h2>Riepilogo scenari (Lezioni 15–18)</h2>
+          <h2>Riepilogo scenari (Lezioni 15–19)</h2>
           <table>
             <thead>
               <tr><th>Scenario</th><th>Lezione</th><th>Descrizione</th><th>Stato</th><th>Note</th></tr>
@@ -656,6 +710,60 @@ def render_week12_html(report: Week12ReportBuilder) -> str:
         msg = "Non eseguito in questa run"
         sections.append(_placeholder_section("Lezione 18b — Hand-off e tool gate", msg))
 
+    if report.l19a_rows:
+        rows = "".join(
+            f"<tr><td>{_esc(r.label)}</td><td>{_esc(r.tool)}</td>"
+            f"<td>{'PAUSED' if r.paused else 'IMMEDIATE'}</td>"
+            f"<td><code>{_esc(r.session_id or '—')}</code></td>"
+            f"<td>{_esc(r.status or '—')}</td></tr>"
+            for r in report.l19a_rows
+        )
+        detail_blocks = "".join(
+            _render_details_block(f"Breakpoint — {r.label}", _l19a_row_detail_body(r))
+            for r in report.l19a_rows
+        )
+        sections.append(
+            f"""
+        <section>
+          <h2>Lezione 19a — Breakpoint HITL</h2>
+          <table>
+            <thead>
+              <tr><th>Caso</th><th>Tool</th><th>Esito</th><th>Session</th><th>Status</th></tr>
+            </thead>
+            <tbody>{rows}</tbody>
+          </table>
+          {detail_blocks}
+        </section>"""
+        )
+    else:
+        sections.append(_placeholder_section("Lezione 19a — Breakpoint HITL", "Non eseguito in questa run"))
+
+    if report.l19b_rows:
+        rows = "".join(
+            f"<tr><td>{_esc(r.action)}</td><td><code>{_esc(r.session_id)}</code></td>"
+            f"<td>{_esc(r.final_status)}</td><td>{_esc(r.detail[:80])}</td></tr>"
+            for r in report.l19b_rows
+        )
+        detail_blocks = "".join(
+            _render_details_block(f"Resume — {r.action}", _l19b_row_detail_body(r))
+            for r in report.l19b_rows
+        )
+        sections.append(
+            f"""
+        <section>
+          <h2>Lezione 19b — Approve / Reject</h2>
+          <table>
+            <thead>
+              <tr><th>Azione</th><th>Session</th><th>Status finale</th><th>Dettaglio</th></tr>
+            </thead>
+            <tbody>{rows}</tbody>
+          </table>
+          {detail_blocks}
+        </section>"""
+        )
+    else:
+        sections.append(_placeholder_section("Lezione 19b — Approve / Reject", "Non eseguito in questa run"))
+
     body = "\n".join(sections) if sections else "<p>Nessun risultato registrato.</p>"
 
     return f"""<!DOCTYPE html>
@@ -729,7 +837,7 @@ def render_week12_html(report: Week12ReportBuilder) -> str:
 <body>
   <div class="container">
     <header>
-      <h1>Report Demo — Settimana 12–13 (L15–L18)</h1>
+      <h1>Report Demo — Settimana 12–14 (L15–L19)</h1>
       <p class="meta">
         Scenario CLI: <code>{_esc(report.root_scenario)}</code> ·
         Generato: {generated}

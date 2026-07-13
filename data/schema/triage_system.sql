@@ -29,3 +29,21 @@ CREATE TABLE IF NOT EXISTS security_alerts (
 );
 
 CREATE INDEX IF NOT EXISTS idx_security_alerts_type ON security_alerts(alert_type);
+
+-- Lezione 19: sessioni HITL in attesa di approvazione
+CREATE TABLE IF NOT EXISTS ticket_states (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL UNIQUE,
+    status TEXT NOT NULL,
+    breakpoint_stage TEXT NOT NULL,
+    pending_tool TEXT NOT NULL,
+    pending_args_json TEXT NOT NULL,
+    stm_json TEXT NOT NULL,
+    pipeline_context_json TEXT,
+    user_input_excerpt TEXT NOT NULL,
+    resolved_by TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    resolved_at TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_ticket_states_status ON ticket_states(status);

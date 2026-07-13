@@ -29,7 +29,7 @@ L’abbonamento a Cursor **non è necessario** per questo argomento. Conta molto
 
 ## Stato attuale del progetto
 
-Il codice ha una gestione errori di **livello 1–3**: fail-fast con `ValueError`, boundary in `main.py` (pipeline ticket su branch storici; branch L18: demo L15–L18), parser con `raise ... from e`, loop in `logic.py` (`_run_agent_loop` + `_finalize_with_self_correction` — Lezione 11), memoria, RAG + ChromaDB (Lezione 10/10B), self-correction (Lezione 11), benchmark/log KPI (Lezione 12), **ReAct multi-step + SQLite LTM** (Lezioni 13–14), **modelli multi-agente** (Lezione 15), **orchestrazione CrewAI/AutoGen** (Lezione 16), **guardrail sicurezza MAS** (Lezione 18) con [`errors.SecurityGuardrailError`](src/errors.py), suite di **~142 test** su branch `lesson-18-multi-agent-security`. La gerarchia `errors.py` è avviata (L18); restano opzionali i Moduli 2–4 completi.
+Il codice ha una gestione errori di **livello 1–3**: fail-fast con `ValueError`, boundary in `main.py` (pipeline ticket su branch storici; branch L19: demo L15–L19), parser con `raise ... from e`, loop in `logic.py` (`_run_agent_loop` + `_finalize_with_self_correction` — Lezione 11), memoria, RAG + ChromaDB (Lezione 10/10B), self-correction (Lezione 11), benchmark/log KPI (Lezione 12), **ReAct multi-step + SQLite LTM** (Lezioni 13–14), **modelli multi-agente** (Lezione 15), **orchestrazione CrewAI/AutoGen** (Lezione 16), **guardrail sicurezza MAS** (Lezione 18) con [`errors.SecurityGuardrailError`](src/errors.py), **HITL breakpoint** (Lezione 19) con [`errors.HitlApprovalRequired`](src/errors.py), suite di **~164 test** su branch `lesson-19-hitl-breakpoints`. La gerarchia `errors.py` è avviata (L18–L19); restano opzionali i Moduli 2–4 completi.
 
 **Indice corso e branch:** [docs/CORSO_LEZIONI.md](docs/CORSO_LEZIONI.md).
 
@@ -126,6 +126,8 @@ flowchart TD
 
 **Lezione 18 — Sicurezza MAS:** eventi `security_input_blocked`, `security_handoff_blocked`, `security_tool_denied`, `handoff_field_redacted`; allerte in tabella SQLite `security_alerts` ([`security_store.py`](src/orchestration/security_store.py)); eccezione [`SecurityGuardrailError`](src/errors.py).
 
+**Lezione 19 — HITL:** eventi `hitl_breakpoint_reached`, `hitl_session_approved`, `hitl_session_rejected`, `hitl_session_resumed`; sessioni in tabella SQLite `ticket_states` ([`hitl_store.py`](src/orchestration/hitl_store.py)); eccezione [`HitlApprovalRequired`](src/errors.py).
+
 **Lezione 12 — Benchmark e log:** suite in [`src/benchmark.py`](src/benchmark.py), KPI in [`src/analytics/log_kpi.py`](src/analytics/log_kpi.py). Eventi `triage_json_retry`, `emergency_fallback` e (L14) `react_max_steps_fallback` alimentano le metriche.
 
 **Lezione 11:** `_finalize_with_self_correction`, `MAX_TRIAGE_JSON_RETRIES = 3`, `_emergency_triage_result` — non confondere con retry HTTP illimitato.
@@ -170,6 +172,21 @@ Persistenza: tabella `security_alerts` in SQLite (`alert_type`, `severity`, `blo
 Eccezione: `SecurityGuardrailError` in [`src/errors.py`](src/errors.py) — interrompe la pipeline senza chiamata LLM.
 
 **Demo live Settimana 13:** [docs/SETTIMANA_13_DEMO_LIVE.md](docs/SETTIMANA_13_DEMO_LIVE.md) — `l18a`/`l18b` **non** richiedono API key (distinto da `api_guard` L17).
+
+### Lezione 19 — HITL breakpoint
+
+| Evento | Significato |
+|--------|-------------|
+| `hitl_breakpoint_reached` | Azione critica in pausa; sessione salvata in `ticket_states` |
+| `hitl_session_approved` | Operatore approva sessione HITL |
+| `hitl_session_rejected` | Operatore rifiuta sessione HITL |
+| `hitl_session_resumed` | Tool pendente eseguito dopo approve |
+
+Persistenza: tabella `ticket_states` in SQLite (`session_id`, `status`, `stm_json`, `pending_tool`).
+
+Eccezione: `HitlApprovalRequired` in [`src/errors.py`](src/errors.py) — pausa workflow senza bloccare il server.
+
+**Demo live Settimana 14:** [docs/SETTIMANA_14_DEMO_LIVE.md](docs/SETTIMANA_14_DEMO_LIVE.md) — `l19a`/`l19b` **non** richiedono API key; CLI `orchestration.hitl_cli`.
 
 ### Lezione 15 — Multi-agent (concettuale)
 
@@ -216,7 +233,7 @@ Dettaglio scenari: [README — Demo](README.md#demo-ed-esecuzione), [CORSO_LEZIO
 | `raise ValueError(...)` | `client.py`, `logic.py`, `parser.py`, `enrichment.py`, `router.py`, `schemas/ticket.py` | Messaggi in italiano |
 | `raise ... from e` | `parser.py` — `JSONDecodeError`, `ValidationError` | Catena traceback preservata |
 | Boundary tipizzato | `main.py` — `except (FileNotFoundError, ValueError, OSError)` | Cattura errori da tutta la pipeline |
-| Suite test essenziale | `tests/` — **~145 test** (branch `lesson-18`), alcuni `pytest.raises` | Vedi tabella sotto |
+| Suite test essenziale | `tests/` — **~164 test** (branch `lesson-19`), alcuni `pytest.raises` | Vedi tabella sotto |
 | Percorsi centralizzati | `paths.py` | Manuale, policy, ticket, log, `.env` |
 | Separazione agente / orchestrazione | `logic.py` (`_run_agent_loop`) vs `main.py` | Errori LLM nascono nel nucleo loop, gestiti in `main` |
 | Nessuna eccezione di dominio | — | Obiettivo dei moduli 2–4 |

@@ -9,6 +9,8 @@ from analytics.week12_report import (
     L18aAlertSummary,
     L18aGuardrailRow,
     L18bGateRow,
+    L19aBreakpointRow,
+    L19bResumeRow,
     Week12ReportBuilder,
     render_week12_html,
 )
@@ -191,6 +193,12 @@ def test_full_all_scenario_report_structure():
     report.set_l17b_rows([BenchmarkRow(name="react", wall_ms=80, tokens_est=40, categoria="SALES")])
     report.set_l18a_rows([L18aGuardrailRow(label="benigno", allowed=True)])
     report.set_l18b_rows([L18bGateRow(step="handoff", allowed=False, detail="blocked")])
+    report.set_l19a_rows(
+        [L19aBreakpointRow(label="isolate", tool="isolate_account", paused=True, session_id="hitl-x")]
+    )
+    report.set_l19b_rows(
+        [L19bResumeRow(action="approve", session_id="hitl-x", final_status="RESUMED", detail="ok")]
+    )
     html_out = render_week12_html(report)
     for scenario_id, _, _ in LESSON_SCENARIOS:
         assert report.scenario_status(scenario_id) == "Eseguito"

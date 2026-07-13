@@ -92,3 +92,15 @@ SOC weaponized         BLOCKED   Input bloccato dal guardrail ...
 - [ ] Studente legge allerta SQLite e evento JSONL correlato
 - [ ] Studente descrive perché `notify_manager` priority 4 richiede evidenza policy
 - [ ] `pytest tests/ -q` verde sul branch L18
+
+---
+
+## Prossimo passo — Lezione 19 (HITL)
+
+La [Lezione 19](LEZIONE_19_HITL_BREAKPOINTS.md) estende L18 con breakpoint operatore su azioni irreversibili. Manuale demo live: [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md) (`l19a`, `l19b`, sequenza `all` estesa L15–L19).
+
+```bash
+git checkout lesson-19-hitl-breakpoints
+PYTHONPATH=src python3 src/main.py --scenario l19a
+PYTHONPATH=src python3 src/main.py --scenario l19b
+```

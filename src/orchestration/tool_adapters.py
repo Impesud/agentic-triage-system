@@ -7,13 +7,10 @@ import os
 from autogen_core.tools import FunctionTool
 from crewai.tools import tool
 
+from orchestration.hitl_pipeline import invoke_critical_tool_with_hitl
 from orchestration.message_pruning import compact_tool_output
 from orchestration.pipeline_cache import PipelineContextCache
-from orchestration.tool_policy_gate import (
-    ToolPolicyContext,
-    invoke_isolate_account,
-    invoke_notify_manager,
-)
+from orchestration.tool_policy_gate import ToolPolicyContext
 from tools.registry import TOOL_MAP, TOOLS_DEFINITION
 
 _TOOL_DESCRIPTIONS: dict[str, str] = {
@@ -105,7 +102,13 @@ def _crew_notify_manager(policy_ctx: ToolPolicyContext) -> object:
     @tool("notify_manager")
     def notify_manager(message: str, priority: int) -> str:
         """Invia escalation al manager di turno."""
-        return invoke_notify_manager(message, priority, base_fn, policy_ctx)
+        return invoke_critical_tool_with_hitl(
+            "notify_manager",
+            {"message": message, "priority": priority},
+            base_fn,
+            policy_ctx,
+            pause_ctx=policy_ctx.hitl_pause_context,
+        )
 
     notify_manager.description = description  # type: ignore[attr-defined]
     return notify_manager
@@ -118,7 +121,13 @@ def _crew_isolate_account(policy_ctx: ToolPolicyContext) -> object:
     @tool("isolate_account")
     def isolate_account(account_name: str, reason: str) -> str:
         """Isola account AD compromesso (stub SOC L18)."""
-        return invoke_isolate_account(account_name, reason, base_fn, policy_ctx)
+        return invoke_critical_tool_with_hitl(
+            "isolate_account",
+            {"account_name": account_name, "reason": reason},
+            base_fn,
+            policy_ctx,
+            pause_ctx=policy_ctx.hitl_pause_context,
+        )
 
     isolate_account.description = description  # type: ignore[attr-defined]
     return isolate_account
@@ -139,6 +148,8 @@ def make_crewai_tools(
             cache=cache,
             handoff=ctx.handoff,
             pipeline_categoria=ctx.pipeline_categoria,
+            enable_hitl=ctx.enable_hitl,
+            hitl_pause_context=ctx.hitl_pause_context,
         )
     tools: list[object] = []
     for name in tool_names:
@@ -169,6 +180,8 @@ def make_autogen_tools(
             cache=cache,
             handoff=ctx.handoff,
             pipeline_categoria=ctx.pipeline_categoria,
+            enable_hitl=ctx.enable_hitl,
+            hitl_pause_context=ctx.hitl_pause_context,
         )
     base_notify = TOOL_MAP["notify_manager"]
     base_isolate = TOOL_MAP["isolate_account"]
@@ -180,10 +193,22 @@ def make_autogen_tools(
         return _invoke_ltm(cliente_nome, hours, cache, compact=compact_output)
 
     def notify_fn(message: str, priority: int) -> str:
-        return invoke_notify_manager(message, priority, base_notify, ctx)
+        return invoke_critical_tool_with_hitl(
+            "notify_manager",
+            {"message": message, "priority": priority},
+            base_notify,
+            ctx,
+            pause_ctx=ctx.hitl_pause_context,
+        )
 
     def isolate_fn(account_name: str, reason: str) -> str:
-        return invoke_isolate_account(account_name, reason, base_isolate, ctx)
+        return invoke_critical_tool_with_hitl(
+            "isolate_account",
+            {"account_name": account_name, "reason": reason},
+            base_isolate,
+            ctx,
+            pause_ctx=ctx.hitl_pause_context,
+        )
 
     _autogen_fns = {
         "search_policy": policy_fn,

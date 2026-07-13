@@ -76,6 +76,17 @@ def security_metrics(events: list[dict[str, Any]]) -> dict[str, int]:
     }
 
 
+def hitl_metrics(events: list[dict[str, Any]]) -> dict[str, int]:
+    """Metriche Lezione 19: breakpoint, approve, reject, resume."""
+    types = event_type_counts(events)
+    return {
+        "hitl_breakpoint_reached": types.get("hitl_breakpoint_reached", 0),
+        "hitl_session_approved": types.get("hitl_session_approved", 0),
+        "hitl_session_rejected": types.get("hitl_session_rejected", 0),
+        "hitl_session_resumed": types.get("hitl_session_resumed", 0),
+    }
+
+
 def performance_metrics(events: list[dict[str, Any]]) -> dict[str, int]:
     """Metriche Lezione 17: pruning, cache embedding, latenza pipeline."""
     types = event_type_counts(events)
@@ -97,6 +108,7 @@ def format_kpi_report(events: list[dict[str, Any]]) -> str:
     correction = self_correction_metrics(events)
     performance = performance_metrics(events)
     security = security_metrics(events)
+    hitl = hitl_metrics(events)
     lines = [
         "=== KPI DA activity.jsonl ===",
         f"Eventi totali: {len(events)}",
@@ -133,6 +145,12 @@ def format_kpi_report(events: list[dict[str, Any]]) -> str:
             f"  security_handoff_blocked: {security['security_handoff_blocked']}",
             f"  security_tool_denied: {security['security_tool_denied']}",
             f"  handoff_field_redacted: {security['handoff_field_redacted']}",
+            "",
+            "HITL multi-agent (L19):",
+            f"  hitl_breakpoint_reached: {hitl['hitl_breakpoint_reached']}",
+            f"  hitl_session_approved: {hitl['hitl_session_approved']}",
+            f"  hitl_session_rejected: {hitl['hitl_session_rejected']}",
+            f"  hitl_session_resumed: {hitl['hitl_session_resumed']}",
             "==================================",
         ]
     )

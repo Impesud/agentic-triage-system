@@ -71,3 +71,19 @@ def test_security_metrics_l18():
     assert metrics["security_input_blocked"] == 1
     assert metrics["security_handoff_blocked"] == 1
     assert metrics["security_tool_denied"] == 1
+
+
+def test_hitl_metrics_l19():
+    from analytics.log_kpi import hitl_metrics
+
+    events = [
+        {"event_type": "hitl_breakpoint_reached", "payload": {}},
+        {"event_type": "hitl_session_approved", "payload": {}},
+        {"event_type": "hitl_session_rejected", "payload": {}},
+        {"event_type": "hitl_session_resumed", "payload": {}},
+    ]
+    metrics = hitl_metrics(events)
+    assert metrics["hitl_breakpoint_reached"] == 1
+    assert metrics["hitl_session_approved"] == 1
+    assert metrics["hitl_session_rejected"] == 1
+    assert metrics["hitl_session_resumed"] == 1

@@ -2,7 +2,7 @@
 
 Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSON), tool locali, **memoria short/long-term** (Lezione 9), **RAG semantica su policy con ChromaDB** (Lezione 10/10B), **self-correction e emergency fallback** (Lezione 11), **benchmark e log analytics** (Lezione 12), **loop ReAct e SQLite LTM** (Lezione 13) e **planning multi-step con controllo loop** (Lezione 14) e **modelli multi-agente con topologie di comunicazione** (Lezione 15) , **orchestrazione CrewAI/AutoGen** (Lezione 16), **ottimizzazione performance multi-agente** (Lezione 17) e **ingegneria della sicurezza MAS** (Lezione 18).
 
-**Branch corrente:** `lesson-18-multi-agent-security` — include le **lezioni 9–18**.
+**Branch corrente:** `lesson-19-hitl-breakpoints` — include le **lezioni 9–19**.
 
 ## Percorso didattico e branch Git
 
@@ -19,7 +19,8 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 | `lesson-15-multi-agent-topologies` | 15 — Multi-agent | + `orchestration/`, topologie, `SharedHandoffContext` |
 | `lesson-16-crew-autogen-orchestration` | 16 — CrewAI/AutoGen | + `multi_agent_triage`, demo `l16a`/`l16b` |
 | `lesson-17-multi-agent-performance` | 17 — Performance MAS | + pruning, cache pipeline, demo `l17a`/`l17b` |
-| `lesson-18-multi-agent-security` | **18 — Sicurezza MAS** | + guardrail, hand-off sanitizer, tool gate, demo `l18a`/`l18b` (questo branch) |
+| `lesson-18-multi-agent-security` | **18 — Sicurezza MAS** | + guardrail, hand-off sanitizer, tool gate, demo `l18a`/`l18b` |
+| `lesson-19-hitl-breakpoints` | **19 — HITL e resume** | + breakpoint, `ticket_states`, CLI operatore, demo `l19a`/`l19b` (questo branch) |
 
 | Guida | File |
 |-------|------|
@@ -41,9 +42,9 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 
 | Modulo | Ruolo |
 |--------|--------|
-| [`main.py`](src/main.py) | Demo Settimana 12–13 (L15–L18); pipeline ticket su branch storici |
-| [`orchestration/`](src/orchestration/) | L15–L18: topologie, CrewAI/AutoGen, pruning, cache, sicurezza |
-| [`logic.py`](src/logic.py) | `triage_message`, `react_triage`, `multi_agent_triage` + L17/L18 |
+| [`main.py`](src/main.py) | Demo Settimana 12–14 (L15–L19); pipeline ticket su branch storici |
+| [`orchestration/`](src/orchestration/) | L15–L19: topologie, CrewAI/AutoGen, pruning, cache, sicurezza, HITL |
+| [`logic.py`](src/logic.py) | `triage_message`, `react_triage`, `multi_agent_triage` + L17/L18/L19 |
 | [`benchmark.py`](src/benchmark.py) | Suite benchmark 5 ticket (Lezione 12) |
 | [`benchmark_multi_agent.py`](src/benchmark_multi_agent.py) | Confronto latenza pipeline (Lezione 17) |
 | [`client.py`](src/client.py) | Client OpenAI (`OPENAI_API_KEY` solo nel file `.env`, non dalla shell) |
@@ -59,7 +60,7 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 | [`tools/registry.py`](src/tools/registry.py) | `TOOL_MAP` e schema OpenAI |
 | [`prompts/triage_v1.py`](src/prompts/triage_v1.py) | System prompt, few-shot, `build_chat_messages(history=…)` |
 | [`prompts/agents/`](src/prompts/agents/) | System prompt TriageAnalyst / SecurityResolver (Lezione 16) |
-| [`analytics/log_kpi.py`](src/analytics/log_kpi.py) | KPI da `activity.jsonl` (L12 + L17 + L18) |
+| [`analytics/log_kpi.py`](src/analytics/log_kpi.py) | KPI da `activity.jsonl` (L12 + L17 + L18 + L19) |
 | [`paths.py`](src/paths.py) | Percorsi repo (`TRIAGE_DB_PATH`, `LOG_FILE_PATH`, `DEMO_M2_DB_PATH`, …) |
 
 ```mermaid
@@ -128,7 +129,7 @@ flowchart TB
     end
 ```
 
-### API principali (`main.py` — branch L18)
+### API principali (`main.py` — branch L19)
 
 | Funzione | Uso |
 |----------|-----|
@@ -138,10 +139,12 @@ flowchart TB
 | `run_l17b_latency_demo()` | Benchmark latenza multi-pipeline |
 | `run_l18a_guardrail_demo()` | Input Guardrail + SQLite `security_alerts` (no LLM) |
 | `run_l18b_handoff_tool_gate_demo()` | Hand-off sanitizer + tool gate (no LLM) |
-| `run_week12_all()` | Sequenza `l15 → … → l18b` |
+| `run_l19a_hitl_breakpoint_demo()` | Breakpoint HITL + `ticket_states` (no LLM) |
+| `run_l19b_hitl_resume_demo()` | Approve / reject workflow (no LLM) |
+| `run_week12_all()` | Sequenza `l15 → … → l19b` |
 | `seed_marco_angry_history(…)` | Fixture test JSONL (legacy) |
 
-**Pipeline ticket classica** (`process_ticket`, `continue_ticket`, demo M1–M3, L10–L14): disponibili sui branch `main` … `lesson-14-*`. Su L18 il focus didattico è **Settimana 12–13** (multi-agente, performance, sicurezza).
+**Pipeline ticket classica** (`process_ticket`, `continue_ticket`, demo M1–M3, L10–L14): disponibili sui branch `main` … `lesson-14-*`. Su L19 il focus didattico è **Settimana 12–14** (multi-agente, performance, sicurezza, HITL).
 
 ## Memoria (Lezione 9)
 
@@ -357,7 +360,7 @@ PYTHONPATH=src python3 src/main.py --scenario l17a
 PYTHONPATH=src python3 src/benchmark_multi_agent.py
 ```
 
-**CLI `main.py` (branch L18):** scenari Settimana 12–13 — `l15` … `l17b`, `l18a`, `l18b`, `all`.
+**CLI `main.py` (branch L19):** scenari Settimana 12–14 — `l15` … `l19b`, `all`.
 
 
 ## Sicurezza Multi-Agente (Lezione 18)
@@ -391,7 +394,7 @@ ls -la data/triage_system.db
 
 Guida completa: [LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md).
 
-## Demo ed esecuzione (branch L18)
+## Demo ed esecuzione (branch L19)
 
 **Manuale demo live:** [docs/SETTIMANA_12_DEMO_LIVE.md](docs/SETTIMANA_12_DEMO_LIVE.md), [docs/SETTIMANA_13_DEMO_LIVE.md](docs/SETTIMANA_13_DEMO_LIVE.md)
 
@@ -400,7 +403,7 @@ Guida completa: [LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md).
 | Comando | Effetto |
 |---------|---------|
 | `python3 src/main.py` | **Solo L15** (default, senza LLM) |
-| `python3 src/main.py --scenario all` | Sequenza **L15 → … → L18b** |
+| `python3 src/main.py --scenario all` | Sequenza **L15 → … → L19b** |
 
 | Scenario | Focus | LLM |
 |----------|--------|-----|
@@ -497,7 +500,8 @@ pytest tests/ -q
 | `test_benchmark_multi_agent.py` | Report benchmark MAS (L17) |
 | `test_input_guardrail.py` / `test_handoff_sanitizer.py` | Guardrail e hand-off (L18) |
 | `test_tool_policy_gate.py` / `test_security_store.py` | Tool gate e SQLite alert (L18) |
-| `test_week12_report.py` / `test_main_report.py` | Report HTML Settimana 12–13 (L15–L18) |
+| `test_hitl_breakpoints.py` / `test_hitl_pipeline.py` | Breakpoint e resume HITL (L19) |
+| `test_week12_report.py` / `test_main_report.py` | Report HTML Settimana 12–14 (L15–L19) |
 | `test_open_html.py` / `test_open_report_script.py` | Apertura report nel browser (WSL) |
 | `test_logger_sqlite.py` | SQLite init, insert, query indicizzata |
 | `test_policy_semantic.py` | RAG + Chroma, sinonimi, soglia |

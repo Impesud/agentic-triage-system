@@ -29,6 +29,7 @@ KPI disponibili:
 | Orchestrazione (L16) | `crew_triage_complete`, `autogen_triage_complete`, `multi_agent_fallback` |
 | Performance (L17) | `message_pruning_applied`, `embedding_cache_hit`, `pipeline_latency_report` |
 | Sicurezza (L18) | `security_input_blocked`, `security_handoff_blocked`, `security_tool_denied` |
+| HITL (L19) | `hitl_breakpoint_reached`, `hitl_session_approved`, `hitl_session_resumed`, `hitl_session_rejected` |
 | Tool usage (proxy) | stringhe `search_policy`, `notify_manager`, … nei payload |
 
 Se `triage_json_retry` è alto → problema **sintassi JSON** (prompt o self-correction).

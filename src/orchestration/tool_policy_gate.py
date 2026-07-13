@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Callable
 
+from orchestration.hitl_breakpoints import HitlPauseContext
 from orchestration.models import SharedHandoffContext
 from orchestration.pipeline_cache import PipelineContextCache
 from tools.logger import log_event
@@ -25,6 +26,8 @@ class ToolPolicyContext:
     cache: PipelineContextCache | None = None
     handoff: SharedHandoffContext | None = None
     pipeline_categoria: str | None = None
+    enable_hitl: bool = True
+    hitl_pause_context: HitlPauseContext | None = None
 
 
 @dataclass(frozen=True)

@@ -7,3 +7,11 @@ class TriageError(Exception):
 
 class SecurityGuardrailError(TriageError):
     """Input o hand-off bloccato dal guardrail di sicurezza (Lezione 18)."""
+
+
+class HitlApprovalRequired(TriageError):
+    """Azione critica in pausa: richiesta approvazione operatore (Lezione 19)."""
+
+    def __init__(self, message: str, *, session_id: str) -> None:
+        super().__init__(message)
+        self.session_id = session_id

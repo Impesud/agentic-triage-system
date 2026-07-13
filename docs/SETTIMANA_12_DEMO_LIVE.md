@@ -2,7 +2,7 @@
 
 Manuale operativo per docenti e studenti: **come eseguire le demo L15–L17** dal branch corrente.
 
-> **Branch `lesson-18-multi-agent-security`:** include anche la **Lezione 18** (`l18a`, `l18b`). Vedi [SETTIMANA_13_DEMO_LIVE.md](SETTIMANA_13_DEMO_LIVE.md). Con `--scenario all` vengono eseguiti **sempre** L18a/L18b anche senza API key.
+> **Branch `lesson-19-hitl-breakpoints`:** include anche la **Lezione 19** (`l19a`, `l19b`). Vedi [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md). Con `--scenario all` vengono eseguiti **sempre** L18a/L18b e L19a/L19b anche senza API key.
 
 Guide teoriche per singola lezione:
 

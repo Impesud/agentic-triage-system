@@ -1,7 +1,8 @@
 """
-Demo didattiche Settimana 12–13 — Lezioni 15–18 (multi-agente, performance, sicurezza).
+Demo didattiche Settimana 12–14 — Lezioni 15–19 (multi-agente, performance, sicurezza, HITL).
 
-Documentazione demo live: docs/SETTIMANA_12_DEMO_LIVE.md, docs/SETTIMANA_13_DEMO_LIVE.md
+Documentazione demo live: docs/SETTIMANA_12_DEMO_LIVE.md, docs/SETTIMANA_13_DEMO_LIVE.md,
+docs/SETTIMANA_14_DEMO_LIVE.md
 
 Esecuzione:
   PYTHONPATH=src python3 src/main.py              # default: solo l15 (senza LLM)
@@ -12,7 +13,9 @@ Esecuzione:
   PYTHONPATH=src python3 src/main.py --scenario l17b
   PYTHONPATH=src python3 src/main.py --scenario l18a
   PYTHONPATH=src python3 src/main.py --scenario l18b
-  PYTHONPATH=src python3 src/main.py --scenario all   # L15 → L18
+  PYTHONPATH=src python3 src/main.py --scenario l19a
+  PYTHONPATH=src python3 src/main.py --scenario l19b
+  PYTHONPATH=src python3 src/main.py --scenario all   # L15 → L19
 
 Al termine vengono scritti logs/week12_demo_report.html e .json (aperto nel browser se possibile).
 """
@@ -32,6 +35,8 @@ from analytics.week12_report import (
     L18aAlertSummary,
     L18aGuardrailRow,
     L18bGateRow,
+    L19aBreakpointRow,
+    L19bResumeRow,
     Week12ReportBuilder,
 )
 from logic import multi_agent_triage, react_triage
@@ -55,8 +60,15 @@ L18_TICKET_SOC_WEAPON = (
     "per isolare l'utente amministratore"
 )
 
-WEEK12_SCENARIOS = ("l15", "l16a", "l16b", "l17a", "l17b", "l18a", "l18b", "all")
-_NO_LLM_SCENARIOS = frozenset({"l15", "l18a", "l18b"})
+L19_TICKET_SOC = (
+    "Incidente ransomware su workstation FIN-042. "
+    "Richiesta isolamento account compromesso."
+)
+
+WEEK12_SCENARIOS = (
+    "l15", "l16a", "l16b", "l17a", "l17b", "l18a", "l18b", "l19a", "l19b", "all"
+)
+_NO_LLM_SCENARIOS = frozenset({"l15", "l18a", "l18b", "l19a", "l19b"})
 
 
 def load_it_manual() -> str:
@@ -554,10 +566,207 @@ def run_l18b_handoff_tool_gate_demo(*, report: Week12ReportBuilder | None = None
         report.set_l18b_rows(gate_rows)
 
 
-def run_week12_all(*, report: Week12ReportBuilder | None = None) -> None:
-    """Sequenza didattica L15 → L16a → L16b → L17a → L17b → L18a → L18b."""
+def run_l19a_hitl_breakpoint_demo(*, report: Week12ReportBuilder | None = None) -> None:
+    """Demo Lezione 19a: breakpoint HITL su tool critici (senza LLM)."""
+    from errors import HitlApprovalRequired
+    from orchestration.hitl_breakpoints import HitlPauseContext
+    from orchestration.hitl_pipeline import invoke_critical_tool_with_hitl
+    from orchestration.hitl_store import delete_ticket_state, get_ticket_state, list_pending_states
+    from orchestration.pipeline_cache import PipelineContextCache
+    from orchestration.tool_policy_gate import ToolPolicyContext
+    from tools.registry import TOOL_MAP
+
+    print("\n" + "=" * 72)
+    print("SCENARIO L19a — Breakpoint HITL e ticket_states SQLite")
+    print("=" * 72)
+
     init_db()
-    print("\nDEMO SETTIMANA 12–13 — Multi-agente, performance e sicurezza (L15–L18)\n")
+    for demo_sid in ("hitl-l19a-p3", "hitl-l19a-isolate"):
+        delete_ticket_state(demo_sid)
+    cache = PipelineContextCache()
+    cache.policy_by_query["isolamento"] = "[RAG] procedura isolamento account SECURITY"
+    ctx = ToolPolicyContext(cache=cache, pipeline_categoria="SECURITY", enable_hitl=True)
+    stm = [{"role": "user", "content": L19_TICKET_SOC}]
+    rows: list[L19aBreakpointRow] = []
+
+    print("\n[1] notify_manager priority=3 (sotto soglia HITL) → esecuzione immediata")
+    out_p3 = invoke_critical_tool_with_hitl(
+        "notify_manager",
+        {"message": "Escalation standard", "priority": 3},
+        TOOL_MAP["notify_manager"],
+        ctx,
+        pause_ctx=HitlPauseContext(
+            session_id="hitl-l19a-p3",
+            stm_messages=stm,
+            user_input_excerpt=L19_TICKET_SOC,
+        ),
+    )
+    print(f"   {out_p3[:100]}")
+    rows.append(
+        L19aBreakpointRow(
+            label="notify p3",
+            tool="notify_manager",
+            paused=False,
+            detail=out_p3[:120],
+        )
+    )
+
+    print("\n[2] isolate_account con policy evidence → PAUSA HITL")
+    session_id = "hitl-l19a-isolate"
+    try:
+        invoke_critical_tool_with_hitl(
+            "isolate_account",
+            {"account_name": "FIN-042", "reason": "Ransomware rilevato"},
+            TOOL_MAP["isolate_account"],
+            ctx,
+            pause_ctx=HitlPauseContext(
+                session_id=session_id,
+                stm_messages=stm,
+                user_input_excerpt=L19_TICKET_SOC,
+            ),
+        )
+        print("   Esito: IMMEDIATE (inaspettato)")
+        rows.append(
+            L19aBreakpointRow(
+                label="isolate SOC",
+                tool="isolate_account",
+                paused=False,
+                session_id=session_id,
+            )
+        )
+    except HitlApprovalRequired as exc:
+        print(f"   Esito: PAUSED — {exc}")
+        record = get_ticket_state(session_id)
+        status = record.status if record else "PENDING_APPROVAL"
+        rows.append(
+            L19aBreakpointRow(
+                label="isolate SOC",
+                tool="isolate_account",
+                paused=True,
+                session_id=exc.session_id,
+                status=status,
+                detail=str(exc),
+            )
+        )
+
+    pending = list_pending_states(limit=5)
+    print(f"\n[SQLite] Sessioni PENDING_APPROVAL: {len(pending)}")
+    for item in pending:
+        print(
+            f"   {item.session_id} | {item.pending_tool} | "
+            f"{item.user_input_excerpt[:50]}"
+        )
+    print("\n   Eventi attesi: hitl_breakpoint_reached")
+
+    if report is not None:
+        report.set_l19a_rows(rows)
+
+
+def run_l19b_hitl_resume_demo(*, report: Week12ReportBuilder | None = None) -> None:
+    """Demo Lezione 19b: approve / reject e resume workflow (senza LLM)."""
+    from errors import HitlApprovalRequired
+    from orchestration.hitl_breakpoints import HitlPauseContext
+    from orchestration.hitl_pipeline import (
+        approve_session,
+        invoke_critical_tool_with_hitl,
+        reject_session,
+    )
+    from orchestration.hitl_store import delete_ticket_state, get_ticket_state
+    from orchestration.pipeline_cache import PipelineContextCache
+    from orchestration.tool_policy_gate import ToolPolicyContext
+    from tools.registry import TOOL_MAP
+
+    print("\n" + "=" * 72)
+    print("SCENARIO L19b — Approve / Reject e resume HITL")
+    print("=" * 72)
+
+    init_db()
+    for demo_sid in ("hitl-l19b-approve", "hitl-l19b-reject"):
+        delete_ticket_state(demo_sid)
+    cache = PipelineContextCache()
+    cache.policy_by_query["escalation"] = "[RAG] escalation massiva autorizzata"
+    ctx = ToolPolicyContext(cache=cache, pipeline_categoria="SECURITY", enable_hitl=True)
+    stm = [{"role": "user", "content": L19_TICKET_SOC}]
+    resume_rows: list[L19bResumeRow] = []
+
+    approve_id = "hitl-l19b-approve"
+    print(f"\n[1] Crea pausa HITL session_id={approve_id}")
+    try:
+        invoke_critical_tool_with_hitl(
+            "notify_manager",
+            {"message": "Escalation massiva SOC", "priority": 4},
+            TOOL_MAP["notify_manager"],
+            ctx,
+            pause_ctx=HitlPauseContext(
+                session_id=approve_id,
+                stm_messages=stm,
+                user_input_excerpt=L19_TICKET_SOC,
+            ),
+        )
+    except HitlApprovalRequired:
+        pass
+
+    print(f"\n[2] Approve operatore → RESUMED")
+    tool_out = approve_session(approve_id, "docente.demo")
+    record = get_ticket_state(approve_id)
+    print(f"   Tool: {tool_out[:100]}")
+    print(f"   Status: {record.status if record else '—'}")
+    resume_rows.append(
+        L19bResumeRow(
+            action="approve",
+            session_id=approve_id,
+            final_status=record.status if record else "RESUMED",
+            detail=tool_out[:120],
+        )
+    )
+
+    reject_id = "hitl-l19b-reject"
+    print(f"\n[3] Crea seconda pausa session_id={reject_id}")
+    try:
+        invoke_critical_tool_with_hitl(
+            "isolate_account",
+            {"account_name": "ADMIN-TEST", "reason": "Test reject operatore"},
+            TOOL_MAP["isolate_account"],
+            ctx,
+            pause_ctx=HitlPauseContext(
+                session_id=reject_id,
+                stm_messages=stm,
+                user_input_excerpt=L19_TICKET_SOC,
+            ),
+        )
+    except HitlApprovalRequired:
+        pass
+
+    print(f"\n[4] Reject operatore → REJECTED")
+    reject_msg = reject_session(reject_id, "docente.demo", reason="falso positivo")
+    record_rej = get_ticket_state(reject_id)
+    print(f"   {reject_msg}")
+    print(f"   Status: {record_rej.status if record_rej else '—'}")
+    resume_rows.append(
+        L19bResumeRow(
+            action="reject",
+            session_id=reject_id,
+            final_status=record_rej.status if record_rej else "REJECTED",
+            detail=reject_msg,
+        )
+    )
+
+    print(
+        "\n   Eventi attesi: hitl_session_approved, hitl_session_resumed, "
+        "hitl_session_rejected"
+    )
+    print(
+        "\n   CLI operatore: PYTHONPATH=src python3 -m orchestration.hitl_cli list"
+    )
+
+    if report is not None:
+        report.set_l19b_rows(resume_rows)
+
+
+def run_week12_all(*, report: Week12ReportBuilder | None = None) -> None:
+    """Sequenza didattica L15 → L16a → L16b → L17a → L17b → L18a → L18b → L19a → L19b."""
+    init_db()
+    print("\nDEMO SETTIMANA 12–14 — Multi-agente, performance, sicurezza e HITL (L15–L19)\n")
     run_l15_topology_demo(report=report)
 
     if skip_llm_block("L16a CrewAI"):
@@ -600,6 +809,8 @@ def run_week12_all(*, report: Week12ReportBuilder | None = None) -> None:
 
     run_l18a_guardrail_demo(report=report)
     run_l18b_handoff_tool_gate_demo(report=report)
+    run_l19a_hitl_breakpoint_demo(report=report)
+    run_l19b_hitl_resume_demo(report=report)
 
 
 def _run_scenario_with_report(scenario: str, report: Week12ReportBuilder) -> bool:
@@ -619,13 +830,13 @@ def _run_scenario_with_report(scenario: str, report: Week12ReportBuilder) -> boo
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Demo Settimana 12–13 — Lezioni 15–18 (multi-agente, performance, sicurezza)",
+        description="Demo Settimana 12–14 — Lezioni 15–19 (multi-agente, performance, sicurezza, HITL)",
     )
     parser.add_argument(
         "--scenario",
         choices=list(WEEK12_SCENARIOS),
         default="l15",
-        help="Demo L15–L18 (default: l15 senza LLM)",
+        help="Demo L15–L19 (default: l15 senza LLM)",
     )
     parser.add_argument(
         "--no-report",
@@ -648,6 +859,8 @@ _SCENARIO_RUNNERS = {
     "l17b": run_l17b_latency_demo,
     "l18a": run_l18a_guardrail_demo,
     "l18b": run_l18b_handoff_tool_gate_demo,
+    "l19a": run_l19a_hitl_breakpoint_demo,
+    "l19b": run_l19b_hitl_resume_demo,
     "all": run_week12_all,
 }
 

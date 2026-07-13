@@ -3,13 +3,15 @@ Nucleo del loop agentico (logic.py) — Lezione 9: memoria; Lezione 10: RAG;
 Lezione 11: self-correction su soft error e emergency fallback;
 Lezione 13: loop ReAct multi-step; Lezione 14: max_steps, STM, self-correction in-loop;
 Lezione 16: orchestrazione multi-agent; Lezione 17: pruning e cache pipeline;
-Lezione 18: input guardrail e tool policy gate.
+Lezione 18: input guardrail e tool policy gate;
+Lezione 19: breakpoint HITL e resume workflow.
 """
 
 from __future__ import annotations
 
 import json
 import re
+import uuid
 from dataclasses import dataclass
 from typing import Any, Literal
 
@@ -20,6 +22,9 @@ from prompts.triage_v1 import build_chat_messages
 from schemas.ticket import TriageResult
 from tools.history_tools import should_escalate_repeat_customer
 from tools.logger import log_event
+from errors import HitlApprovalRequired
+from orchestration.hitl_breakpoints import HitlPauseContext
+from orchestration.hitl_pipeline import invoke_critical_tool_with_hitl
 from orchestration.message_pruning import (
     apply_pruning_with_log,
     compact_tool_output,
@@ -27,11 +32,7 @@ from orchestration.message_pruning import (
 )
 from orchestration.pipeline_cache import PipelineContextCache
 from orchestration.security_pipeline import guard_ticket_input
-from orchestration.tool_policy_gate import (
-    ToolPolicyContext,
-    invoke_isolate_account,
-    invoke_notify_manager,
-)
+from orchestration.tool_policy_gate import ToolPolicyContext
 from tools.registry import TOOL_MAP, TOOLS_DEFINITION
 
 MAX_TRIAGE_JSON_RETRIES = 3
@@ -182,6 +183,7 @@ def _execute_tool_calls(
             function_args,
             cache=cache,
             compact_output=compact_output,
+            enable_hitl=False,
         )
         conversation.append(
             {
@@ -236,6 +238,7 @@ def _append_fallback_tools(
             args,
             cache=fallback_cache,
             compact_output=compact_output,
+            enable_hitl=False,
         )
         conversation.append(
             {
@@ -682,14 +685,26 @@ def _react_tool_output(
     cache: PipelineContextCache | None,
     compact_output: bool,
     policy_ctx: ToolPolicyContext | None = None,
+    enable_hitl: bool = True,
+    pause_ctx: HitlPauseContext | None = None,
 ) -> str:
-    """Invoca TOOL_MAP con cache pipeline, gate L18 e compattazione opzionale."""
-    ctx = policy_ctx or ToolPolicyContext(cache=cache)
+    """Invoca TOOL_MAP con cache pipeline, gate L18, HITL L19 e compattazione opzionale."""
+    ctx = policy_ctx or ToolPolicyContext(cache=cache, enable_hitl=enable_hitl)
     if ctx.cache is None and cache is not None:
         ctx = ToolPolicyContext(
             cache=cache,
             handoff=ctx.handoff,
             pipeline_categoria=ctx.pipeline_categoria,
+            enable_hitl=enable_hitl if policy_ctx is None else ctx.enable_hitl,
+            hitl_pause_context=pause_ctx or ctx.hitl_pause_context,
+        )
+    elif pause_ctx is not None:
+        ctx = ToolPolicyContext(
+            cache=ctx.cache,
+            handoff=ctx.handoff,
+            pipeline_categoria=ctx.pipeline_categoria,
+            enable_hitl=ctx.enable_hitl,
+            hitl_pause_context=pause_ctx,
         )
 
     if function_name == "search_policy":
@@ -716,19 +731,21 @@ def _react_tool_output(
         return cache.get_or_call_ltm(cliente, hours, call)
 
     if function_name == "notify_manager":
-        return invoke_notify_manager(
-            str(function_args.get("message", "")),
-            int(function_args.get("priority", 1)),
+        return invoke_critical_tool_with_hitl(
+            "notify_manager",
+            function_args,
             lambda **kw: TOOL_MAP["notify_manager"](**kw),
             ctx,
+            pause_ctx=pause_ctx or ctx.hitl_pause_context,
         )
 
     if function_name == "isolate_account":
-        return invoke_isolate_account(
-            str(function_args.get("account_name", "")),
-            str(function_args.get("reason", "")),
+        return invoke_critical_tool_with_hitl(
+            "isolate_account",
+            function_args,
             lambda **kw: TOOL_MAP["isolate_account"](**kw),
             ctx,
+            pause_ctx=pause_ctx or ctx.hitl_pause_context,
         )
 
     return TOOL_MAP[function_name](**function_args)
@@ -745,53 +762,28 @@ def _build_react_messages(
     return messages
 
 
-def react_triage(
-    user_input: str,
-    manuale: str,
+def _react_triage_loop(
+    client: Any,
+    conversation: list[Any],
     *,
-    history: list[dict[str, str]] | None = None,
-    session_id: str | None = None,
-    max_steps: int = DEFAULT_REACT_MAX_STEPS,
-    max_json_retries: int = MAX_TRIAGE_JSON_RETRIES,
+    user_input: str,
+    session_id: str | None,
+    start_step: int,
+    max_steps: int,
+    use_pruning: bool,
+    use_cache: bool,
+    compact_output: bool,
+    cache: PipelineContextCache | None,
+    return_metrics: bool,
+    enable_hitl: bool,
+    manuale: str = "",
     enable_optimizations: bool = True,
     enable_pruning: bool | None = None,
     enable_cache: bool | None = None,
     enable_compact_output: bool | None = None,
-    return_metrics: bool = False,
-    enable_security_guard: bool = True,
 ) -> TriageResult | tuple[TriageResult, ReactRunMetrics]:
-    """
-    Motore di Triage Agentico ReAct Multi-Step (Lezioni 13–14).
-    Esegue cicli iterativi Thought -> Action -> Observation fino a convergenza JSON.
-    Con session_id riusa la conversazione in _SHORT_TERM_STORE (Short-Term Memory).
-    """
-    if enable_security_guard:
-        guard_ticket_input(user_input)
-    client = get_client()
-
-    if session_id and session_id in _SHORT_TERM_STORE:
-        conversation = _SHORT_TERM_STORE[session_id]
-        conversation.append({"role": "user", "content": user_input})
-    elif session_id:
-        conversation = _build_react_messages(user_input, manuale, history=history)
-        _SHORT_TERM_STORE[session_id] = conversation
-    else:
-        conversation = _build_react_messages(user_input, manuale, history=history)
-
-    use_pruning, use_cache, compact_output = _resolve_optimization_flags(
-        enable_optimizations,
-        enable_pruning=enable_pruning,
-        enable_cache=enable_cache,
-        enable_compact_output=enable_compact_output,
-    )
-    cache = PipelineContextCache() if use_cache else None
-
-    print(
-        f"\n🎬 [ReAct Engine] Avvio pianificazione per ticket: '{user_input[:40]}...'",
-        flush=True,
-    )
-
-    for step in range(1, max_steps + 1):
+    """Ciclo ReAct interno; usato da react_triage e react_triage_resume."""
+    for step in range(start_step, max_steps + 1):
         print(f"🔄 [STEP {step}/{max_steps}] Riflessione cognitiva dell'agente...", flush=True)
 
         response_message = _call_llm_with_tools(client, conversation)
@@ -809,12 +801,48 @@ def react_triage(
                     f"   🛠️ [ACTION] Invocazione tool '{function_name}' con: {function_args}",
                     flush=True,
                 )
-                tool_output = _react_tool_output(
-                    function_name,
-                    function_args,
-                    cache=cache,
-                    compact_output=compact_output,
+                hitl_session_id = (
+                    f"hitl-{session_id}"
+                    if session_id
+                    else f"hitl-{uuid.uuid4().hex[:12]}"
                 )
+                pause_ctx = HitlPauseContext(
+                    session_id=hitl_session_id,
+                    stm_messages=list(conversation),
+                    user_input_excerpt=user_input[:200],
+                    react_step=step,
+                    tool_call_id=tool_call.id,
+                    react_session_id=session_id,
+                    user_input=user_input,
+                    manuale=manuale,
+                    max_steps=max_steps,
+                    enable_optimizations=enable_optimizations,
+                    enable_pruning=enable_pruning,
+                    enable_cache=enable_cache,
+                    enable_compact_output=enable_compact_output,
+                )
+                try:
+                    tool_output = _react_tool_output(
+                        function_name,
+                        function_args,
+                        cache=cache,
+                        compact_output=compact_output,
+                        enable_hitl=enable_hitl,
+                        pause_ctx=pause_ctx,
+                    )
+                except HitlApprovalRequired as exc:
+                    tool_output = str(exc)
+                    if session_id:
+                        conversation.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": tool_call.id,
+                                "name": function_name,
+                                "content": tool_output,
+                            }
+                        )
+                        _SHORT_TERM_STORE[session_id] = conversation
+                    raise
                 preview = tool_output[:50] + ("..." if len(tool_output) > 50 else "")
                 print(f"   📥 [OBSERVATION] Risultato: {preview}", flush=True)
                 conversation.append(
@@ -904,6 +932,129 @@ def react_triage(
         use_pruning=use_pruning,
         use_cache=use_cache,
         compact_output=compact_output,
+    )
+
+
+def react_triage_resume(
+    conversation: list[Any],
+    *,
+    user_input: str,
+    manuale: str,
+    session_id: str,
+    from_step: int,
+    max_steps: int = DEFAULT_REACT_MAX_STEPS,
+    enable_optimizations: bool = True,
+    enable_pruning: bool | None = None,
+    enable_cache: bool | None = None,
+    enable_compact_output: bool | None = None,
+    cache: PipelineContextCache | None = None,
+    return_metrics: bool = False,
+    enable_hitl: bool = True,
+) -> TriageResult | tuple[TriageResult, ReactRunMetrics]:
+    """
+    Riprende il loop ReAct dopo approve HITL: ripristina STM e continua dal passo successivo.
+    """
+    _SHORT_TERM_STORE[session_id] = list(conversation)
+    client = get_client()
+    use_pruning, use_cache, compact_output = _resolve_optimization_flags(
+        enable_optimizations,
+        enable_pruning=enable_pruning,
+        enable_cache=enable_cache,
+        enable_compact_output=enable_compact_output,
+    )
+    if cache is None and use_cache:
+        cache = PipelineContextCache()
+
+    print(
+        f"\n▶️ [ReAct Resume] Ripresa sessione {session_id} da step {from_step + 1}/{max_steps}",
+        flush=True,
+    )
+    return _react_triage_loop(
+        client,
+        conversation,
+        user_input=user_input,
+        session_id=session_id,
+        start_step=from_step + 1,
+        max_steps=max_steps,
+        use_pruning=use_pruning,
+        use_cache=use_cache,
+        compact_output=compact_output,
+        cache=cache,
+        return_metrics=return_metrics,
+        enable_hitl=enable_hitl,
+        manuale=manuale,
+        enable_optimizations=enable_optimizations,
+        enable_pruning=enable_pruning,
+        enable_cache=enable_cache,
+        enable_compact_output=enable_compact_output,
+    )
+
+
+def react_triage(
+    user_input: str,
+    manuale: str,
+    *,
+    history: list[dict[str, str]] | None = None,
+    session_id: str | None = None,
+    max_steps: int = DEFAULT_REACT_MAX_STEPS,
+    max_json_retries: int = MAX_TRIAGE_JSON_RETRIES,
+    enable_optimizations: bool = True,
+    enable_pruning: bool | None = None,
+    enable_cache: bool | None = None,
+    enable_compact_output: bool | None = None,
+    return_metrics: bool = False,
+    enable_security_guard: bool = True,
+    enable_hitl: bool = True,
+) -> TriageResult | tuple[TriageResult, ReactRunMetrics]:
+    """
+    Motore di Triage Agentico ReAct Multi-Step (Lezioni 13–14).
+    Esegue cicli iterativi Thought -> Action -> Observation fino a convergenza JSON.
+    Con session_id riusa la conversazione in _SHORT_TERM_STORE (Short-Term Memory).
+    """
+    if enable_security_guard:
+        guard_ticket_input(user_input)
+    client = get_client()
+
+    if session_id and session_id in _SHORT_TERM_STORE:
+        conversation = _SHORT_TERM_STORE[session_id]
+        conversation.append({"role": "user", "content": user_input})
+    elif session_id:
+        conversation = _build_react_messages(user_input, manuale, history=history)
+        _SHORT_TERM_STORE[session_id] = conversation
+    else:
+        conversation = _build_react_messages(user_input, manuale, history=history)
+
+    use_pruning, use_cache, compact_output = _resolve_optimization_flags(
+        enable_optimizations,
+        enable_pruning=enable_pruning,
+        enable_cache=enable_cache,
+        enable_compact_output=enable_compact_output,
+    )
+    cache = PipelineContextCache() if use_cache else None
+
+    print(
+        f"\n🎬 [ReAct Engine] Avvio pianificazione per ticket: '{user_input[:40]}...'",
+        flush=True,
+    )
+
+    return _react_triage_loop(
+        client,
+        conversation,
+        user_input=user_input,
+        session_id=session_id,
+        start_step=1,
+        max_steps=max_steps,
+        use_pruning=use_pruning,
+        use_cache=use_cache,
+        compact_output=compact_output,
+        cache=cache,
+        return_metrics=return_metrics,
+        enable_hitl=enable_hitl,
+        manuale=manuale,
+        enable_optimizations=enable_optimizations,
+        enable_pruning=enable_pruning,
+        enable_cache=enable_cache,
+        enable_compact_output=enable_compact_output,
     )
 
 

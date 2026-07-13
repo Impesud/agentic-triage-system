@@ -16,7 +16,8 @@ Ogni branch contiene il codice **cumulativo** fino alla lezione indicata; le lez
 | [`lesson-15-multi-agent-topologies`](.) | **Lezione 15** — Multi-agent e topologie | `git checkout lesson-15-multi-agent-topologies` | ~76 |
 | [`lesson-16-crew-autogen-orchestration`](.) | **Lezione 16** — CrewAI & AutoGen | `git checkout lesson-16-crew-autogen-orchestration` | ~83 |
 | [`lesson-17-multi-agent-performance`](.) | **Lezione 17** — Performance MAS | `git checkout lesson-17-multi-agent-performance` | ~106 |
-| [`lesson-18-multi-agent-security`](.) | **Lezione 18** — Sicurezza MAS | `git checkout lesson-18-multi-agent-security` | ~142 |
+| [`lesson-18-multi-agent-security`](.) | **Lezione 18** — Sicurezza MAS | `git checkout lesson-18-multi-agent-security` | ~150 |
+| [`lesson-19-hitl-breakpoints`](.) | **Lezione 19** — HITL e resume | `git checkout lesson-19-hitl-breakpoints` | ~164 |
 
 ```mermaid
 gitGraph
@@ -48,6 +49,9 @@ gitGraph
   branch lesson-18-multi-agent-security
   checkout lesson-18-multi-agent-security
   commit id: "L18-security"
+  branch lesson-19-hitl-breakpoints
+  checkout lesson-19-hitl-breakpoints
+  commit id: "L19-hitl"
 ```
 
 **Settimana 8 (lezioni 11–12):** resilienza, error recovery, benchmarking — vedi [LEZIONE_11_RESILIENZA.md](LEZIONE_11_RESILIENZA.md) e [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md).
@@ -57,6 +61,8 @@ gitGraph
 **Settimana 12 (lezioni 15–17):** modelli multi-agente, orchestrazione e performance — manuale demo live: **[SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md)**; teoria: [LEZIONE_15](LEZIONE_15_MULTI_AGENT_COORDINATION.md), [LEZIONE_16](LEZIONE_16_CREW_AUTOGEN.md), [LEZIONE_17](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md).
 
 **Settimana 13 (lezione 18):** sicurezza MAS — guardrail, hand-off, tool gate — manuale demo live: **[SETTIMANA_13_DEMO_LIVE.md](SETTIMANA_13_DEMO_LIVE.md)**; teoria: [LEZIONE_18](LEZIONE_18_MULTI_AGENT_SECURITY.md).
+
+**Settimana 14 (lezione 19):** HITL, breakpoint, resume workflow — manuale demo live: **[SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md)**; teoria: [LEZIONE_19](LEZIONE_19_HITL_BREAKPOINTS.md).
 
 ---
 
@@ -77,6 +83,7 @@ gitGraph
 | **16** | CrewAI sequenziale + AutoGen GroupChat | `multi_agent_triage`, `crew_pipeline`, `autogen_team` | [LEZIONE_16_CREW_AUTOGEN.md](LEZIONE_16_CREW_AUTOGEN.md) |
 | **17** | Pruning, cache pipeline, benchmark MAS | `message_pruning`, `pipeline_cache`, `benchmark_multi_agent` | [LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) |
 | **18** | Guardrail input, hand-off sanitizer, tool gate | `input_guardrail`, `handoff_sanitizer`, `tool_policy_gate`, `security_alerts` | [LEZIONE_18_MULTI_AGENT_SECURITY.md](LEZIONE_18_MULTI_AGENT_SECURITY.md) |
+| **19** | HITL breakpoint, `ticket_states`, resume CLI | `hitl_breakpoints`, `hitl_store`, `hitl_pipeline`, `hitl_cli` | [LEZIONE_19_HITL_BREAKPOINTS.md](LEZIONE_19_HITL_BREAKPOINTS.md) |
 
 ---
 
@@ -93,7 +100,10 @@ gitGraph
 | 17b — Benchmark latenza MAS | `PYTHONPATH=src python3 src/main.py --scenario l17b` |
 | 18a — Input Guardrail | `PYTHONPATH=src python3 src/main.py --scenario l18a` |
 | 18b — Hand-off + tool gate | `PYTHONPATH=src python3 src/main.py --scenario l18b` |
-| Settimana 12–13 — tutte le demo | `PYTHONPATH=src python3 src/main.py --scenario all` |
+| 19a — Breakpoint HITL | `PYTHONPATH=src python3 src/main.py --scenario l19a` |
+| 19b — Approve / reject | `PYTHONPATH=src python3 src/main.py --scenario l19b` |
+| CLI operatore HITL | `PYTHONPATH=src python3 -m orchestration.hitl_cli list` |
+| Settimana 12–14 — tutte le demo | `PYTHONPATH=src python3 src/main.py --scenario all` |
 | Report HTML (auto a fine run) | `logs/week12_demo_report.html` |
 | 12 — benchmark monolitico | `PYTHONPATH=src python3 src/benchmark.py` |
 | 17 — benchmark multi-agent | `PYTHONPATH=src python3 src/benchmark_multi_agent.py` |
@@ -116,6 +126,7 @@ gitGraph
 | **Settimana 9** | ReAct, SQLite, planning multi-step | `lesson-13-*` → `lesson-14-*` |
 | **Settimana 12** | Multi-agent, orchestrazione, performance MAS | `lesson-15-*` → `lesson-17-*` |
 | **Settimana 13** | Sicurezza MAS: guardrail, hand-off, tool gate | `lesson-18-*` |
+| **Settimana 14** | HITL: breakpoint, ticket_states, resume | `lesson-19-*` |
 
 ---
 
@@ -209,7 +220,7 @@ Vedi [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md) per la checklist com
 |----------|-----------------|
 | Message pruning | `orchestration/message_pruning.py`, `test_message_pruning.py` |
 | Cache pipeline | `pipeline_cache.py`, `test_pipeline_cache.py` |
-| CLI L15–L18 | `main.WEEK12_SCENARIOS`, `test_cli_scenarios_week12_only` |
+| CLI L15–L19 | `main.WEEK12_SCENARIOS`, `test_cli_scenarios_week12_only` |
 | Demo l17a/l17b | `run_l17a_pruning_demo`, `benchmark_multi_agent.py` |
 | KPI L17 in log | `analytics/log_kpi.performance_metrics` |
 | Retrocompatibilità | `pytest tests/ -q` (~106), benchmark L12 |
@@ -236,4 +247,22 @@ Push suggerito:
 
 ```bash
 git push -u origin lesson-18-multi-agent-security
+```
+
+## Per docenti — review Settimana 14 (L19)
+
+| Criterio | Dove verificare |
+|----------|-----------------|
+| Breakpoint HITL | `hitl_breakpoints.py`, `test_hitl_breakpoints.py` |
+| SQLite ticket_states | `hitl_store.py`, `test_hitl_store.py` |
+| Pause / resume | `hitl_pipeline.py`, `test_hitl_pipeline.py` |
+| CLI operatore | `hitl_cli.py`, `test_hitl_cli.py` |
+| Demo l19a/l19b (no LLM) | `main.run_l19a_hitl_breakpoint_demo`, `run_l19b_hitl_resume_demo` |
+| KPI L19 in log | `analytics/log_kpi.hitl_metrics` |
+| Retrocompatibilità | `pytest tests/ -q` (~164), benchmark L12 |
+
+Push suggerito:
+
+```bash
+git push -u origin lesson-19-hitl-breakpoints
 ```
