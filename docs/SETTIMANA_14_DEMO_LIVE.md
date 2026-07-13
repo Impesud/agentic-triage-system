@@ -24,6 +24,26 @@
 | `l19b` | No | Approve → RESUMED + esecuzione tool; Reject → REJECTED |
 | `all` | Parziale | Sequenza L15–L19; L19a/L19b sempre eseguiti anche senza API key |
 
+### Cosa fa ogni scenario (in breve)
+
+**`l19a` — Quando scatta la pausa**
+
+Simula due azioni critiche su un ticket SOC, **senza LLM**:
+
+1. **`notify_manager` con priorità 3** → il tool parte **subito** (sotto la soglia HITL, nessuna pausa).
+2. **`isolate_account`** → il sistema **si ferma**: salva la sessione su SQLite (`ticket_states`) con stato `PENDING_APPROVAL` e mostra il messaggio `[HITL PAUSED]`.
+
+Obiettivo didattico: capire la **differenza** tra tool che passano e tool che richiedono approvazione umana.
+
+**`l19b` — Cosa fa l'operatore dopo la pausa**
+
+Crea due pause HITL di prova e mostra le due decisioni possibili, **senza LLM**:
+
+1. **Approve** → l'operatore autorizza: il tool pendente viene **eseguito** e la sessione diventa `RESUMED`.
+2. **Reject** → l'operatore rifiuta: il tool **non** parte e la sessione diventa `REJECTED`.
+
+Obiettivo didattico: vedere il workflow **approve / reject** che in produzione si usa con `hitl_cli`.
+
 ```bash
 PYTHONPATH=src python3 src/main.py --scenario l19a
 PYTHONPATH=src python3 src/main.py --scenario l19b

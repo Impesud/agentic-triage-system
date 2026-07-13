@@ -433,8 +433,8 @@ Guida completa: [LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md).
 | **l17b** | Benchmark latenza MAS | Sì |
 | **l18a** | Input Guardrail + SQLite | No |
 | **l18b** | Hand-off + tool gate | No |
-| **l19a** | Breakpoint HITL + `ticket_states` | No |
-| **l19b** | Approve / reject workflow | No |
+| **l19a** | Quando scatta la pausa HITL: notify p3 immediato, isolate → `PENDING_APPROVAL` | No |
+| **l19b** | Operatore approve (tool eseguito) o reject (tool bloccato) | No |
 
 ```bash
 source .venv/bin/activate

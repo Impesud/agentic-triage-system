@@ -102,8 +102,8 @@ gitGraph
 | 17b — Benchmark latenza MAS | `PYTHONPATH=src python3 src/main.py --scenario l17b` |
 | 18a — Input Guardrail | `PYTHONPATH=src python3 src/main.py --scenario l18a` |
 | 18b — Hand-off + tool gate | `PYTHONPATH=src python3 src/main.py --scenario l18b` |
-| 19a — Breakpoint HITL | `PYTHONPATH=src python3 src/main.py --scenario l19a` |
-| 19b — Approve / reject | `PYTHONPATH=src python3 src/main.py --scenario l19b` |
+| 19a — Breakpoint HITL | `… --scenario l19a` — notify p3 subito, isolate in pausa su SQLite |
+| 19b — Approve / reject | `… --scenario l19b` — operatore approva o rifiuta il tool in sospeso |
 | CLI operatore HITL | `PYTHONPATH=src python3 -m orchestration.hitl_cli list` |
 | Settimana 12–14 — tutte le demo | `PYTHONPATH=src python3 src/main.py --scenario all` |
 | Report HTML (auto a fine run) | `logs/week12_demo_report.html` |
