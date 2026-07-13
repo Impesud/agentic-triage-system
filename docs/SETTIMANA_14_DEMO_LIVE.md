@@ -1,8 +1,8 @@
-# Manuale demo live — Settimana 14 (Lezione 19)
+# Manuale demo live — Settimana 14 (Lezione 19) — completata
 
 **Human-in-the-Loop e breakpoint workflow** — complementa [SETTIMANA_13_DEMO_LIVE.md](SETTIMANA_13_DEMO_LIVE.md) e [LEZIONE_19_HITL_BREAKPOINTS.md](LEZIONE_19_HITL_BREAKPOINTS.md) (guida completa: [come usare i breakpoint](LEZIONE_19_HITL_BREAKPOINTS.md#come-usare-i-breakpoint-guida-pratica)).
 
-**Branch:** `lesson-19-hitl-breakpoints`
+**Branch:** `lesson-19-hitl-breakpoints` (**ultimo branch** del percorso lezioni 9–19)
 
 ---
 

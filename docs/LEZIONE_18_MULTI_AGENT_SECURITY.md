@@ -131,9 +131,9 @@ Su `lesson-18-multi-agent-security`, `main.py` espone anche `l18a`/`l18b` e la s
 - [MANUALE_PROGETTINO_DATASET_TEST.md](MANUALE_PROGETTINO_DATASET_TEST.md) — scenario 3 injection, tool SOC completi
 - [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) — eventi audit L18
 
-## Prossimo passo (Lezione 19)
+## Lezione successiva — 19 (completata)
 
-[LEZIONE_19_HITL_BREAKPOINTS.md](LEZIONE_19_HITL_BREAKPOINTS.md) — branch `lesson-19-hitl-breakpoints`.
+[LEZIONE_19_HITL_BREAKPOINTS.md](LEZIONE_19_HITL_BREAKPOINTS.md) — branch `lesson-19-hitl-breakpoints` (ultimo branch del corso 9–19). Demo: [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md).
 
 ## Documentazione correlata
 

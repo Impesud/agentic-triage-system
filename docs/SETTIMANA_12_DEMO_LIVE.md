@@ -1,8 +1,8 @@
-# Settimana 12 — Guida alla demo live (Lezioni 15, 16 e 17)
+# Settimana 12–14 — Guida alla demo live (Lezioni 15–19)
 
-Manuale operativo per docenti e studenti: **come eseguire le demo L15–L17** dal branch corrente.
+Manuale operativo per docenti e studenti: **come eseguire le demo L15–L19** dal branch `lesson-19-hitl-breakpoints`.
 
-> **Branch `lesson-19-hitl-breakpoints`:** include anche la **Lezione 19** (`l19a`, `l19b`). Vedi [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md). Con `--scenario all` vengono eseguiti **sempre** L18a/L18b e L19a/L19b anche senza API key.
+> **Branch `lesson-19-hitl-breakpoints` (corso completo):** include lezioni **15–19**. Demo L18 (`l18a`/`l18b`) e L19 (`l19a`/`l19b`) in [SETTIMANA_13](SETTIMANA_13_DEMO_LIVE.md) e [SETTIMANA_14](SETTIMANA_14_DEMO_LIVE.md). Con `--scenario all` vengono eseguiti **sempre** L18a/L18b e L19a/L19b anche senza API key.
 
 Guide teoriche per singola lezione:
 
@@ -16,7 +16,7 @@ Indice corso: [CORSO_LEZIONI.md](CORSO_LEZIONI.md).
 
 ## Cosa fa `main.py` su questo branch
 
-Su `lesson-17-multi-agent-performance`, [`src/main.py`](../src/main.py) espone la Settimana 12:
+Su `lesson-19-hitl-breakpoints`, [`src/main.py`](../src/main.py) espone la Settimana 12–14:
 
 | Scenario | Lezione | Funzione | API OpenAI |
 |----------|---------|----------|------------|
@@ -25,9 +25,13 @@ Su `lesson-17-multi-agent-performance`, [`src/main.py`](../src/main.py) espone l
 | `l16b` | 16 | AutoGen GroupChat | **Sì** |
 | `l17a` | 17 | ReAct: baseline vs compact/cache vs full opt | **Sì** |
 | `l17b` | 17 | Benchmark latenza multi-pipeline | **Sì** |
-| `all` | 15→17 | Sequenza L15–L17 (L16/L17 saltati senza API key) | misto |
+| `l18a` | 18 | Input Guardrail + `security_alerts` | **No** |
+| `l18b` | 18 | Hand-off avvelenato + tool gate | **No** |
+| `l19a` | 19 | Breakpoint HITL + `ticket_states` | **No** |
+| `l19b` | 19 | Approve / reject workflow | **No** |
+| `all` | 15→19 | Sequenza completa (L16/L17 saltati senza API key; L18/L19 sempre eseguiti) | misto |
 
-Su **`lesson-18-multi-agent-security`** aggiungere: `l18a`, `l18b` (no LLM) e `all` esteso a L15→L18.
+Su **`lesson-18-multi-agent-security`**: `all` esteso fino a L18. Su **`lesson-19-hitl-breakpoints`** (branch corrente): `all` include anche L19a/L19b.
 
 **Demo storiche** (M1–M3, `l10`–`l14`, `process_ticket`): disponibili sui branch `main` … `lesson-14-*`, non su questo branch.
 
@@ -36,7 +40,7 @@ Su **`lesson-18-multi-agent-security`** aggiungere: `l18a`, `l18b` (no LLM) e `a
 ## Prerequisiti (prima di entrare in aula)
 
 ```bash
-git checkout lesson-17-multi-agent-performance
+git checkout lesson-19-hitl-breakpoints
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[test,multiagent]"
 ```

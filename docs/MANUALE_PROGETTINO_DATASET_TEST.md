@@ -3,9 +3,12 @@
 **Progetto finale** — complementa [CORSO_LEZIONI.md](CORSO_LEZIONI.md) e le lezioni 9–14.
 
 **Branch di riferimento:** `lesson-14-planning-loops` (progetto SOC completo: `progetto-2`)
-> **Nota (branch `lesson-18-multi-agent-security`):** le [Lezioni 15–18](LEZIONE_15_MULTI_AGENT_COORDINATION.md) coprono multi-agente, orchestrazione CrewAI/AutoGen, ottimizzazione performance e **sicurezza MAS** ([L18](LEZIONE_18_MULTI_AGENT_SECURITY.md)). Il progettino SOC resta ancorato alle competenze **L9–L14**; la squadra Analyst/Resolver (L16–L18) è il percorso avanzato opzionale (`progetto-2`).
 
-> **Nota (branch `lesson-19-hitl-breakpoints`):** la [Lezione 19](LEZIONE_19_HITL_BREAKPOINTS.md) aggiunge breakpoint HITL su tool critici (`isolate_account`, `notify_manager` priority ≥ 4), persistenza `ticket_states` e resume ReAct. Per scenari SOC con azioni irreversibili, valutare `enable_hitl=True` su `react_triage` e il workflow operatore in [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md).
+> **Nota (branch `lesson-18-multi-agent-security`):** le [Lezioni 15–18](LEZIONE_15_MULTI_AGENT_COORDINATION.md) coprono multi-agente, orchestrazione CrewAI/AutoGen, ottimizzazione performance e **sicurezza MAS** ([L18](LEZIONE_18_MULTI_AGENT_SECURITY.md)).
+>
+> **Nota (branch `lesson-19-hitl-breakpoints` — corso completo 9–19):** la [Lezione 19](LEZIONE_19_HITL_BREAKPOINTS.md) aggiunge breakpoint HITL su tool critici, persistenza `ticket_states` e resume ReAct. Per scenari SOC con azioni irreversibili, valutare `enable_hitl=True` su `react_triage` e il workflow operatore in [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md).
+>
+> Il progettino SOC resta ancorato alle competenze **L9–L14**; le lezioni 15–19 sono il percorso avanzato multi-agente (opzionale, branch `lesson-19-hitl-breakpoints` o fork `progetto-2`).
 
 
 **Motore obbligatorio:** `react_triage` (ReAct multi-step, max 4 step, self-correction in-loop)
@@ -771,7 +774,7 @@ I testi integrali sono nella sezione 5.
 | [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md) | Prompt injection |
 | [LEZIONE_13_REACT_SQLITE.md](LEZIONE_13_REACT_SQLITE.md) | ReAct e SQLite |
 | [LEZIONE_14_PLANNING_LOOPS.md](LEZIONE_14_PLANNING_LOOPS.md) | max_steps e STM |
-| [LEZIONE_19_HITL_BREAKPOINTS.md](LEZIONE_19_HITL_BREAKPOINTS.md) | Breakpoint HITL e resume ReAct (L19, opzionale) |
+| [LEZIONE_19_HITL_BREAKPOINTS.md](LEZIONE_19_HITL_BREAKPOINTS.md) | Breakpoint HITL e resume ReAct (L19, percorso avanzato) |
 | [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) | Manuale errori |
 
 ### File del repo rilevanti

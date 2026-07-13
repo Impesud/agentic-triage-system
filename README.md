@@ -1,8 +1,8 @@
 # Agentic Customer Care Triage System
 
-Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSON), tool locali, **memoria short/long-term** (Lezione 9), **RAG semantica su policy con ChromaDB** (Lezione 10/10B), **self-correction e emergency fallback** (Lezione 11), **benchmark e log analytics** (Lezione 12), **loop ReAct e SQLite LTM** (Lezione 13) e **planning multi-step con controllo loop** (Lezione 14) e **modelli multi-agente con topologie di comunicazione** (Lezione 15) , **orchestrazione CrewAI/AutoGen** (Lezione 16), **ottimizzazione performance multi-agente** (Lezione 17) e **ingegneria della sicurezza MAS** (Lezione 18).
+Sistema agentico per triage ticket customer care: classificazione LLM (CoT + JSON), tool locali, **memoria short/long-term** (Lezione 9), **RAG semantica su policy con ChromaDB** (Lezione 10/10B), **self-correction e emergency fallback** (Lezione 11), **benchmark e log analytics** (Lezione 12), **loop ReAct e SQLite LTM** (Lezione 13), **planning multi-step con controllo loop** (Lezione 14), **modelli multi-agente con topologie di comunicazione** (Lezione 15), **orchestrazione CrewAI/AutoGen** (Lezione 16), **ottimizzazione performance multi-agente** (Lezione 17), **ingegneria della sicurezza MAS** (Lezione 18) e **breakpoint Human-in-the-Loop con resume ReAct** (Lezione 19).
 
-**Branch corrente:** `lesson-19-hitl-breakpoints` — include le **lezioni 9–19**.
+**Branch corrente (corso completo):** `lesson-19-hitl-breakpoints` — include le **lezioni 9–19** (ultima lezione del percorso didattico).
 
 ## Percorso didattico e branch Git
 
@@ -20,7 +20,7 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 | `lesson-16-crew-autogen-orchestration` | 16 — CrewAI/AutoGen | + `multi_agent_triage`, demo `l16a`/`l16b` |
 | `lesson-17-multi-agent-performance` | 17 — Performance MAS | + pruning, cache pipeline, demo `l17a`/`l17b` |
 | `lesson-18-multi-agent-security` | **18 — Sicurezza MAS** | + guardrail, hand-off sanitizer, tool gate, demo `l18a`/`l18b` |
-| `lesson-19-hitl-breakpoints` | **19 — HITL e resume** | + breakpoint, `ticket_states`, CLI operatore, demo `l19a`/`l19b` (questo branch) |
+| `lesson-19-hitl-breakpoints` | **19 — HITL e resume** | + breakpoint, `ticket_states`, CLI operatore, demo `l19a`/`l19b` (**branch più recente**) |
 
 | Guida | File |
 |-------|------|
@@ -33,8 +33,10 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 | 16 CrewAI/AutoGen | [docs/LEZIONE_16_CREW_AUTOGEN.md](docs/LEZIONE_16_CREW_AUTOGEN.md) |
 | 17 Performance MAS | [docs/LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](docs/LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) |
 | 18 Sicurezza MAS | [docs/LEZIONE_18_MULTI_AGENT_SECURITY.md](docs/LEZIONE_18_MULTI_AGENT_SECURITY.md) |
+| 19 HITL e resume | [docs/LEZIONE_19_HITL_BREAKPOINTS.md](docs/LEZIONE_19_HITL_BREAKPOINTS.md) |
 | **Settimana 12 demo live** | [docs/SETTIMANA_12_DEMO_LIVE.md](docs/SETTIMANA_12_DEMO_LIVE.md) |
 | **Settimana 13 demo live** | [docs/SETTIMANA_13_DEMO_LIVE.md](docs/SETTIMANA_13_DEMO_LIVE.md) |
+| **Settimana 14 demo live** | [docs/SETTIMANA_14_DEMO_LIVE.md](docs/SETTIMANA_14_DEMO_LIVE.md) |
 
 [GESTIONE_ERRORI.md](GESTIONE_ERRORI.md)
 
@@ -43,7 +45,7 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 | Modulo | Ruolo |
 |--------|--------|
 | [`main.py`](src/main.py) | Demo Settimana 12–14 (L15–L19); pipeline ticket su branch storici |
-| [`orchestration/`](src/orchestration/) | L15–L19: topologie, CrewAI/AutoGen, pruning, cache, sicurezza, HITL |
+| [`orchestration/`](src/orchestration/) | L15–L19: topologie, CrewAI/AutoGen, pruning, cache, sicurezza, HITL (`hitl_*`) |
 | [`logic.py`](src/logic.py) | `triage_message`, `react_triage`, `multi_agent_triage` + L17/L18/L19 |
 | [`benchmark.py`](src/benchmark.py) | Suite benchmark 5 ticket (Lezione 12) |
 | [`benchmark_multi_agent.py`](src/benchmark_multi_agent.py) | Confronto latenza pipeline (Lezione 17) |
@@ -65,7 +67,7 @@ Indice completo lezioni, branch e comandi: **[docs/CORSO_LEZIONI.md](docs/CORSO_
 
 ```mermaid
 flowchart TB
-    subgraph main_py [main.py — branch L17]
+    subgraph main_py [main.py — branch L19]
         CLI["--scenario l15..l17b"]
         L15[run_l15_topology_demo]
         L16[run_l16a / run_l16b]
@@ -379,8 +381,25 @@ PYTHONPATH=src python3 src/main.py --scenario l18a   # no LLM
 PYTHONPATH=src python3 src/main.py --scenario l18b   # no LLM
 ```
 
+## Human-in-the-Loop (Lezione 19)
 
-**Dopo checkout su `lesson-13-*` … `lesson-18-*`:**
+Breakpoint deterministici su azioni irreversibili, persistenza `ticket_states` e resume ReAct:
+
+- **Breakpoint** — pausa su `isolate_account` e `notify_manager` (priority ≥ 4) dopo autorizzazione L18
+- **`ticket_states`** — SQLite con STM e contesto pipeline per approvazione operatore
+- **`hitl_cli`** — `list`, `approve`, `reject` da terminale
+- **`react_triage_resume`** — ripresa automatica del loop ReAct dopo approve
+
+Guida pratica: [LEZIONE_19_HITL_BREAKPOINTS.md](docs/LEZIONE_19_HITL_BREAKPOINTS.md#come-usare-i-breakpoint-guida-pratica). Demo live: [SETTIMANA_14_DEMO_LIVE.md](docs/SETTIMANA_14_DEMO_LIVE.md).
+
+```bash
+PYTHONPATH=src python3 src/main.py --scenario l19a   # no LLM
+PYTHONPATH=src python3 src/main.py --scenario l19b   # no LLM
+PYTHONPATH=src python3 -m orchestration.hitl_cli list
+```
+
+
+**Dopo checkout su `lesson-13-*` … `lesson-19-*`:**
 
 ```bash
 # Opzione A — script dedicato (senza chiamate LLM)
@@ -394,11 +413,11 @@ ls -la data/triage_system.db
 
 Guida completa: [LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md).
 
-## Demo ed esecuzione (branch L19)
+## Demo ed esecuzione (branch L19 — corso completo)
 
-**Manuale demo live:** [docs/SETTIMANA_12_DEMO_LIVE.md](docs/SETTIMANA_12_DEMO_LIVE.md), [docs/SETTIMANA_13_DEMO_LIVE.md](docs/SETTIMANA_13_DEMO_LIVE.md)
+**Manuali demo live:** [SETTIMANA_12](docs/SETTIMANA_12_DEMO_LIVE.md) (L15–L17), [SETTIMANA_13](docs/SETTIMANA_13_DEMO_LIVE.md) (L18), [SETTIMANA_14](docs/SETTIMANA_14_DEMO_LIVE.md) (L19).
 
-**CLI `main.py`:** Settimana 12–13 — scenari `l15` … `l18b`, `all`.
+**CLI `main.py`:** scenari `l15` … `l19b`, sequenza `all` (L15 → L19b).
 
 | Comando | Effetto |
 |---------|---------|
@@ -414,6 +433,8 @@ Guida completa: [LEZIONE_13_REACT_SQLITE.md](docs/LEZIONE_13_REACT_SQLITE.md).
 | **l17b** | Benchmark latenza MAS | Sì |
 | **l18a** | Input Guardrail + SQLite | No |
 | **l18b** | Hand-off + tool gate | No |
+| **l19a** | Breakpoint HITL + `ticket_states` | No |
+| **l19b** | Approve / reject workflow | No |
 
 ```bash
 source .venv/bin/activate
@@ -428,6 +449,8 @@ PYTHONPATH=src python3 src/main.py --scenario l17a
 PYTHONPATH=src python3 src/main.py --scenario l17b
 PYTHONPATH=src python3 src/main.py --scenario l18a
 PYTHONPATH=src python3 src/main.py --scenario l18b
+PYTHONPATH=src python3 src/main.py --scenario l19a
+PYTHONPATH=src python3 src/main.py --scenario l19b
 PYTHONPATH=src python3 src/main.py --scenario all
 
 PYTHONPATH=src python3 src/benchmark.py              # L12 monolitico
@@ -457,7 +480,11 @@ agentic-triage-system/
 │   ├── LEZIONE_15_MULTI_AGENT_COORDINATION.md
 │   ├── LEZIONE_16_CREW_AUTOGEN.md
 │   ├── LEZIONE_17_MULTI_AGENT_PERFORMANCE.md
-│   └── SETTIMANA_12_DEMO_LIVE.md
+│   ├── LEZIONE_18_MULTI_AGENT_SECURITY.md
+│   ├── LEZIONE_19_HITL_BREAKPOINTS.md
+│   ├── SETTIMANA_12_DEMO_LIVE.md
+│   ├── SETTIMANA_13_DEMO_LIVE.md
+│   └── SETTIMANA_14_DEMO_LIVE.md
 ├── data/
 │   ├── schema/triage_system.sql # DDL SQLite (versionato)
 │   ├── manuale_it.txt

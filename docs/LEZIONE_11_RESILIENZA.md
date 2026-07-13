@@ -14,7 +14,7 @@
 
 | Tipo | Esempi | Gestione nel progetto |
 |---
-**Branch storico demo:** `lesson-11-resilienza-self-correction`. Sul branch `lesson-17-multi-agent-performance`, `main.py` non espone più la demo CLI di questa lezione — fare checkout su `lesson-11-resilienza-self-correction`.
+**Branch storico demo:** `lesson-11-resilienza-self-correction`. Su `lesson-19-hitl-breakpoints` (e branch successivi a L11), `main.py` non espone più la demo CLI di questa lezione — fare checkout su `lesson-11-resilienza-self-correction`.
 ---|--------|------------------------|
 | **Hard error** | API timeout, API key assente, `manuale_it.txt` mancante, disco pieno | Propagazione → boundary `main.py` → `[ERRORE]`, `return None` |
 | **Soft error** | JSON malformato, campi mancanti, `riassunto_breve` > 15 parole | `_finalize_with_self_correction` in [`logic.py`](../src/logic.py) |

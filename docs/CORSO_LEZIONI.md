@@ -3,6 +3,8 @@
 Indice delle **lezioni**, **branch Git** e documentazione di riferimento.  
 Ogni branch contiene il codice **cumulativo** fino alla lezione indicata; le lezioni successive vivono sui branch successivi.
 
+> **Stato corso (luglio 2026):** il percorso **lezioni 9–19** è **completo** sul branch [`lesson-19-hitl-breakpoints`](.) — ultima lezione: HITL, breakpoint e resume ReAct. Per il progettino SOC (L9–L14) resta valido il branch `lesson-14-planning-loops` o il fork `progetto-2`.
+
 ## Mappa branch ↔ lezioni
 
 | Branch Git | Ultima lezione inclusa | Checkout | Test (indicativo) |
@@ -17,7 +19,7 @@ Ogni branch contiene il codice **cumulativo** fino alla lezione indicata; le lez
 | [`lesson-16-crew-autogen-orchestration`](.) | **Lezione 16** — CrewAI & AutoGen | `git checkout lesson-16-crew-autogen-orchestration` | ~83 |
 | [`lesson-17-multi-agent-performance`](.) | **Lezione 17** — Performance MAS | `git checkout lesson-17-multi-agent-performance` | ~106 |
 | [`lesson-18-multi-agent-security`](.) | **Lezione 18** — Sicurezza MAS | `git checkout lesson-18-multi-agent-security` | ~150 |
-| [`lesson-19-hitl-breakpoints`](.) | **Lezione 19** — HITL e resume | `git checkout lesson-19-hitl-breakpoints` | ~174 |
+| [`lesson-19-hitl-breakpoints`](.) | **Lezione 19** — HITL e resume | `git checkout lesson-19-hitl-breakpoints` | ~174 (**ultimo branch**) |
 
 ```mermaid
 gitGraph
@@ -135,7 +137,7 @@ gitGraph
 | File | Contenuto |
 |------|-----------|
 | [README.md](../README.md) | Architettura, setup, demo, struttura repo (allineato al branch corrente) |
-| [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) | Manuale errori, moduli 0–5, collegamento L11–L16 |
+| [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) | Manuale errori, moduli 0–5, collegamento L11–L19 |
 | [LEZIONE_10B_CHROMADB.md](LEZIONE_10B_CHROMADB.md) | Laboratorio ChromaDB |
 | [LEZIONE_11_RESILIENZA.md](LEZIONE_11_RESILIENZA.md) | Hard vs soft error, self-correction, fallback |
 | [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md) | Benchmark, analytics, triage_v2 |
@@ -145,8 +147,11 @@ gitGraph
 | [LEZIONE_16_CREW_AUTOGEN.md](LEZIONE_16_CREW_AUTOGEN.md) | CrewAI, AutoGen, multi_agent_triage |
 | [LEZIONE_17_MULTI_AGENT_PERFORMANCE.md](LEZIONE_17_MULTI_AGENT_PERFORMANCE.md) | Pruning, cache pipeline, benchmark MAS |
 | [LEZIONE_18_MULTI_AGENT_SECURITY.md](LEZIONE_18_MULTI_AGENT_SECURITY.md) | Guardrail, hand-off sanitizer, tool gate |
-| [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md) | **Manuale operativo demo live L15–L17** |
+| [LEZIONE_19_HITL_BREAKPOINTS.md](LEZIONE_19_HITL_BREAKPOINTS.md) | Breakpoint HITL, `ticket_states`, resume ReAct |
+| [SETTIMANA_12_DEMO_LIVE.md](SETTIMANA_12_DEMO_LIVE.md) | **Manuale operativo demo live L15–L17** (su L19: esteso a L18–L19) |
 | [SETTIMANA_13_DEMO_LIVE.md](SETTIMANA_13_DEMO_LIVE.md) | **Manuale operativo demo live L18** |
+| [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md) | **Manuale operativo demo live L19** |
+| [MANUALE_PROGETTINO_DATASET_TEST.md](MANUALE_PROGETTINO_DATASET_TEST.md) | Progettino SOC (L9–L14; note L15–L19 opzionali) |
 
 ---
 

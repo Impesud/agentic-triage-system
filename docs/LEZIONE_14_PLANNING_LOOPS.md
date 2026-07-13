@@ -17,7 +17,7 @@ Lasciare l'agente libero di ciclare Thought → Action espone il sistema a loop 
 
 | Meccanismo | Implementazione |
 |---
-**Branch storico demo:** `lesson-14-planning-loops`. Sul branch `lesson-17-multi-agent-performance`, `main.py` non espone più la demo CLI di questa lezione — fare checkout su `lesson-14-planning-loops`.
+**Branch storico demo:** `lesson-14-planning-loops`. Su `lesson-19-hitl-breakpoints` (e branch successivi a L14), `main.py` non espone più la demo CLI di questa lezione — fare checkout su `lesson-14-planning-loops`.
 ---------|-----------------|
 | Hard stop | `DEFAULT_REACT_MAX_STEPS = 4` in [`logic.py`](../src/logic.py) |
 | Fallback strutturato | `TriageResult` con `azione_eseguita: "Fallback per interruzione ciclo ReAct"` |

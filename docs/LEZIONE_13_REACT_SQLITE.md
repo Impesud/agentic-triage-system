@@ -17,7 +17,7 @@ Fino alla Settimana 8, `logs/activity.jsonl` è lo strumento di audit per KPI, b
 
 | Aspetto | JSONL (`log_event`) | SQLite (`log_triage_to_sqlite`) |
 |---
-**Branch storico demo:** `lesson-13-react-sqlite`. Sul branch `lesson-17-multi-agent-performance`, `main.py` non espone più la demo CLI di questa lezione — fare checkout su `lesson-13-react-sqlite`.
+**Branch storico demo:** `lesson-13-react-sqlite`. Su `lesson-19-hitl-breakpoints` (e branch successivi a L13), `main.py` non espone più la demo CLI di questa lezione — fare checkout su `lesson-13-react-sqlite`.
 ------|---------------------|----------------------------------|
 | Scopo | Audit operativo, KPI L12 | Long-Term Memory per cliente |
 | Ricerca per `cliente_nome` | O(N) scan sequenziale | O(log N) con indice `idx_cliente` |
@@ -159,5 +159,7 @@ pytest tests/ -q   # ~66 su questo branch
 - [Lezione 14 — Planning loop](LEZIONE_14_PLANNING_LOOPS.md) — `max_steps=4`, STM, self-correction in-loop
 - [Lezione 15 — Multi-agent](LEZIONE_15_MULTI_AGENT_COORDINATION.md) — topologie, ruoli, Blackboard
 - [Lezione 16 — CrewAI/AutoGen](LEZIONE_16_CREW_AUTOGEN.md) — `multi_agent_triage`, demo `l16a`/`l16b`
+- [Lezione 18 — Sicurezza MAS](LEZIONE_18_MULTI_AGENT_SECURITY.md) — guardrail, tool gate
+- [Lezione 19 — HITL](LEZIONE_19_HITL_BREAKPOINTS.md) — breakpoint e resume ReAct (branch `lesson-19-hitl-breakpoints`)
 - [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) — errori ReAct e fallback
 - [LEZIONE_12_PROMPT_OPTIMIZATION.md](LEZIONE_12_PROMPT_OPTIMIZATION.md) — KPI su JSONL invariati

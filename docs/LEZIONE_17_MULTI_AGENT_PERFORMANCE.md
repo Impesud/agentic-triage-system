@@ -90,7 +90,7 @@ PYTHONPATH=src python3 -m analytics.log_kpi
 ```bash
 pytest tests/test_message_pruning.py tests/test_pipeline_cache.py tests/test_benchmark_multi_agent.py -q
 pytest tests/test_week12_report.py tests/test_main_report.py tests/test_open_html.py -q
-pytest tests/ -q   # ~129 test
+pytest tests/ -q   # ~106 su L17; ~174 su branch `lesson-19-hitl-breakpoints`
 ```
 
 ## Ottimizzazioni aggiuntive (review L17)
@@ -151,6 +151,6 @@ Quando il Blackboard è arricchito post-Analyst (`policy_excerpt`, `ltm_digest`)
 - [README.md](../README.md) — architettura cumulativa
 - [GESTIONE_ERRORI.md](../GESTIONE_ERRORI.md) — eventi audit L17
 
-## Nota branch L18
+## Nota branch L19 (corso completo)
 
-Su `lesson-18-multi-agent-security`, `main.py` include anche `l18a`/`l18b`. Vedi [SETTIMANA_13_DEMO_LIVE.md](SETTIMANA_13_DEMO_LIVE.md) e [LEZIONE_18_MULTI_AGENT_SECURITY.md](LEZIONE_18_MULTI_AGENT_SECURITY.md).
+Su `lesson-19-hitl-breakpoints`, `main.py` include anche `l19a`/`l19b` e la sequenza `all` estesa L15→L19. Vedi [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md) e [LEZIONE_19_HITL_BREAKPOINTS.md](LEZIONE_19_HITL_BREAKPOINTS.md).

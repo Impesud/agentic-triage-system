@@ -2,9 +2,11 @@
 
 **Settimana 14** — complementa [LEZIONE_18_MULTI_AGENT_SECURITY.md](LEZIONE_18_MULTI_AGENT_SECURITY.md) e [CORSO_LEZIONI.md](CORSO_LEZIONI.md).
 
+**Stato:** lezione **completata** — branch `lesson-19-hitl-breakpoints` pubblicato; **ultima lezione** del percorso didattico 9–19.
+
 **Demo live:** [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md) — sezioni `l19a`, `l19b` e sequenza `all`.
 
-**Branch:** `lesson-19-hitl-breakpoints` (include lezioni 9–19).
+**Branch:** `lesson-19-hitl-breakpoints` (include lezioni 9–19; **ultimo branch del corso**).
 
 **Durata:** 2 ore — Breakpoint deterministici, persistenza STM, resume workflow.
 
@@ -292,6 +294,22 @@ pytest tests/ -q   # 174 test
 - [ ] Con `react_resume` in SQLite, `approve` riprende il loop ReAct (`react_triage_resume`)
 - [ ] Eventi `hitl_breakpoint_reached`, `hitl_session_resumed` in `activity.jsonl`
 - [ ] `pytest tests/ -q` verde
+
+## Fine percorso lezioni 9–19
+
+Con la Lezione 19 il corso **Agentic Customer Care Triage System** copre l'intero arco didattico:
+
+| Settimana | Lezioni | Competenza chiave |
+|-----------|---------|-------------------|
+| 8 | 11–12 | Resilienza, benchmark, KPI |
+| 9 | 13–14 | ReAct, SQLite LTM, planning loop |
+| 12 | 15–17 | Multi-agente, CrewAI/AutoGen, performance |
+| 13 | 18 | Sicurezza MAS (guardrail, tool gate) |
+| 14 | 19 | HITL, breakpoint, resume operatore |
+
+**Branch di riferimento completo:** `lesson-19-hitl-breakpoints` — `174 test`, demo `l15` … `l19b`, CLI `hitl_cli`.
+
+Percorsi paralleli: [MANUALE_PROGETTINO_DATASET_TEST.md](MANUALE_PROGETTINO_DATASET_TEST.md) (progettino SOC L9–L14); fork avanzato `progetto-2`.
 
 ## Prerequisito
 

@@ -33,7 +33,7 @@ Report post-run (revisione studenti):
 
 | File | Ruolo |
 |------|--------|
-| `logs/week12_demo_report.html` | Sintesi + `<details>` per L15–L18 (incl. guardrail L18) |
+| `logs/week12_demo_report.html` | Sintesi + `<details>` per L15–L19 (incl. guardrail L18, HITL L19) |
 | `logs/week12_demo_report.json` | Stessi dati strutturati (diff tra run) |
 | `logs/activity.jsonl` | Trace completo (`security_input_blocked`, `security_tool_denied`, …) |
 
@@ -95,9 +95,15 @@ SOC weaponized         BLOCKED   Input bloccato dal guardrail ...
 
 ---
 
-## Prossimo passo — Lezione 19 (HITL)
+## Lezione 19 — completata (Settimana 14)
 
-La [Lezione 19](LEZIONE_19_HITL_BREAKPOINTS.md) estende L18 con breakpoint operatore su azioni irreversibili. Manuale demo live: [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md) (`l19a`, `l19b`, sequenza `all` estesa L15–L19).
+La [Lezione 19](LEZIONE_19_HITL_BREAKPOINTS.md) è disponibile sul branch `lesson-19-hitl-breakpoints` (pubblicato su `origin`). Estende L18 con breakpoint operatore su azioni irreversibili, tabella `ticket_states` e resume ReAct.
+
+| Risorsa | Link |
+|---------|------|
+| Teoria e guida breakpoint | [LEZIONE_19_HITL_BREAKPOINTS.md](LEZIONE_19_HITL_BREAKPOINTS.md) |
+| Demo live `l19a` / `l19b` | [SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md) |
+| Sequenza completa L15–L19 | `PYTHONPATH=src python3 src/main.py --scenario all` |
 
 ```bash
 git checkout lesson-19-hitl-breakpoints
