@@ -17,7 +17,7 @@ Ogni branch contiene il codice **cumulativo** fino alla lezione indicata; le lez
 | [`lesson-16-crew-autogen-orchestration`](.) | **Lezione 16** — CrewAI & AutoGen | `git checkout lesson-16-crew-autogen-orchestration` | ~83 |
 | [`lesson-17-multi-agent-performance`](.) | **Lezione 17** — Performance MAS | `git checkout lesson-17-multi-agent-performance` | ~106 |
 | [`lesson-18-multi-agent-security`](.) | **Lezione 18** — Sicurezza MAS | `git checkout lesson-18-multi-agent-security` | ~150 |
-| [`lesson-19-hitl-breakpoints`](.) | **Lezione 19** — HITL e resume | `git checkout lesson-19-hitl-breakpoints` | ~164 |
+| [`lesson-19-hitl-breakpoints`](.) | **Lezione 19** — HITL e resume | `git checkout lesson-19-hitl-breakpoints` | ~174 |
 
 ```mermaid
 gitGraph
@@ -62,7 +62,7 @@ gitGraph
 
 **Settimana 13 (lezione 18):** sicurezza MAS — guardrail, hand-off, tool gate — manuale demo live: **[SETTIMANA_13_DEMO_LIVE.md](SETTIMANA_13_DEMO_LIVE.md)**; teoria: [LEZIONE_18](LEZIONE_18_MULTI_AGENT_SECURITY.md).
 
-**Settimana 14 (lezione 19):** HITL, breakpoint, resume workflow — manuale demo live: **[SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md)**; teoria: [LEZIONE_19](LEZIONE_19_HITL_BREAKPOINTS.md).
+**Settimana 14 (lezione 19):** HITL, breakpoint, resume workflow — guida uso breakpoint: [LEZIONE_19 § guida pratica](LEZIONE_19_HITL_BREAKPOINTS.md#come-usare-i-breakpoint-guida-pratica); demo live: **[SETTIMANA_14_DEMO_LIVE.md](SETTIMANA_14_DEMO_LIVE.md)**; teoria completa: [LEZIONE_19](LEZIONE_19_HITL_BREAKPOINTS.md).
 
 ---
 
@@ -241,7 +241,7 @@ git push -u origin lesson-17-multi-agent-performance
 | Tool policy gate | `tool_policy_gate.py`, `test_tool_policy_gate.py` |
 | Demo l18a/l18b (no LLM) | `main.run_l18a_guardrail_demo`, `run_l18b_handoff_tool_gate_demo` |
 | KPI L18 in log | `analytics/log_kpi.security_metrics` |
-| Retrocompatibilità | `pytest tests/ -q` (~145), benchmark L12 |
+| Retrocompatibilità | `pytest tests/ -q` (~150), benchmark L12 |
 
 Push suggerito:
 
@@ -255,11 +255,11 @@ git push -u origin lesson-18-multi-agent-security
 |----------|-----------------|
 | Breakpoint HITL | `hitl_breakpoints.py`, `test_hitl_breakpoints.py` |
 | SQLite ticket_states | `hitl_store.py`, `test_hitl_store.py` |
-| Pause / resume | `hitl_pipeline.py`, `test_hitl_pipeline.py` |
+| Pause / resume ReAct | `hitl_pipeline.py`, `logic.react_triage_resume`, `test_hitl_pipeline.py` |
 | CLI operatore | `hitl_cli.py`, `test_hitl_cli.py` |
 | Demo l19a/l19b (no LLM) | `main.run_l19a_hitl_breakpoint_demo`, `run_l19b_hitl_resume_demo` |
 | KPI L19 in log | `analytics/log_kpi.hitl_metrics` |
-| Retrocompatibilità | `pytest tests/ -q` (~164), benchmark L12 |
+| Retrocompatibilità | `pytest tests/ -q` (~174), benchmark L12 |
 
 Push suggerito:
 

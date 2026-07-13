@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from errors import HitlApprovalRequired
 from logic import (
     MAX_TRIAGE_JSON_RETRIES,
     ReactRunMetrics,
@@ -14,6 +15,7 @@ from logic import (
     _extract_max_budget_eur,
     _requires_vip_escalation,
     react_triage,
+    react_triage_resume,
     triage_message,
 )
 from schemas.ticket import TriageResult
@@ -407,6 +409,107 @@ def test_react_triage_return_metrics(mock_get_client):
     assert result.categoria == "IT"
     assert isinstance(metrics, ReactRunMetrics)
     assert metrics.tokens_est > 0
+
+
+@patch("logic.get_client")
+def test_react_triage_hitl_pauses_on_critical_tool(mock_get_client, tmp_path, monkeypatch):
+    import paths as paths_module
+    from logic import _SHORT_TERM_STORE
+    from orchestration.hitl_store import get_ticket_state
+    from tools.logger import init_db
+    from tools.registry import TOOL_MAP
+
+    db_path = tmp_path / "triage.db"
+    monkeypatch.setattr(paths_module, "TRIAGE_DB_PATH", db_path)
+    init_db()
+    monkeypatch.setitem(
+        TOOL_MAP,
+        "search_policy",
+        lambda query="": "[RAG] procedura isolamento account SECURITY",
+    )
+
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    tc_sp = _tool_call("search_policy", {"query": "isolamento"}, "tc-sp")
+    tc_iso = _tool_call("isolate_account", {"account_name": "FIN-1", "reason": "ransomware"}, "tc-iso")
+    mock_client.chat.completions.create.side_effect = [
+        _completion(tool_calls=[tc_sp]),
+        _completion(tool_calls=[tc_iso]),
+    ]
+
+    session_id = "react-hitl-pause-test"
+    with pytest.raises(HitlApprovalRequired) as exc_info:
+        react_triage(
+            "incidente ransomware FIN-1",
+            manuale="Manuale IT",
+            session_id=session_id,
+            enable_hitl=True,
+        )
+
+    hitl_id = f"hitl-{session_id}"
+    assert exc_info.value.session_id == hitl_id
+    assert session_id in _SHORT_TERM_STORE
+    record = get_ticket_state(hitl_id)
+    assert record is not None
+    assert record.status == "PENDING_APPROVAL"
+    assert record.pending_tool == "isolate_account"
+    pipeline = json.loads(record.pipeline_context_json or "{}")
+    react_resume = pipeline["react_resume"]
+    assert react_resume["react_session_id"] == session_id
+    assert react_resume["from_step"] == 2
+    _SHORT_TERM_STORE.clear()
+
+
+@patch("logic.get_client")
+def test_react_triage_resume_completes_json(mock_get_client):
+    from logic import _SHORT_TERM_STORE
+
+    conversation = [
+        {"role": "system", "content": "sys"},
+        {"role": "user", "content": "ticket ransomware"},
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "tc-1",
+                    "type": "function",
+                    "function": {
+                        "name": "isolate_account",
+                        "arguments": json.dumps({"account_name": "FIN", "reason": "malware"}),
+                    },
+                }
+            ],
+        },
+        {
+            "role": "tool",
+            "tool_call_id": "tc-1",
+            "name": "isolate_account",
+            "content": "Account isolato",
+        },
+    ]
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    final = (
+        '{"analisi_problema":"1. P. 2. C. 3. SECURITY. 4. CRITICAL.",'
+        '"categoria":"SECURITY","priorita":"CRITICAL","riassunto_breve":"Ransomware",'
+        '"messaggio_originale":"ticket ransomware"}'
+    )
+    mock_client.chat.completions.create.return_value = _completion(content=final)
+
+    result = react_triage_resume(
+        conversation,
+        user_input="ticket ransomware",
+        manuale="Manuale IT",
+        session_id="react-resume-direct",
+        from_step=1,
+        enable_hitl=False,
+    )
+
+    assert result.categoria == "SECURITY"
+    assert "react-resume-direct" in _SHORT_TERM_STORE
+    assert mock_client.chat.completions.create.call_count == 1
+    _SHORT_TERM_STORE.clear()
 
 
 @patch("logic.get_client")

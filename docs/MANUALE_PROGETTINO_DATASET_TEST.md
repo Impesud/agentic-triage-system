@@ -778,7 +778,9 @@ I testi integrali sono nella sezione 5.
 
 | File | Ruolo |
 |------|-------|
-| [`src/logic.py`](../src/logic.py) | `react_triage`, fallback, self-correction |
+| [`src/logic.py`](../src/logic.py) | `react_triage`, `react_triage_resume`, fallback, self-correction |
+| [`src/orchestration/hitl_pipeline.py`](../src/orchestration/hitl_pipeline.py) | Pause / approve / reject HITL (L19) |
+| [`src/orchestration/hitl_store.py`](../src/orchestration/hitl_store.py) | SQLite `ticket_states` (L19) |
 | [`src/tools/registry.py`](../src/tools/registry.py) | Definizione e mappa tool |
 | [`src/schemas/ticket.py`](../src/schemas/ticket.py) | Modello `TriageResult` |
 | [`src/parsing/parser.py`](../src/parsing/parser.py) | Estrazione e validazione JSON |

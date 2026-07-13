@@ -489,7 +489,7 @@ PYTHONPATH=src python3 scripts/init_triage_db.py
 pytest tests/ -q
 ```
 
-**~129 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
+**174 test** su questo branch ([CORSO_LEZIONI](docs/CORSO_LEZIONI.md) per conteggi altri branch). Mock LLM/embeddings; ChromaDB `EphemeralClient` in pytest.
 
 | File | Verifica |
 |------|----------|
@@ -500,7 +500,7 @@ pytest tests/ -q
 | `test_benchmark_multi_agent.py` | Report benchmark MAS (L17) |
 | `test_input_guardrail.py` / `test_handoff_sanitizer.py` | Guardrail e hand-off (L18) |
 | `test_tool_policy_gate.py` / `test_security_store.py` | Tool gate e SQLite alert (L18) |
-| `test_hitl_breakpoints.py` / `test_hitl_pipeline.py` | Breakpoint e resume HITL (L19) |
+| `test_hitl_breakpoints.py` / `test_hitl_store.py` / `test_hitl_pipeline.py` / `test_hitl_cli.py` | Breakpoint, SQLite, resume ReAct e CLI HITL (L19) |
 | `test_week12_report.py` / `test_main_report.py` | Report HTML Settimana 12–14 (L15–L19) |
 | `test_open_html.py` / `test_open_report_script.py` | Apertura report nel browser (WSL) |
 | `test_logger_sqlite.py` | SQLite init, insert, query indicizzata |

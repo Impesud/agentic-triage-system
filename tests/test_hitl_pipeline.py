@@ -11,6 +11,7 @@ from orchestration.hitl_pipeline import (
     approve_session,
     invoke_critical_tool_with_hitl,
     reject_session,
+    resume_session,
 )
 from orchestration.hitl_store import get_ticket_state, list_pending_states
 from orchestration.pipeline_cache import PipelineContextCache
@@ -131,6 +132,66 @@ def test_reject_does_not_execute_tool(tmp_path):
     assert record is not None
     assert record.status == "REJECTED"
     assert list_pending_states(db_path=str(db)) == []
+
+
+def test_pause_persists_react_resume_metadata(tmp_path):
+    db = tmp_path / "hitl.db"
+    ctx = _ctx_with_policy()
+    react_session = "react-meta-1"
+    with pytest.raises(HitlApprovalRequired):
+        invoke_critical_tool_with_hitl(
+            "isolate_account",
+            {"account_name": "ACC", "reason": "test"},
+            TOOL_MAP["isolate_account"],
+            ctx,
+            pause_ctx=HitlPauseContext(
+                session_id="hitl-meta-1",
+                stm_messages=[{"role": "user", "content": "t"}],
+                user_input_excerpt="ticket test",
+                react_step=2,
+                tool_call_id="tc-1",
+                react_session_id=react_session,
+                user_input="ticket test completo",
+                manuale="Manuale IT",
+                max_steps=4,
+            ),
+            db_path=str(db),
+        )
+    record = get_ticket_state("hitl-meta-1", db_path=str(db))
+    assert record is not None
+    pipeline = json.loads(record.pipeline_context_json or "{}")
+    react_resume = pipeline["react_resume"]
+    assert react_resume["react_session_id"] == react_session
+    assert react_resume["from_step"] == 2
+    assert react_resume["tool_call_id"] == "tc-1"
+    assert react_resume["user_input"] == "ticket test completo"
+
+
+def test_resume_session_alias():
+    assert resume_session is approve_session
+
+
+def test_approve_skips_react_resume_when_disabled(tmp_path):
+    db = tmp_path / "hitl.db"
+    ctx = _ctx_with_policy()
+    session_id = "hitl-no-resume"
+    with pytest.raises(HitlApprovalRequired):
+        invoke_critical_tool_with_hitl(
+            "isolate_account",
+            {"account_name": "ACC", "reason": "test"},
+            TOOL_MAP["isolate_account"],
+            ctx,
+            pause_ctx=HitlPauseContext(
+                session_id=session_id,
+                stm_messages=[],
+                user_input_excerpt="t",
+                react_session_id="react-should-not-run",
+            ),
+            db_path=str(db),
+        )
+    with patch("logic.react_triage_resume") as mock_resume:
+        approve_session(session_id, "op", db_path=str(db), resume_react=False)
+        mock_resume.assert_not_called()
 
 
 @patch("logic.get_client")

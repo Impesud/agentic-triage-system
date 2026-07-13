@@ -40,6 +40,17 @@ def test_format_kpi_report_contains_sections():
     assert "emergency_fallback" in report
 
 
+def test_format_kpi_report_contains_hitl_section():
+    events = [
+        {"event_type": "hitl_breakpoint_reached", "payload": {}},
+        {"event_type": "hitl_session_resumed", "payload": {}},
+    ]
+    report = format_kpi_report(events)
+    assert "HITL multi-agent (L19)" in report
+    assert "hitl_breakpoint_reached" in report
+    assert "hitl_session_resumed" in report
+
+
 def test_tool_usage_rate_empty_payload():
     events = [{"event_type": "ping", "payload": {}}]
     assert tool_usage_rate(events) == {}

@@ -114,7 +114,7 @@ pytest tests/ -q
 - [ ] Record in `security_alerts` visibili dopo `l18a`
 - [ ] Demo `l18b`: hand-off avvelenato bloccato; `notify_manager` negato senza policy
 - [ ] Eventi `security_input_blocked`, `security_tool_denied` in `activity.jsonl`
-- [ ] `pytest tests/ -q` verde (~145 test)
+- [ ] `pytest tests/ -q` verde (~150 test)
 
 ## Nota branch L18
 
